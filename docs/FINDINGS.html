@@ -1,0 +1,126 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Findings — Nemesis / Gradius (Konami, 1986)</title>
+<style>
+:root{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;--linea:#23262e;
+  --rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
+@media (prefers-color-scheme:light){:root{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;
+  --panel:#f7f6f2;--linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}}
+:root[data-theme="dark"]{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;
+  --linea:#23262e;--rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
+:root[data-theme="light"]{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;--panel:#f7f6f2;
+  --linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fondo);color:var(--tinta);padding:0 1.25rem 6rem;
+  font:15px/1.7 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+.w{max-width:1120px;margin:0 auto}
+.n{max-width:68ch}
+h1,h2,h3,h4{font-weight:400;text-wrap:balance}
+a{color:var(--cyan)}
+img{image-rendering:pixelated;max-width:100%;height:auto;display:block}
+header.top{display:flex;flex-direction:column;align-items:center;gap:1.5rem;
+  padding:4rem 0 2rem;text-align:center}
+header.top img{width:min(100%,642px)}
+.claim{max-width:60ch;color:var(--suave);font-size:1.05rem}
+.claim b{color:var(--tinta);font-weight:400}
+.ficha{display:flex;flex-wrap:wrap;justify-content:center;gap:0 1.5rem;width:100%;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave);
+  border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);padding:.85rem 0}
+.ficha b{color:var(--rojo);font-weight:400}
+nav{display:flex;flex-wrap:wrap;gap:1.25rem;justify-content:center;padding:1.25rem 0;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+nav a{color:var(--suave);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover,nav a:focus{color:var(--tinta);border-bottom-color:var(--rojo)}
+nav.docs{border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);
+  margin-bottom:1rem}
+section{margin-top:4.5rem;scroll-margin-top:1rem}
+section>h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;
+  border-left:3px solid var(--rojo);padding-left:.9rem;margin:0 0 1.5rem}
+.cifras{display:grid;gap:1px;background:var(--linea);border:1px solid var(--linea);
+  grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.cifra{background:var(--panel);padding:1.1rem}
+.cifra b{display:block;font-size:1.7rem;color:var(--oro);font-weight:400;
+  font-variant-numeric:tabular-nums;line-height:1.2}
+.cifra span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--suave)}
+.hall{border-top:1px solid var(--linea);padding-top:1.75rem;margin-top:2.5rem}
+.hall:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.hall h3{margin:0 0 .75rem;font-size:1.15rem;color:var(--rojo)}
+.hall h4{color:var(--oro);margin:1.5rem 0 .5rem;font-size:.95rem}
+.hall p{margin:0 0 1rem}
+pre.asm{background:var(--panel);border-left:2px solid var(--verde);margin:1.25rem 0;
+  padding:1rem 1.1rem;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--tinta)}
+.par{display:grid;gap:1.25rem;grid-template-columns:1fr}
+@media(min-width:820px){.par{grid-template-columns:1fr 1fr}}
+.par figure{margin:0}
+table{border-collapse:collapse;width:100%;margin:1.25rem 0;font-size:13px;display:block;
+  overflow-x:auto}
+th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--linea)}
+th{color:var(--suave);font-weight:400;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+td.num{font-variant-numeric:tabular-nums;color:var(--oro)}
+.nivel{margin-top:2rem}
+.nivel h3{margin:0 0 .9rem;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase}
+.nivel em{color:var(--cyan);font-style:normal}
+.sep{color:var(--suave);margin:0 .6rem}
+.rejilla{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.rejilla figure{margin:0;background:var(--panel);box-shadow:0 0 0 1px var(--linea)}
+.rejilla figcaption{display:flex;justify-content:space-between;padding:.45rem .65rem;
+  font-size:11px;color:var(--suave);border-top:1px solid var(--linea)}
+.dir{font-variant-numeric:tabular-nums;color:var(--verde)}
+footer{margin-top:5rem;padding-top:1.5rem;border-top:1px solid var(--linea);
+  color:var(--suave);font-size:12px}
+
+/* Aviso de trabajo en curso: tiene que verse antes que las cifras, porque un
+   100% mal leido hace mas dano que no ponerlo. */
+.aviso{background:#3a2a10;border-left:3px solid var(--oro);margin:1.5rem auto;
+  padding:1rem 1.2rem;max-width:900px;border-radius:4px}
+.aviso p{margin:0;color:var(--tinta);font-size:15px;line-height:1.65}
+.galeria{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:1.5rem;margin:1.5rem 0}
+.galeria figure{margin:0}
+.galeria img{width:100%;height:auto;image-rendering:pixelated;
+  border:1px solid var(--linea);border-radius:3px}
+.galeria figcaption{color:var(--suave);font-size:13px;margin-top:.5rem}
+audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
+</style>
+<div class="w"><nav class="top"><a href="index.html">Home</a><a href="GETTING-STARTED.html">Start</a><a href="THE-GAME.html">The game</a><a href="THE-CARTRIDGE.html">The cartridge</a><a href="THE-CODE.html">The code</a><a href="FINDINGS.html" style=color:var(--tinta)>Findings</a><a href="IN-THE-EMULATOR.html">In the emulator</a><a href="OPEN-QUESTIONS.html">Open questions</a><a href="es/HALLAZGOS.html" style="margin-left:auto;color:var(--oro)">Castellano</a></nav>
+<h1 id="findings">Findings</h1>
+<p>Everything on this page is measured on the bytes or in the emulator. Where it was measured in openMSX, it says so.</p>
+<h2 id="the-vram-map-is-upside-down">The VRAM map is upside down</h2>
+<p>The eight bytes at 0x575A program VDP registers 0 to 7 and put nothing where the BIOS puts it: <b>patterns at 0x2000</b>, <b>colours at 0x0000</b>, names at 0x3800 and sprite attributes at 0x3B00, right behind the name table. Sprite patterns end up at 0x1800.</p>
+<p>This is not a curiosity. Anyone reading the addresses in this listing expecting the usual layout will get every one of them wrong — and so did the first version of the tool that draws the pictures on this site, which is how it was caught.</p>
+<h2 id="the-map-is-in-ram-and-it-is-scrolled-by-hand">The map is in RAM, and it is scrolled by hand</h2>
+<p>Twenty-two rows of thirty-two cells at 0xED00. On every scroll step the whole thing moves one column left with twenty-two <code>ldir</code>s, the new column is written on the right, and all 704 bytes go out to VRAM with <code>outi</code>. The stage script gives six piece numbers every four columns; each piece is four by four characters, five of them give twenty rows and the sixth gives the last two.</p>
+<p>That is enough to rebuild any stage without an emulator, which is what the maps on the front page are. Checked against the cartridge running in openMSX: of the 704 cells of the map buffer, <b>6 differed at distance 138 and 9 at distance 201</b>, and those are the twinkling stars and the characters the shot writes over the map.</p>
+<h2 id="all-the-randomness-is-the-z80-s-r-register">All the randomness is the Z80&#x27;s R register</h2>
+<p>There is no seed and no generator anywhere in the 128 KB. What stands in for chance is <code>ld a,r</code>, the refresh register, which counts on its own with every instruction executed:</p>
+<ul><li>which of the two star drawings goes in each sky column (0x4750),</li><li>which of the sixteen doors each falling rock comes through (0xABC2),</li><li>how many frames each drawing of the blinking enemy lasts, 0x0F or 3 (0xB016), and 0x0A or 3 for another (0xBDBE), so two of them on screen at once are never in step,</li><li>how far the enemy that walks the ground gets before stopping, between 0x2D and 0x4C frames (0xAAE6),</li><li>and which of the pair of shots a two-shot enemy sends where (0xA453).</li></ul>
+<h2 id="every-enemy-is-one-number-and-two-routines">Every enemy is one number and two routines</h2>
+<p>An object boils down to its type, 1 to 0x1F. That number drives two twin tables — p00:0x5DFD for who moves it and p01:0x6B46 for who finishes building it — and twenty of the thirty-one types have at least one of the two in bank 3, sixteen of them both.</p>
+<h2 id="the-spiral-is-done-without-sines">The spiral is done without sines</h2>
+<p>Type 0x1D closes in a spiral around a centre, and there is no sine table for it: take the difference to the centre along one axis, divide it by eight with three <code>sra a</code> and add it to the other; then the same the other way round. That is a turn of about seven degrees per step. The radius shrinks separately, multiplying both coordinates by a byte that starts at 0xFF and drops by one every 0x3C frames, so the spiral closes on its own.</p>
+<p>Bit 0 of byte 30 picks the direction, and the two halves of the routine are the same code with the signs swapped.</p>
+<h2 id="a-three-slot-enemy-built-with-one-self-overlapping-ldir">A three-slot enemy, built with one self-overlapping LDIR</h2>
+<p>Type 0x1E does not fit in one slot: it takes <b>three consecutive ones</b>, which is why the allocator has a separate path that looks for three in a row. The other two are built with a single <code>ldir</code> of 0x40 bytes from the slot onto itself shifted by 0x20 — copying the first over the second and the second over the third in one instruction — and then placed in a triangle. Only the first one moves; the other two follow. When its time runs out, all three become type 0x1F and fly apart.</p>
+<h2 id="the-three-way-fan-of-aimed-shots">The three-way fan of aimed shots</h2>
+<p>One enemy does not fire one shot: it fires three. The angle to the ship is measured, its top nibble is taken — sixteen directions — and three shots go out with that number, the one beside it and the one before it. The two speeds for each direction are worked out in advance in the table at 0xB26A, four bytes per direction.</p>
+<h2 id="stage-7-writes-its-spawns-one-by-one-packed-into-single-words">Stage 7 writes its spawns one by one, packed into single words</h2>
+<p>The other stages release enemies in bursts. The seventh has them written out: forty-three appearances in eighty-six bytes at 0xAF3F. Each one is a single word — the low byte and bit 0 of the high byte are a nine-bit distance, bits 1 and 2 are the variant, and the top five are the row.</p>
+<h2 id="stages-3-and-6-have-no-terrain-at-all">Stages 3 and 6 have no terrain at all</h2>
+<p>Their script range is 0xFFFF, so the test that decides whether the script applies always fails and the column builder falls through to the star routine. The whole stage is sky.</p>
+<h2 id="the-checkpoints-table-has-eleven-entries-and-stage-12-reads-past-the-end">The checkpoints table has eleven entries, and stage 12 reads past the end</h2>
+<p>The table at 0x4214 holds the distance each stage restarts at if you had already got that far. It is read with <code>HL = 0x4212</code> and twice the stage number, so stage 1 takes the word at 0x4214 and stage 11 the one at 0x4228 — and <b>stage 12 reads at 0x422A, which is already code</b>: the first two bytes of the <code>call 0x58BA</code> that starts the next routine.</p>
+<p>What comes out is 0xBACD, that is 47,821, a distance the scroll never gets anywhere near, so the comparison always fails and stage 12 simply restarts at 0x20. The bug is real and its effect is nothing.</p>
+<h2 id="the-keyboard-cheats-only-exist-while-the-game-is-paused">The keyboard cheats only exist while the game is paused</h2>
+<p>0x44E7 watches the GRAPH key and, with the screen stopped, 0x50C9 collects letters into 0xE1E8 until RETURN. Typing them while playing does nothing. Measured in openMSX with <code>tools/omsx_claves.tcl</code>: paused, 0xE1E8 fills with <code>4F 50 54 49 4F 4E</code> and on RETURN 0xE20B goes from 00 to 02.</p>
+<p>Besides the seven usual words there are twelve more, one per stage, all women&#x27;s names, and <code>BAKA</code> and <code>AHO</code> — <em>idiot</em> and <em>fool</em> — which zero the lives.</p>
+<h2 id="the-demo-is-a-recording-of-the-joystick">The demo is a recording of the joystick</h2>
+<p>Bank 12 holds, per stage, a list of pairs [how many frames][what the joystick reads]. The recorded value is dropped into the very byte where the real joystick is read, with the fire bit forced on, and the run starts fully powered by calling the same routine the <code>HYPER</code> cheat calls.</p>
+<h2 id="sprite-priority-is-rotated-so-the-flicker-is-shared">Sprite priority is rotated so the flicker is shared</h2>
+<p>The MSX drops the last sprites of the table when more than four land on a line. The buffer is therefore uploaded in thirty-two pieces of four bytes, starting at a different place every frame, so no object is always the one that disappears.</p>
+<h2 id="when-a-boss-dies-the-screen-is-eaten-not-cleared">When a boss dies, the screen is eaten, not cleared</h2>
+<p>Blocks of 0x200 bytes come down from VRAM, get an AND with a mask and go back up. First one pass over the colour table with 0xF0, then eight passes over the pattern table with 0xFE, 0xFC, 0xF8... down to 0x00, and the mask is rotated three bits per byte so the black comes in crumbled instead of in rows.</p>
+<h2 id="in-stage-5-the-background-is-characters-not-sprites">In stage 5 the background is characters, not sprites</h2>
+<p>The fifth stage is the only one with its own background engine. Its objects have no sprite card: they are rectangles of characters written into the map. Two twin routines run one frame apart — first they are erased, then, once moved, painted again — and the turret that slides out is drawn half way while it emerges, with only as many rows as it has come out.</p>
+<h2 id="the-hidden-konami-mark">The hidden Konami mark</h2>
+<p>At the end of bank 3, at offset 0x07FFF of the dump: <b>RC-742</b> and eight katakana that read <b>グラディウス</b>, <em>Gradius</em>. The signature Konami hid in its cartridges, found and documented by <b>Manuel Pazos</b>.</p>
+<footer><p><em>Nemesis / Gradius</em> was published by Konami for the MSX in 1986; its catalogue number is RC-742 and it is 128 KB. All rights in the game remain with their holders. This is preservation, study and documentation work, and the cartridge image is not distributed.</p></footer></div>

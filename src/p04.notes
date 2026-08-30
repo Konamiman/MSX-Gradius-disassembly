@@ -1,0 +1,33 @@
+# Banco 4 (se ejecuta en 0x6000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# ESTE BANCO NO LLEVA CODIGO. Sus 8192 bytes son graficos comprimidos con el
+# formato de 0x49B9 (ver tools/rle.py): patrones y colores de los decorados de
+# cada fase. Quien los pide es la rutina 0x4371 del banco 0, que recorre unas
+# fichas de seis bytes -bandera, origen de los colores, indice de caracter,
+# origen de los patrones- guardadas en el banco 5, y le pasa cada origen a
+# 0x49B9. Por eso casi ningun bloque aparece apuntado por un `ld de,nnnn`: la
+# direccion sale de la ficha, no de una instruccion.
+#
+# Que los bloques encajen unos con otros sin dejar ni un byte suelto no es
+# casualidad: es la prueba de que el formato esta bien leido. Un byte de mas o
+# de menos en cualquiera de ellos y el siguiente empezaria donde no debe.
+
+B 0x6000 GRAFICOS DE LOS DECORADOS (banco 4, 8192 bytes)
+B 0x6000 Todo el banco es flujo comprimido para 0x49B9. Los cortes de abajo
+B 0x6000 son los sitios exactos que pide el codigo del banco 0 con un
+B 0x6000 `ld de,nnnn`; entre corte y corte hay cadenas de bloques que se
+B 0x6000 piden desde las fichas de seis bytes del banco 5.
+
+D 0x6000 0x62C7 graficos_cadena_6000  Cadena de 19 bloques comprimidos, del 0x6000 al 0x62C6, que encajan sin holgura. Los piden las fichas del banco 5 (0x4371), no una instruccion con la direccion escrita.
+F 0x6000 16
+D 0x62C7 0x6379 graficos_colores_30A8  Bloque comprimido que 0x53FF y 0x5408 vuelcan en la VRAM 0x30A8 y 0x3160: colores del marcador.
+F 0x62C7 16
+D 0x6379 0x7674 graficos_cadena_6379  Cadena de 75 bloques comprimidos. El primero (0x6379) lo pide 0x53F6 para la VRAM 0x3058; los demas salen de las fichas del banco 5.
+F 0x6379 16
+D 0x7674 0x7703 graficos_patrones_10A8  Bloque comprimido que 0x541A vuelca en la VRAM 0x10A8: patrones del marcador.
+F 0x7674 16
+D 0x7703 0x7793 graficos_patrones_1160  Bloque comprimido que 0x5423 vuelca en la VRAM 0x1160.
+F 0x7703 16
+D 0x7793 0x8000 graficos_cadena_7793  Cadena de 49 bloques comprimidos hasta el final del banco. El primero (0x7793) lo pide 0x5411 para la VRAM 0x1058.
+F 0x7793 16

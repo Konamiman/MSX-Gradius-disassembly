@@ -1,0 +1,23 @@
+# Banco 8 (se ejecuta en 0xA000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# ESTE BANCO NO LLEVA CODIGO. Es la segunda mitad de los datos de sonido: el
+# banco 7 (0x8000) y el 8 (0xA000) se mapean SIEMPRE juntos -la interrupcion
+# lo hace en p00:402C-p00:4032 y el disparador de sonidos en p00:49EF-p00:49FB-,
+# de modo que para el reproductor son 16 KB seguidos de 0x8000 a 0xBFFF.
+#
+# Que estos bytes son la continuacion del sonido lo dice la tabla de 80
+# punteros del banco 7 (0x8328): sus ultimas entradas apuntan a 0xA034,
+# 0xA05D, 0xA09A, ... 0xA3BE, y las tres ultimas a 0xA3DE, que es justo el
+# primer byte de relleno. Nadie apunta aqui con una direccion escrita en una
+# instruccion, y por eso hacia falta la tabla para saberlo.
+
+B 0xA000 DATOS DE SONIDO, SEGUNDA MITAD (banco 8)
+B 0xA000 Continuacion de los datos del banco 7. Los indexa la tabla de 80
+B 0xA000 punteros de 0x8328 (banco 7), que es la que traduce numero de
+B 0xA000 sonido a direccion.
+
+D 0xA000 0xA3DE sonido_continuacion  Datos de melodias y efectos, continuacion del banco 7. Los ultimos catorce punteros de la tabla 0x8328 caen aqui (0xA034 a 0xA3BE); 0xA3DE es el "sonido vacio" al que apuntan las tres ultimas entradas.
+F 0xA000 16
+D 0xA3DE 0xC000 relleno  Relleno 0xFF hasta los 8192 bytes del banco.
+F 0xA3DE 16

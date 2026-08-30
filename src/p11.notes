@@ -1,0 +1,25 @@
+# Banco 11 (se ejecuta en 0x8000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# ESTE BANCO NO LLEVA CODIGO. Es la primera mitad del MAPA: se mapea siempre
+# junto con el banco 12 (0xA000) -p00:4552-p00:455C, p00:460E-p00:4618,
+# p00:5CE1-p00:5CEB y p00:5D84-p00:5D8E-, asi que para el codigo del scroll son
+# 16 KB seguidos de 0x8000 a 0xBFFF.
+#
+# COMO SE DIBUJA EL FONDO. La rutina 0x46DF del banco 0 saca un byte del guion
+# de la fase, lo multiplica por 16 y lo suma a 0x8000 (o a 0x8FF0 en las fases
+# 5, 9, 10 y 12, p00:46F2-p00:4708). Lo que hay ahi son dieciseis bytes: una
+# columna de cuatro caracteres tomados de cuatro en cuatro. O sea, cada byte
+# del guion es una PIEZA de 4x4 caracteres, y el mapa entero se escribe con
+# esas piezas.
+
+B 0x8000 PIEZAS DEL FONDO Y GUIONES DE FASE (banco 11)
+
+D 0x8000 0x8FF0 piezas_A  255 piezas de 16 bytes cada una (4x4 caracteres). El indice sale del guion de la fase; 0x470B suma 16*indice a 0x8000.
+F 0x8000 16
+D 0x8FF0 0x97DE piezas_B  El otro juego de piezas, con base 0x8FF0. Lo usan las fases 5, 9, 10 y 12 (0x46F5-0x4706 compara 0xE061 con 5, 9, 10 y 12).
+F 0x8FF0 16
+D 0x97DE 0x97F8 tabla_de_guiones  Trece palabras, una por fase: donde empieza el guion de esa fase. La lee 0x46C3 con 0x47AE. La entrada 0 vale 0x0000 (no hay fase 0); de la 1 a la 6 apuntan a este banco y de la 7 en adelante al banco 12.
+F 0x97DE w2
+D 0x97F8 0xA000 guiones_1  Los guiones de las fases 1 a 6 (0x97F8, 0x99A8, 0x9B58, 0x9D08 y 0x9F18), uno detras de otro. Filas de seis bytes.
+F 0x97F8 6

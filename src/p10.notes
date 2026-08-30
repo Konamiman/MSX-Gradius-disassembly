@@ -1,0 +1,110 @@
+# Banco 10 (se ejecuta en 0xA000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# Banco mixto: 424 bytes de codigo y el resto datos. Se mapea junto con el 9
+# (0x8000) para las pantallas fijas, y tambien junto con el 2 (p00:4B0A) para
+# cargar los graficos del marcador.
+D 0xA000 0xA0DB datos_A000  219 bytes que ninguna instruccion apunta con la direccion escrita: van pegados por delante del primer bloque comprimido del banco. SUPOSICION: son la cabecera o la primera parte de esa misma tanda de graficos.
+F 0xA000 16
+D 0xA0DB 0xA3F4 graficos_patrones_2418  Bloque comprimido que 0x4B17 pasa a 0x4988 con HL=0x2418: se vuelca tres veces, una por tercio, sumando 0x800. En este cartucho los patrones viven en la VRAM 0x2000 y los colores en la 0x0000, al reves de lo que pone la BIOS.
+F 0xA0DB 16
+D 0xA3F4 0xA683 graficos_colores_0418  Bloque comprimido que 0x4B20 pasa a 0x4988 con HL=0x0418.
+F 0xA3F4 16
+D 0xA683 0xA758 graficos_sprites_1800  Bloque comprimido que 0x4B29 vuelca en la VRAM 0x1800, que en este cartucho es la tabla de patrones de sprite.
+F 0xA683 16
+D 0xA758 0xA783 graficos_patrones_2780  Bloque comprimido que 0x5C4B pasa a 0x4988 con HL=0x2780.
+F 0xA758 16
+D 0xA783 0xA7A4 graficos_colores_0780  Bloque comprimido que 0x5C54 pasa a 0x4988 con HL=0x0780.
+F 0xA783 16
+D 0xA7A4 0xA809 graficos_sprites_1800_b  Bloque comprimido que 0x5C5D vuelca en la VRAM 0x1800, la de patrones de sprite.
+F 0xA7A4 16
+B 0xA809 UN MOTOR DE CUATRO SPRITES POR BICHO, SOLO PARA LA PANTALLA FIJA
+B 0xA809 Este banco lleva su propio motorcillo, aparte del del juego: ocho fichas
+B 0xA809 de ocho bytes en 0xE300, tres soltadores en 0xE500 y, para cada ficha,
+B 0xA809 hasta CUATRO fichas de sprite seguidas en el buffer de 0xEC80. Cada
+B 0xA809 bicho va asomando de sprite en sprite -el byte 5 cuenta cuantos lleva- y
+B 0xA809 se mueve con un par de desplazamientos fijos que le tocan por su tipo.
+L 0xA809 monta_la_pantalla   Limpia la RAM de trabajo, pone los tres soltadores y se copia a si mismo una rutina a 0xE710
+C 0xA809 0x800 bytes de 0xE300 en adelante, a cero
+C 0xA816 Los tres soltadores, de 0xA881 a 0xE500
+C 0xA81C Tres fichas
+C 0xA81F Cuatro bytes utiles de cada una
+C 0xA82E 0xE700, 0xE702 y 0xE704: por donde empieza cada uno
+C 0xA83D Y 0x38 bytes de rutina, copiados a 0xE710 para ejecutarlos desde la RAM
+D 0xA849 0xA881 rutina_para_la_RAM  56 bytes que 0xA840 copia con LDIR a 0xE710. Se ejecutan desde la RAM, no desde aqui.
+F 0xA849 16
+D 0xA881 0xA88D valores_iniciales  Tres grupos de cuatro bytes que 0xA816 reparte en 0xE500, dejando cuatro huecos entre grupo y grupo.
+F 0xA881 4
+L 0xA88D anda_la_pantalla   Un cuadro entero: mueve los bichos, deja que los soltadores suelten mas, y arma las fichas de sprite
+L 0xA897 mueve_los_ocho   Las ocho fichas de ocho bytes de 0xE300, una por una
+C 0xA89B Ocho fichas
+C 0xA89E La ficha vacia no se toca
+C 0xA8A6 Ocho bytes: la ficha siguiente
+L 0xA8AE paso_de_un_bicho   Mientras asoma le va anadiendo sprites, y ya entero se mueve hasta salirse
+C 0xA8AE El byte 1: si ya ha acabado de asomar
+C 0xA8B4 El byte 2: los cuadros hasta el sprite siguiente
+C 0xA8B8 Dos cuadros por sprite
+C 0xA8BC El byte 5: un sprite mas
+C 0xA8C2 Cuatro sprites y ya esta entero
+L 0xA8C9 el_bicho_se_mueve   Los dos desplazamientos que le tocan a su tipo; al salirse por abajo o por la derecha, la ficha se apaga
+C 0xA8D0 La tabla de 0xA8F3: dos bytes por tipo
+C 0xA8D4 El byte 3, la fila, mas el suyo
+C 0xA8DC Pasada la fila 0xC0, fuera
+C 0xA8E4 Y el byte 4, la columna
+C 0xA8EB Pasada la columna 0xF0, tambien
+D 0xA8F3 0xA90B desplazamientos  Veinticuatro bytes que lee 0xA8D0.
+F 0xA8F3 24
+L 0xA90B corren_los_soltadores   Los tres soltadores de 0xE500 sueltan un bicho cada ocho cuadros
+C 0xA90F Tres soltadores
+C 0xA912 El byte 2: los cuadros que faltan
+C 0xA917 Ocho cuadros entre bicho y bicho
+C 0xA91F Ocho bytes: el soltador siguiente
+L 0xA927 suelta_un_bicho   Elige el tipo en la tabla de 0xA989, busca ficha libre en las ocho y la rellena con su posicion, su dibujo y su color
+C 0xA927 El tipo del soltador, por cuatro
+C 0xA92D El byte 5: cual de los cuatro le toca
+C 0xA932 Cada cuatro bichos, 0x60 cuadros de descanso
+C 0xA93A Uno mas para la proxima
+C 0xA93E La tabla de 0xA989: cuatro tipos por soltador
+C 0xA946 Las ocho fichas de 0xE300
+C 0xA94C La primera con el primer byte a cero
+C 0xA956 El tipo, en el primer byte
+C 0xA958 Sin sprites todavia, y dos cuadros para el primero
+C 0xA95E El tipo por tres: la tabla de 0xA995
+C 0xA96B La fila del soltador mas su desvio...
+C 0xA970 ...y su columna
+C 0xA977 El byte 5 a uno: un sprite ya
+C 0xA97D Y de 0xA9B9 sale su color
+D 0xA989 0xA995 tabla_A989  Doce bytes que lee 0xA93E.
+F 0xA989 12
+D 0xA995 0xA9B9 tabla_A995  Treinta y seis bytes que lee 0xA961.
+F 0xA995 12
+D 0xA9B9 0xA9C2 tabla_A9B9  Nueve bytes que lee 0xA97D.
+F 0xA9B9 9
+L 0xA9C2 arma_las_fichas_de_sprite   Por cada uno de los ocho bichos, cuatro fichas de sprite en el buffer de 0xEC80
+C 0xA9C2 Ocho bichos
+C 0xA9C8 0xEC80: el buffer de atributos de sprite
+C 0xA9CC Vacia o llena, cada bicho ocupa sus cuatro fichas
+C 0xA9D8 Ocho bytes: el bicho siguiente
+L 0xA9E1 cuatro_fichas_apagadas   0x10 bytes a 0xE0: los cuatro sprites de este bicho, fuera de pantalla
+L 0xA9E9 fichas_de_este_bicho   Una ficha por sprite asomado, con el desvio que le toca a su tipo en la tabla de 0xAA46
+C 0xA9E9 El tipo por ocho: la tabla de 0xAA46
+C 0xA9F7 El byte 5: cuantos sprites lleva
+C 0xA9FE La fila del bicho mas el desvio...
+C 0xAA02 ...y por debajo de la 0xC0 no se dibuja
+C 0xAA0B ...y su columna
+C 0xAA10 Si la columna da la vuelta, el sprite se apaga
+C 0xAA26 El byte 6: el dibujo
+C 0xAA2B Y el byte 7: el color
+L 0xAA32 apaga_las_que_sobran   Los sprites que aun no han asomado, con 0xE0 en los cuatro bytes
+C 0xAA32 Cuatro menos los que lleva
+C 0xAA39 0xE0: el VDP no los dibuja
+C 0xAA3B Los cuatro bytes de la ficha
+C 0xAA42 Y a por la siguiente
+D 0xAA46 0xAAA6 tabla_AA46  Noventa y seis bytes que lee 0xA9EF.
+F 0xAA46 16
+D 0xAAA6 0xAAB0 tabla_AAA6  Cinco palabras que lee 0x831B del banco 2 con 0x47AE, indexando con (IX+6).
+F 0xAAA6 w2
+D 0xAAB0 0xAF29 datos_AAB0  Lo que apunta la tabla de arriba, y lo que lee 0x834F del banco 2. 1145 bytes hasta donde empieza el relleno.
+F 0xAAB0 16
+D 0xAF29 0xC000 relleno  Relleno 0xFF hasta los 8192 bytes del banco.
+F 0xAF29 16

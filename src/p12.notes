@@ -1,0 +1,15 @@
+# Banco 12 (se ejecuta en 0xA000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# ESTE BANCO NO LLEVA CODIGO. Es la segunda mitad del MAPA: va siempre pegado
+# al banco 11 (0x8000), que se mapea a la vez, asi que el guion de una fase
+# puede empezar en un banco y acabar en el otro.
+
+D 0xA000 0xB2E4 guiones_2  Los guiones de las fases 7 a 12 (0xA098, 0xA2D8, 0xA428, 0xA578 y 0xA668), a los que apunta la tabla 0x97DE del banco 11. El trozo de 0xA000 a 0xA097 es la cola del guion que empieza en 0x9F18, en el banco 11.
+F 0xA000 6
+D 0xB2E4 0xB2EC tabla_de_finales  Cuatro palabras (0xB2EC, 0xB379, 0xB3F4, 0xB48A). La lee 0x5D95 del banco 0 con `ld hl,0xB2D2` y 0x47AE, o sea con la base declarada OCHO PALABRAS mas atras: solo valen los indices 9 a 12, y las entradas de las fases 1 a 8 caerian encima del guion anterior. Es el mismo truco que la tabla 0x42AD.
+F 0xB2E4 w2
+D 0xB2EC 0xB649 registros_de_final  Lo que apunta la tabla de arriba: grupos de tres bytes (cuenta, y una palabra) que 0x5DAA lee con `ld c,(hl) / ld e,(hl) / ld d,(hl)`.
+F 0xB2EC 3
+D 0xB649 0xC000 relleno  Relleno 0xFF hasta los 8192 bytes del banco.
+F 0xB649 16

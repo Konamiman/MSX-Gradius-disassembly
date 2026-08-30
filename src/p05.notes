@@ -1,0 +1,50 @@
+# Banco 5 (se ejecuta en 0x8000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# ESTE BANCO NO LLEVA CODIGO. Lleva dos cosas:
+#
+#   - las FICHAS de seis bytes con las que la rutina 0x4371 del banco 0 carga
+#     los decorados: bandera de que tercio de pantalla, origen de los colores,
+#     indice del caracter donde empieza, origen de los patrones. La bandera a
+#     cero acaba la lista.
+#   - graficos comprimidos con el formato de 0x49B9 (tools/rle.py), igual que
+#     todo el banco 4.
+#
+# Los origenes de las fichas apuntan a este banco Y al 4, porque los dos se
+# mapean a la vez (el reparto 4/5/6 de p00:4234 y sus copias). Recorriendo las
+# fichas salen 198 origenes distintos, y todos caen dentro de 0x6000-0x9FFF.
+
+B 0x8000 GRAFICOS Y FICHAS DE CARGA (banco 5)
+
+D 0x8000 0x86BB graficos_cadena_8000  Cadena de 20 bloques comprimidos que encajan sin holgura, del 0x8000 al 0x86BA. Los piden las fichas de este mismo banco.
+F 0x8000 16
+D 0x86BB 0x8FCB graficos_por_fase  Siete bloques comprimidos seguidos (0x86BB, 0x8A8C, 0x8C1E, 0x8D27, 0x8E4B, 0x8ECA, 0x8F3E). Los reparte la tabla 0x42B3 del banco 0: dos bloques por fase, cada uno con el indice de caracter donde empieza.
+F 0x86BB 16
+D 0x8FCB 0x91D1 graficos_1D00  Dos bloques: 0x8FCB, que 0x4287 vuelca en la VRAM 0x1D00, y 0x9038, que pide la tabla 0x42B3 para la fase 5.
+F 0x8FCB 16
+D 0x91D1 0x92E3 formas_de_objeto  Cuatro bytes por forma: los dos caracteres de arriba y los dos de abajo del objeto. Los lee 0x48CB indexando con (IX+0x0C)*4, y los escribe en la tabla de nombres separados por 0x1E.
+F 0x91D1 4
+D 0x92E3 0x92FB listas_de_fichas_A  Doce palabras, una por fase: donde empieza la lista de fichas de 0x4371 de esa fase. La lee 0x4306 con 0x47AE (DE = palabra en HL+2*A).
+F 0x92E3 w2
+D 0x92FB 0x9313 listas_de_fichas_B  Doce palabras, una por fase. La lee 0x4316.
+F 0x92FB w2
+D 0x9313 0x932D listas_de_fichas_C  Trece palabras, una por fase. La lee 0x4320.
+F 0x9313 w2
+D 0x932D 0x938E fichas_comunes  Dieciseis fichas de seis bytes y el 0x00 que las acaba. Las carga 0x42FC en cualquier fase.
+F 0x932D 6
+D 0x938E 0x939B fichas_extra_1  Dos fichas de seis bytes y su 0x00. Las carga 0x432B, y solo cuando 0xF0F4 no vale cero.
+F 0x938E 6
+D 0x939B 0x93A8 fichas_extra_2  Dos fichas de seis bytes y su 0x00. Las carga 0x4337, y solo de la fase 9 en adelante.
+F 0x939B 6
+D 0x93A8 0x98A3 fichas_por_fase  Las listas de fichas a las que apuntan las tres tablas de arriba, una detras de otra: 0x93A8, 0x9403, 0x9434, 0x9477, 0x94D8, 0x9527, 0x9546, 0x95BF, 0x961A, 0x963F, 0x9664, 0x9689, 0x96AE, 0x96C7, 0x96EC, 0x96F9, 0x9712, 0x972F, 0x9733, 0x9750, 0x9779, 0x9782, 0x979F, 0x97B4, 0x97C9, 0x97FE, 0x9837, 0x9838, 0x9865 y 0x988E.
+F 0x93A8 6
+D 0x98A3 0x98B0 fichas_del_disparador  Dos fichas de seis bytes y su 0x00, que carga 0x4A86.
+F 0x98A3 6
+D 0x98B0 0x98B9 lista_de_0x4348  Nueve bytes que 0x4A92 le pasa a 0x4348 en IX. Formato distinto del de las fichas de 0x4371.
+F 0x98B0 9
+D 0x98B9 0x9963 graficos_de_las_fichas_extra  Cinco bloques comprimidos de 34 bytes (0x98B9, 0x98DB, 0x98FD, 0x991F, 0x9941): los patrones y colores que piden las fichas de 0x938E y 0x939B.
+F 0x98B9 16
+D 0x9963 0x9BE4 graficos_nombres_1800  Bloque comprimido que 0x4296 vuelca en la VRAM 0x1800 (la tabla de nombres) cuando 0xF0F4 no vale cero.
+F 0x9963 16
+D 0x9BE4 0xA000 relleno  Relleno 0xFF hasta los 8192 bytes del banco.
+F 0x9BE4 16

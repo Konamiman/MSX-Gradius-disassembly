@@ -1,0 +1,164 @@
+# Banco 7 (se ejecuta en 0x8000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# ES EL REPRODUCTOR DE SONIDO. La interrupcion (0x4028 del banco 0) mete este
+# banco en 0x8000 y el 8 en 0xA000, llama a 0x8063, y devuelve el reparto
+# anterior leyendolo de 0xF0F1..0xF0F3. Todo lo que suena sale de aqui, y todo
+# se escribe en el PSG por la BIOS: WRTPSG (0x0093) y RDPSG (0x0096).
+#
+# Del banco solo 794 bytes son codigo alcanzable; el resto son datos, y estan
+# indexados por la tabla de 80 punteros de 0x8328.
+B 0x8000 UN CANAL ES UNA FICHA DE 0x11 BYTES Y UN FLUJO DE MANDOS
+B 0x8000 El reproductor lleva tres fichas iguales, en 0xE010, 0xE021 y 0xE032,
+B 0x8000 de 0x11 bytes cada una: el byte 0 es la cuenta atras de la nota que
+B 0x8000 suena, el 1 lo que dura, el 2 el modo, los 3 y 4 por donde va su flujo
+B 0x8000 de mandos, el 5 los interruptores -tono, ruido y envolvente-, el 6 el
+B 0x8000 salto de octava, del 7 al 9 el volumen y su caida, el 0x0B la unidad de
+B 0x8000 tiempo, el 0x0C el sostenido, el 0x0D y el 0x0E los tiempos de la
+B 0x8000 envolvente, y el 0x0F y el 0x10 el ultimo periodo escrito. Todo lo que
+B 0x8000 suena sale de leer esos flujos byte a byte.
+L 0x8000 repite_el_flujo   La orden 0xFE: la palabra de detras dice adonde se vuelve, y el byte 10 cuenta las vueltas dadas
+C 0x8000 El byte 10: las vueltas que lleva
+C 0x8005 Contra las que pide la orden
+C 0x800C Una vuelta mas
+C 0x8010 Y el flujo se vuelve adonde diga la palabra
+L 0x801B ya_ha_dado_las_vueltas   El contador a cero y el flujo sigue por detras de la orden
+C 0x801E Las vueltas, a cero
+C 0x8024 El byte 0 sube uno: la nota de ahora se acaba ya
+L 0x802A pon_la_mezcla   Arma el registro 7 del PSG: por cada canal, si suena tono, si suena ruido, o ninguno
+C 0x802A 0xE043: la mezcla de ahora
+C 0x802E Los dos bits bajos del byte 5: tono y ruido
+C 0x8034 El numero de canal
+C 0x803B El bit 1: el ruido de este canal
+C 0x8046 Tres bits mas arriba estan los del ruido
+C 0x8049 Y el bit 0: su tono
+C 0x8053 La mezcla nueva, apuntada
+C 0x8057 El registro 7 del PSG
+L 0x805C apaga_ese_bit   El bit puesto a cero: ese canal suena
+L 0x8060 enciende_ese_bit   El bit puesto a uno: ese canal calla
+L 0x8063 suena   Lo que la interrupcion llama en cada cuadro (p00:4035), con los bancos 7 y 8 puestos.
+C 0x8063 0xE047: con el efecto de ruido en marcha, manda el
+C 0x806A 0xE04C a uno: al acabar hay que devolver los registros
+C 0x806F Mezcla 0xB8: los tres tonos callados y el ruido en C
+C 0x8073 WRTPSG con A=7: el registro de mezcla, el que decide que canales suenan y cuales sacan ruido.
+C 0x8076 0xE048: el primer cuadro del efecto
+C 0x807D Los cuatro bytes de la cuenta: 0, 7, 5 y 0x10
+C 0x8088 Los tres canales callados...
+C 0x808B ...y el periodo 0xD6 en A y B
+L 0x808D pon_tono_a_y_b   Escribe los registros 0, 2, 1 y 3 del PSG: los periodos de los canales A y B.
+C 0x808E El registro 0: el byte bajo del periodo de A
+C 0x8092 Y el 2: el de B
+C 0x8097 Los registros 1 y 3, los bytes altos, a cero
+L 0x80A3 anda_el_efecto_de_ruido   Baja las dos cuentas del efecto: la de dentro le va quitando volumen y la de fuera le cambia el registro de ruido
+C 0x80A3 0xE04A: solo con el efecto puesto
+C 0x80A9 La cuenta de dentro
+C 0x80AD Un cuadro de cada dos
+C 0x80B0 0xE04B: un escalon menos de volumen
+L 0x80BB pasa_de_paso_el_ruido   Agotada la cuenta de fuera, el efecto pasa al registro siguiente de 0x80D9; al acabarse, los canales callan
+C 0x80BC La cuenta de fuera
+C 0x80BD Y con ella agotada, se acabo el efecto
+C 0x80C2 Seis cuadros para el paso siguiente
+C 0x80C8 La tabla de 0x80D9: el periodo de cada paso
+C 0x80D0 Y el volumen vuelve a 0x0F
+D 0x80D9 0x80DD registros_del_ruido  Cuatro bytes que 0x80C8 indexa con `ld hl,0x80D9 / add hl,de / ld e,(hl)`: el valor que se le pasa al PSG en cada paso del efecto.
+F 0x80D9 4
+L 0x80DD calla_los_canales   Pone E a cero y cae en 0x80E4, o sea deja a cero el volumen de los tres canales.
+C 0x80DD Volumen cero
+C 0x80DF El registro 10: el volumen de C
+L 0x80E4 pon_volumen   Escribe E en los registros 9 y 8 del PSG: el volumen de los canales B y A.
+C 0x80E4 El registro 9: el de B
+C 0x80E9 Y el 8: el de A
+L 0x80ED devuelve_los_registros   Al acabarse el efecto de ruido, los cuatro periodos y los tres volumenes vuelven a lo que tenian los canales
+C 0x80ED 0xE04C: solo si el efecto habia pisado los registros
+C 0x80F4 Y ya no hay nada que devolver
+C 0x80F8 Los periodos guardados en las fichas
+C 0x8113 El volumen del canal A...
+C 0x811C ...el de B...
+C 0x8125 ...y el de C
+C 0x812E Y la mezcla que hubiera
+L 0x8134 anda_los_tres_canales   Las tres fichas de 0x11 bytes de 0xE010, una detras de otra
+C 0x8134 El canal A: registro 1
+C 0x8136 0xE010: la primera ficha
+C 0x813A 0xE044: la cuenta de callar
+C 0x8145 0x60 cuadros por paso
+C 0x8149 Seis pasos y se calla del todo
+C 0x8151 El canal que lleva el 0xA9 tiene ficha aparte
+C 0x8167 0x11 bytes: la ficha siguiente
+C 0x816B El byte 2 a cero: este canal no suena
+C 0x8179 Dos registros de PSG por canal
+L 0x8181 anda_un_canal   El interprete de un canal: saca el siguiente mando del flujo que apunta (IX+3, IX+4). 0xFE y los codigos por encima son ordenes; los de abajo, nota y duracion.
+C 0x8181 El byte 2: el modo
+C 0x8184 Con el bit 7 puesto, el canal va por otro lado
+C 0x8189 El byte 0: los cuadros que le quedan a la nota
+C 0x818D Los bytes 3 y 4: por donde va el flujo
+C 0x8193 El byte de mando del canal.
+C 0x8194 0xFE es la orden que salta al principio del banco.
+C 0x8199 Y por encima de 0xFE, el canal se calla
+C 0x819F El bit 7 del modo
+C 0x81A5 Los mandos 0x2x son los interruptores
+C 0x81AC El byte 5: tono, ruido y envolvente
+C 0x81B1 Y el byte 1: la duracion
+C 0x81B8 El 0x20 pelado no lleva nada detras
+C 0x81C1 El bit 3 del byte 5: lleva envolvente
+C 0x81CB Registros 12 y 11 del PSG: el periodo de la envolvente.
+C 0x81CF Y el 11, el byte bajo
+C 0x81D7 El mando 0x1x: el periodo del ruido
+C 0x81DF Su nibble bajo, por dos
+C 0x81E5 Registro 6: el periodo del ruido.
+C 0x81E9 El nibble alto: la nota
+C 0x81ED Y el bajo, con el byte de detras: el periodo
+L 0x81F1 pon_la_nota   Escribe el periodo en los dos registros del canal y arranca la cuenta de la nota
+C 0x81F9 El nibble alto, abajo: el volumen
+C 0x8201 (IX+1) es la duracion, y se recarga en (IX+0), que es la cuenta atras.
+L 0x8206 calla_este_canal   El byte 2 a cero, sin dibujo y sin interruptores
+C 0x8206 El byte 2 a cero: el canal no suena
+L 0x8213 baja_un_escalon_mas   Un escalon de mas en la caida
+L 0x8216 baja_el_volumen   El byte 8 baja de uno en uno hasta cero
+C 0x8216 El byte 8: el volumen de ahora
+C 0x821A Por debajo de cero ya no
+L 0x821F escribe_volumen_y_mezcla   La mezcla, y el volumen del canal -o la envolvente, si la lleva-
+C 0x821F La mezcla, por si ha cambiado
+C 0x8222 El registro de volumen de este canal: 8, 9 o 10
+C 0x8227 El bit 3 del byte 5: lleva envolvente
+C 0x822E El registro 13: la forma de la envolvente
+C 0x8233 Y el volumen con el bit 4: lo manda la envolvente
+L 0x823B anda_el_canal_de_melodia   Con el bit 7 del modo puesto, la nota ademas se va apagando sola: el byte 9 dice cuando empieza a caer
+C 0x823B Los cuadros que le quedan a la nota
+C 0x823E Agotada, al mando siguiente
+C 0x8241 El byte 9: cuando empieza a caer
+C 0x824D El byte 14: el suelo de la caida
+L 0x8255 lee_el_mando_de_melodia   Los mandos 0xDx, 0xFx y 0xEx ajustan tiempo, volumen, envolvente y octava; el ultimo nibble es la nota
+C 0x8255 El mando 0xDx: la unidad de tiempo
+C 0x825F El byte 11: lo que dura una figura
+C 0x8264 El mando 0xFx: el volumen
+C 0x826C El byte 7: el volumen de partida
+C 0x8271 Y el byte de detras trae los dos tiempos
+C 0x8277 El nibble alto, al byte 13...
+C 0x827B ...y el bajo, al 14
+C 0x8282 El mando 0xEx: sostenido u octava
+C 0x8288 El bit 3: sostenido
+C 0x828C El byte 12: medio tono mas
+C 0x8292 Y si no, el byte 6: el salto de octava
+C 0x8297 El nibble bajo: cuantas figuras dura
+C 0x829F La unidad de tiempo, sumada tantas veces
+C 0x82A4 El byte 1: lo que dura la nota
+C 0x82AB El nibble alto: la nota
+C 0x82B2 La nota 0x0C es el silencio
+C 0x82B9 0xE044: callando, el volumen baja de golpe
+C 0x82C9 El byte 8: el volumen de ahora
+C 0x82D0 El byte 0: la cuenta atras de la nota
+C 0x82D3 Y el byte 9: cuando empieza a caer
+C 0x82DB La tabla de 0x831E: el periodo de las doce notas
+C 0x82E6 El byte 6: cada octava, el periodo por dos
+C 0x82F0 El byte 12: el sostenido sube uno el periodo
+C 0x82F7 El registro alto del canal...
+C 0x8302 ...y el bajo, guardados los dos en la ficha
+C 0x8308 El bit 7 del modo: en melodia, se sigue por otro lado
+C 0x830F El byte 5 a dos: solo tono
+L 0x8316 guarda_el_puntero   Deja en (IX+3, IX+4) por donde se ha quedado el flujo del canal.
+D 0x831E 0x8328 tabla_descendente  Diez bytes en cuesta abajo (0x6B, 0x65, 0x5F, 0x5A, 0x55, 0x50, 0x4C, 0x47, 0x43, 0x40) que lee 0x82DB.
+F 0x831E 10
+D 0x8328 0x83C8 tabla_de_sonidos  Ochenta palabras: la direccion de cada sonido. La lee 0x4A49 del banco 0 con `ld de,0x8328` y `call 0x4062` (DE += A), con A = numero de sonido por dos. La entrada 0 (0x393C) no es una direccion del cartucho: el sonido 0 no existe. Las tres ultimas apuntan a 0xA3DE, el primer byte de relleno del banco 8, o sea a un sonido vacio.
+F 0x8328 w2
+D 0x83C8 0xA000 datos_de_sonido  Las melodias y los efectos, uno detras de otro, en el orden en el que los nombra la tabla de arriba: 0x83C8, 0x83F3, 0x8400, ... 0x9FBF. Siguen en el banco 8, que se mapea a la vez.
+F 0x83C8 16

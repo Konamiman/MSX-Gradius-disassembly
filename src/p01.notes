@@ -1,0 +1,1097 @@
+# Banco 1 (se ejecuta en 0x6000). Directivas: L etiqueta, C comentario de
+# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+#
+# Este banco va SOLDADO a sus vecinos por los dos lados, y no es una manera de
+# hablar:
+#
+#   - por arriba, el codigo del banco 0 sigue de largo de 0x5FFF a 0x6000. El
+#     bucle que empieza en p00:5FFB (`push bc / call 0x6008 / pop bc`) acaba
+#     aqui mismo, en 0x6000-0x6007, con el `ld de,0x0008 / add ix,de / djnz /
+#     ret`.
+#   - por abajo, la ULTIMA INSTRUCCION DEL BANCO ESTA PARTIDA. En 0x7FFE hay
+#     `21 41` y el tercer byte, el 0x80, es el primer byte del banco 2: entre
+#     los dos forman `ld hl,0x8041`, y la ejecucion sigue en 0x8001. Es el
+#     unico sitio del cartucho donde pasa esto. Aqui se lista como dos bytes
+#     sueltos porque el listado de este banco no puede ver el tercero.
+B 0x6000 EL BANCO EMPIEZA A MEDIO BUCLE
+L 0x6000 fin_del_bucle_del_banco_0  Aqui acaba el bucle que empieza en p00:5FFB. El codigo cruza la frontera del banco.
+B 0x6008 LOS MOTORES DE LOS ENEMIGOS
+B 0x6008 Este banco es el que mueve a los bichos. p00:5FFC llama a 0x6008 una vez
+B 0x6008 por objeto, con IX apuntando a su ranura, y de ahi sale un reparto por
+B 0x6008 el tipo (IX+0) y por el paso en el que va (IX+1): cada enemigo es una
+B 0x6008 maquinita de estados diminuta con su contador de cuadros en (IX+4).
+L 0x6008 anda_objeto   La llama p00:5FFC una vez por objeto: si la ranura esta viva, le da un paso a su motor
+C 0x6008 El primer byte a cero: la ranura esta libre
+L 0x6014 se_corre_con_el_scroll   En los pasos con columna nueva, el objeto se corre ocho puntos a la izquierda; al salirse por el borde, la ranura se libera
+C 0x6014 Solo en los pasos que meten columna
+C 0x601C Ocho puntos a la izquierda por paso
+C 0x6024 Y al salirse, la ranura se libera
+L 0x6029 paso_del_motor   Con la pantalla parada no se mueve nada; los tipos 1 y 2 disparan, y del 3 en adelante reparte por (IX+1)
+C 0x6029 0xE1C0 distinto de cero: la pantalla esta parada
+C 0x602E El tipo se apunta en 0xE123
+C 0x6034 Del tipo 3 en adelante, el otro reparto
+C 0x603D Un cuadro menos para el disparo siguiente
+C 0x6041 Ocho cuadros entre bicho y bicho
+C 0x604B El bit 0 del tipo: el 1 los suelta por arriba y el 2 por abajo
+C 0x605C El tipo 7: el bicho que sale de la escotilla
+C 0x606E La X y la Y de la nave, que los motores necesitan
+C 0x6079 Menos tres: los tipos 3, 4, 5 y 6
+D 0x607E 0x6086 tabla_del_despachador_607B  Cuatro palabras pegadas detras del `call 0x4067` de 0x607B (0x610E, 0x6131, 0x614A, 0x615B). El indice es (IX+0) menos tres.
+F 0x607E w2
+L 0x6086 motor_de_espera   Baja el contador y, cada cuatro cuadros, suelta un disparo del tipo 0x0E desde la posicion del bicho
+C 0x6089 A menos de 0x18 del borde izquierdo ya no dispara
+C 0x6093 Cuatro cuadros entre disparo y disparo
+C 0x609F La tabla de 0x60C1: donde le sale el disparo a cada tipo
+C 0x60A2 La tabla de 0x60C1
+C 0x60B2 El tipo 0x0E: el disparo con puntera
+L 0x60B7 acaba_la_tanda   Se agotaron los disparos: la espera hasta la tanda siguiente sale de la dificultad
+C 0x60BA 0xE111 por dos, restado de 0x40: a mas dificultad, menos espera
+D 0x60C7 0x60CF desplazamientos_60C1  Ocho bytes que 0x609F indexa con la base 0x60C1, que cae dentro del codigo.
+F 0x60C7 8
+L 0x60CF siguiente_paso   Corre el objeto lo que diga la tabla de 0x60E7 y le deja 0x0D cuadros
+C 0x60D5 Por dos: dos bytes por tipo
+C 0x60E8 Trece cuadros
+D 0x60ED 0x60F5 desplazamientos_60E7  Ocho bytes que 0x60D6 indexa con la base 0x60E7.
+F 0x60ED 8
+L 0x60F5 muere_al_agotarse   Cuando el contador llega a cero, la ranura se libera
+L 0x60FE pon_el_dibujo   El dibujo sale del tipo por dos, mas uno si se pide la variante
+C 0x6104 El tipo menos uno, por dos
+L 0x610E mira_si_pasa_por_delante   Espera a que la nave este a menos de 0x40 en X y 0x14 en Y, y entonces arranca
+C 0x6116 0x40 de margen en X
+C 0x611D Y 0x14 en Y
+L 0x6124 arranca_la_tanda   0x10 cuadros y 0x10 disparos, y al paso siguiente
+L 0x6131 mira_si_pasa_por_debajo   Lo mismo pero mirando 0x34 por debajo
+C 0x6131 Un cuadro menos
+C 0x613C 0x40 de margen en X
+C 0x6143 Y 0x34 por debajo
+L 0x614A mira_si_esta_delante   Solo mira la X, con 0x18 de margen
+C 0x614A Un cuadro menos
+C 0x6155 0x18 de margen en X
+L 0x615B mira_si_ya_paso   Arranca en cuanto la nave se queda detras
+C 0x615B Un cuadro menos
+L 0x616A corre_los_cuatro_de_e800   Los cuatro objetos de 0xE800, de ocho bytes cada uno
+C 0x616E Cuatro objetos
+C 0x6177 Ocho bytes por objeto
+L 0x617F llamada_muerta  `call 0x6014`. Nadie llega aqui.
+D 0x617F 0x6182 llamada_muerta  Tres bytes que son `call 0x6014`. Nadie llega a 0x617F: la instruccion de delante acaba en `ret` y ninguna tabla apunta aqui.
+F 0x617F 3
+L 0x6182 paso_del_objeto_de_e800   Se corre con el scroll y, cada cuatro cuadros, gasta una unidad de (IX+6); al agotarse, se apaga
+C 0x6189 Cuatro cuadros por unidad
+C 0x618D El byte 6 se gasta de uno en uno
+C 0x6190 Cuatro cuadros por unidad
+L 0x6196 borra_los_de_e800   Recorre los cuatro objetos de 0xE800 borrando su dibujo de la pantalla
+L 0x6199 pinta_los_de_e800   Lo mismo, pintandolos
+L 0x61A3 pinta_los_del_fondo   En las fases 3 y 5 no toca; en las demas, pinta los objetos de 0xE700
+C 0x61A3 Las fases 3 y 5 tienen su propio motor
+L 0x61AF pinta_los_del_fondo_o_el_banco3   La fase 5 se la lleva el banco 3; las demas pintan ocho objetos si es la 3, y dos si no
+C 0x61B4 La fase 5, al banco 3
+C 0x61C1 La fase 3 lleva ocho objetos; las demas, dos
+L 0x61CA recorre_los_de_e700   0xEC00 dice si se pinta o se borra, y luego pasa por los B objetos
+C 0x61CA 0xEC00 a cero borra, y a 0xFF pinta
+C 0x61D2 Ocho bytes por objeto
+L 0x61DA borra_los_del_fondo   Lo mismo pero borrando; la fase 5 tambien se la lleva el banco 3
+C 0x61DA La fase 5 se la lleva el banco 3
+C 0x61DD La fase 5 se la lleva el banco 3
+L 0x61E8 dibuja_un_objeto_del_fondo   Saca de la tabla que le toque el rectangulo de caracteres del objeto y lo pinta o lo borra
+C 0x61F0 El tipo 0x20 usa la tabla de 0x633A
+C 0x61F7 Los demas, la de 0x6370
+C 0x61FD Y en la fase 2, del dibujo 2 en adelante se salta doce
+L 0x620D pinta_el_rectangulo   Cuatro por cuatro caracteres en la casilla del objeto: 0x48F7 los borra y 0x490C los copia
+C 0x620D Cuatro de ancho por cuatro de alto
+C 0x6210 La casilla donde cae
+C 0x6219 Los tipos 3, 4, 5 y 6 llevan trozos de varios tamanos
+C 0x621F 0xEC00 decide: borrar o copiar
+L 0x6229 pinta_por_trozos   Los tipos grandes se pintan por trozos: la tabla de 0x6283 da el ancho, el alto y el desplazamiento de cada uno
+C 0x622D Por tres: tres bytes por trozo
+C 0x6236 El ancho, el alto y donde cae
+C 0x623C El bit 7 del tercer byte corre el trozo media casilla
+C 0x6246 El bit 7 del tercer byte corre el trozo media casilla
+L 0x6256 pinta_el_trozo_ancho   Un rectangulo de diez por uno, con el origen sacado de las dos tablas de 0x6273 y 0x64D4
+C 0x6259 Por dos: dos bytes por dibujo
+C 0x625A La tabla de 0x6273
+C 0x626D Por diez: diez caracteres por fila
+C 0x6275 Diez de ancho por uno de alto
+D 0x627B 0x6283 tabla_6273  Ocho bytes que 0x625A indexa con la base 0x6273.
+F 0x627B 8
+D 0x6283 0x62AD tabla_6283  Cuarenta y dos bytes que lee 0x6230.
+F 0x6283 8
+L 0x62AD suelta_los_del_fondo   Va sacando objetos de fondo mientras el guion tenga renglones para esta distancia
+C 0x62B0 La fase 5 se la lleva el banco 3
+C 0x62BE 0xE109 avanza al renglon siguiente
+L 0x62C1 suelta_los_del_fondo_con_columna   Lo mismo, pero solo en los pasos que meten columna nueva
+C 0x62C1 Solo en los pasos con columna
+C 0x62CE 0xF8 en 0xEC04
+L 0x62D9 mira_el_guion_del_fondo   Consulta el guion de 0x64FA con la rutina del banco 2 y, si toca, monta el objeto en la primera ranura libre de 0xE700
+C 0x62DF La rutina del banco 2 que compara la distancia
+C 0x62E7 Las ocho ranuras de 0xE700
+C 0x62EC Ocho bytes por ranura
+C 0x62F0 La primera ranura libre
+C 0x62F1 Ocho bytes por ranura
+C 0x62F3 Ocho bytes: la ranura siguiente
+L 0x62F8 monta_el_objeto_del_fondo   Rellena la ranura: tipo, contador, la X por ocho, la Y, y los dos bytes que dependen de si viene de arriba o de abajo
+C 0x6302 Los cinco bits bajos por ocho: la columna
+C 0x6309 La fila, de 0xEC04
+C 0x630E Con la fila 0xF8 se pone 0x18, y si no 0xFF
+C 0x6316 0xF8 o 0xFF segun de donde venga
+C 0x6318 Quince
+C 0x631A 0xE1FF a cero
+C 0x631B 0xE109: por que renglon del guion va
+L 0x6324 tipo_del_objeto_del_fondo   En la fase 3 el tipo sale de otra cuenta; en las demas, el bit 7 elige entre el 1 y el 2
+C 0x6327 La fase 3 va por otro lado
+C 0x632D El bit 7: uno de los dos tipos
+C 0x6332 Dos bits de C: uno de cuatro tipos
+D 0x633A 0x6340 tabla_633A  Tres palabras (0x6340, 0x6350, 0x6360) que lee 0x61F2.
+F 0x633A w2
+D 0x6340 0x6370 formaciones  Cuarenta y ocho bytes a los que apunta la tabla de arriba, y que ademas pide p00:4B9F con `ld de,0x6340`.
+F 0x6340 16
+D 0x6370 0x64D4 trayectorias  Lo que lee 0x61F7 con `ld hl,0x6370`, seguido.
+F 0x6370 16
+D 0x64D4 0x64FA tabla_64D4  Treinta y ocho bytes que lee 0x626A.
+F 0x64D4 8
+D 0x64FA 0x65DC tabla_64FA  Lo que lee 0x62DC con `ld hl,0x64FA`.
+F 0x64FA 16
+L 0x65DC corre_los_diez_de_e500   Los diez objetos de 0xE500: les suma la velocidad, mira si chocan y apaga a los que se salen
+C 0x65E0 Diez objetos
+C 0x65E8 Les suma su velocidad, y devuelve si siguen dentro
+C 0x65F1 Y el banco 2 mira si han chocado con algo
+C 0x65F6 Pasada la Y 0xB0 o la X 0xF0, se van
+C 0x660B Treinta y dos bytes: el objeto siguiente
+L 0x6613 dispara_el_enemigo   Monta un disparo hacia la nave: la velocidad sale de la dificultad, topada en 0x60
+C 0x6613 Con la pantalla parada no se dispara
+C 0x661C La dificultad por dos mas 0x50...
+C 0x6622 ...topada en 0x60
+C 0x6624 Topada en 0x60
+C 0x6635 Las diez ranuras de 0xE500
+C 0x6640 Treinta y dos bytes: la siguiente
+L 0x6646 monta_el_disparo   Rellena la ranura del disparo con su posicion y las dos velocidades que dejo 0x6677 en 0xEC12 y 0xEC14
+C 0x6646 0xE112 a uno: hay disparo nuevo
+C 0x6648 0xE112 a uno: hay disparo nuevo
+C 0x664F Los contadores, a cero
+C 0x6658 La velocidad vertical...
+C 0x665F ...y la horizontal
+C 0x6668 El patron y el color
+C 0x666B El patron 0x88 y el color 9
+C 0x6670 Catorce bytes mas alla, la marca de vivo
+B 0x6677 LA PUNTERIA DEL ENEMIGO EMPEORA A PROPOSITO... CON EL REGISTRO R
+B 0x6677 De la dificultad 7 en adelante, el disparo del enemigo NO va derecho a la
+B 0x6677 nave: se le mete un error sacado del registro R del Z80, cuatro bits, que
+B 0x6677 unas veces se suma y otras se resta segun el bit 6 de esa misma lectura.
+B 0x6677 Por debajo de la dificultad 7 el tiro va limpio. Es la cuarta vez que el
+B 0x6677 cartucho usa el registro de refresco como generador de numeros.
+L 0x6677 apunta_a_la_nave   Calcula hacia donde sale el disparo; de la dificultad 7 en adelante le mete un error del registro R
+C 0x667E Por debajo de la dificultad 7, sin error
+C 0x6685 El registro R: cuatro bits de error
+C 0x668A Y su bit 6 decide si se suma o se resta
+C 0x668C El bit 6 decide el signo del error
+C 0x6698 Topado en 0x3F
+B 0x669F EL SENO Y EL COSENO SALEN DE LA MISMA TABLA
+B 0x669F Para saber hacia donde sale el disparo hace falta el seno y el coseno del
+B 0x669F angulo, y el cartucho no guarda dos tablas: guarda UNA, la de 0x6853, y
+B 0x669F la lee dos veces. Una con el indice tal cual y otra con 0x3F menos el
+B 0x669F indice, que es justo el angulo complementario. Con eso saca las dos
+B 0x669F componentes, las multiplica por la velocidad (0x6731, con la
+B 0x669F multiplicacion de ocho por ocho hecha a mano de 0x6743) y les pone el
+B 0x669F signo que toque con el complemento a dos de 0x6729.
+L 0x669F saca_las_dos_velocidades   Lee la tabla de 0x6853 por los dos lados -el indice y su complemento a 0x3F- y de ahi salen las dos velocidades, la vertical y la horizontal
+C 0x66A2 0x3F menos el indice: el angulo complementario
+C 0x66A6 La tabla de 0x6853, leida por los dos extremos
+C 0x66A9 La tabla, por los dos extremos
+C 0x66B4 Por la velocidad
+C 0x66B7 0xEC10 dice si la X va hacia el otro lado
+C 0x66BE 0xEC12: la velocidad vertical, la de la diferencia de filas
+C 0x66D0 Y 0xEC14: la horizontal
+L 0x66D5 mide_la_distancia_a_la_nave   Saca las dos diferencias en valor absoluto, apunta sus signos en 0xEC10 y 0xEC11, y de la pareja saca el angulo
+C 0x66DA 0xE204: la fila de la nave
+C 0x66E0 En negativo, se apunta el signo
+C 0x66E9 0xE206: su columna
+C 0x66F8 Con la suma de las dos por debajo de 0x30, la nave esta pegada
+C 0x6701 El nibble alto de una y la otra: el indice de la tabla de 0x6753
+C 0x670F 0xEC17 se queda con el angulo
+C 0x671E Y 0xEC18 con el cuadrante, que sale de los dos signos
+L 0x6729 cambia_el_signo   Complemento a dos de DE
+C 0x6729 Complemento a dos: el otro sentido
+L 0x6731 por_la_velocidad   Multiplica la componente por la velocidad de 0xE110 y se queda con la parte alta, corrida tres bits
+C 0x6731 0xE110: la velocidad del disparo
+C 0x6739 Tres veces por dos, quedandose con el acarreo
+C 0x673A Y otra vez por dos
+L 0x6743 multiplica_h_por_e   Multiplicacion de 8 por 8 hecha a mano: ocho `add hl,hl` sumando DE cuando sale acarreo. Devuelve el producto en HL.
+C 0x6743 Ocho vueltas de desplazar y sumar: el clasico
+D 0x674F 0x6753 tabla_674F  Cuatro bytes por delante de la base 0x6753.
+F 0x674F 4
+D 0x6753 0x6853 angulos  Doscientos cincuenta y seis bytes que 0x6708 indexa con el nibble alto de una diferencia y el de la otra: de la pareja (dx, dy) sale el angulo con el que luego se lee el cuarto de seno de 0x6853.
+F 0x6753 16
+D 0x6853 0x6893 cuarto_de_seno  Sesenta y cuatro bytes que son UN CUARTO DE SENO, de 0 a 255: comparados con 255*sen(k/63*90) el error maximo es de 1,9. 0x66A6 los lee DOS veces, una con el indice y otra con 0x3F menos el indice, y asi saca el seno y el coseno del mismo angulo de una sola tabla; la comprobacion pitagorica -t[k]^2 mas t[63-k]^2- da entre 0,98 y 1,00 veces 255 al cuadrado.
+F 0x6853 16
+L 0x6893 apunta_las_casillas_de_todos   Le calcula a cada objeto la casilla de pantalla en la que cae, para los doce de 0xE300 y los diez de 0xE500
+C 0x6896 Y una rutina del banco 3
+C 0x689C Y los diez de 0xE500
+L 0x68A0 los_diez_de_e500   Los diez objetos de 0xE500
+L 0x68A8 los_de_e500_si_toca   Solo con 0xE1B0 puesto
+L 0x68AF los_doce_de_e300   Los doce objetos de 0xE300
+C 0x68AF Las doce ranuras de 0xE300
+C 0x68B5 Doce
+C 0x68BA Treinta y dos bytes: el objeto siguiente
+L 0x68C2 casilla_del_objeto   De la X y la Y del objeto saca la casilla del mapa y la guarda en los bytes 30 y 31, y copia dos bytes mas
+C 0x68C7 El byte 11 a cero: no se dibuja con caracteres
+C 0x68CC La Y y la X
+C 0x68D2 La rutina del banco 0 que convierte casilla en direccion de RAM
+C 0x68D5 Los bytes 30 y 31: donde cae
+C 0x68DE Trece bytes mas alla
+C 0x68E0 Trece bytes mas alla, la pareja de caracteres
+L 0x68EF hay_algo_en_e151   Devuelve acarreo si 0xE151 esta a cero o si 0xE152 no lo esta
+C 0x68EF Con 0xE151 a cero no hay jefe
+C 0x68F2 0xE152 a cero: no hay jefe
+L 0x68FB corre_los_cuatro_de_e800_y_ea80   Con 0xE151 puesto y 0xE152 en 1 o en 4-5, recorre los cuatro pares de ranuras
+C 0x68FB Sin jefe no hay nada que guardar
+C 0x6901 0xE152: el paso del jefe
+C 0x690C 0xE800 y su pareja en 0xEA80
+C 0x6914 Cuatro
+C 0x691A Ocho bytes en una tabla y dieciseis en la otra
+C 0x6928 La ranura a cero esta libre
+C 0x692B La posicion del objeto
+L 0x6936 corre_los_de_e780_y_ea00   Ocho pares, o uno solo si 0xE152 vale 6
+C 0x693C Ocho pares
+C 0x6944 Con 0xE152 en 5 tambien
+C 0x694B Y en el 6, uno solo
+C 0x6959 Dieciseis bytes cada una
+C 0x695C Dieciseis bytes cada una
+C 0x695E Dieciseis bytes cada una
+L 0x6964 guarda_lo_que_habia   Se guarda en la tabla espejo el rectangulo de 4x4 caracteres que hay debajo del objeto, para poder devolverlo
+C 0x696F La casilla del mapa donde cae
+C 0x6975 Cuatro filas
+C 0x6977 Cuatro caracteres por fila
+C 0x697C 0x1C: lo que falta hasta la fila de abajo
+C 0x697E Cuatro caracteres por fila
+C 0x697F 0x1C: lo que falta hasta la fila de abajo
+L 0x6983 pinta_todo_lo_del_cuadro   La tira de dibujado: los objetos, el fondo, los de 0xE800 y los de 0xE780, cada uno con su rutina
+C 0x699B 0xE151 dice si hay jefe en pantalla
+C 0x69A5 Y 0xE152 en que paso va
+C 0x69AA Sin jefe, se borran los cuatro de 0xE800
+L 0x69B2 dibuja_los_de_e500_si_toca   Solo si hay algo en 0xE151
+C 0x69B6 Las diez ranuras de 0xE500
+L 0x69BE dibuja_los_de_e500   Solo con 0xE1B0 puesto
+L 0x69C5 dibuja_los_de_e300   Los doce objetos
+C 0x69C5 Y las doce de 0xE300
+L 0x69CB dibuja_dos_por_dos   Escribe en el mapa los cuatro caracteres del objeto: dos arriba y dos en la fila de abajo
+C 0x69D1 El byte 11 a cero: este no se dibuja asi
+C 0x69D7 Pasada la X 0xF8, tampoco
+C 0x69DE La casilla, de los bytes 30 y 31
+C 0x69E4 Los bytes 19 y 20: los dos caracteres de arriba
+C 0x69ED 0x1F: la fila de abajo
+C 0x69F2 Y los bytes 21 y 22: los dos de abajo
+C 0x69FB Treinta y dos bytes: el objeto siguiente
+L 0x6A03 guarda_lo_de_los_cuatro   Los cuatro de 0xE800, con su tabla espejo en 0xEA80
+C 0x6A0D Cuatro objetos
+C 0x6A11 Ocho bytes en una tabla y dieciseis en la otra
+L 0x6A1F guarda_lo_de_uno   La casilla de ese objeto, y a copiar
+C 0x6A1F La ranura a cero esta libre
+C 0x6A22 La ranura a cero esta libre
+C 0x6A23 La posicion del objeto
+L 0x6A2C guarda_lo_de_e780   Un solo objeto de 0xE780
+L 0x6A37 guarda_lo_de_los_ocho   Los ocho de 0xE780, con su espejo en 0xEA00
+C 0x6A41 Dieciseis bytes cada una
+C 0x6A45 Dieciseis bytes: la pieza siguiente
+L 0x6A50 guarda_uno_de_e780   Igual, pero con la posicion en los bytes 3 y 5
+C 0x6A55 La posicion de la pieza
+L 0x6A5B copia_cuatro_por_cuatro   Copia el rectangulo de cuatro por cuatro caracteres de la pantalla a la tabla espejo
+C 0x6A5B La casilla del mapa donde cae
+C 0x6A62 Cuatro filas
+C 0x6A64 Cuatro caracteres por fila
+C 0x6A69 Y 0x1C hasta la fila siguiente
+B 0x6A72 SACAR UN OBJETO NUEVO A LA PANTALLA
+B 0x6A72 Esta es la rutina mas llamada del banco: la usan todos los motores de
+B 0x6A72 enemigo para soltar un disparo, una explosion o un enemigo nuevo. Se le
+B 0x6A72 entra con A = el tipo, DE = donde va y C = un ajuste, y ella busca una
+B 0x6A72 ranura libre en la tabla de objetos, la rellena con la ficha que le toca
+B 0x6A72 al tipo -cuatro bytes de la tabla de 0x6BA3- y sube la cuenta de vivos.
+B 0x6A72 Tres tipos se salen de lo normal: el 0x1E necesita TRES ranuras seguidas
+B 0x6A72 (por eso 0x6AA1 busca tres huecos consecutivos y suma dos a la cuenta),
+B 0x6A72 el 0x0E va a otra tabla -la de 0xE460, de ocho ranuras de 0x20 bytes
+B 0x6A72 contando hacia atras- y los demas a la de 0xE300, doce ranuras.
+L 0x6A72 saca_un_objeto   Busca ranura libre y monta ahi un objeto del tipo A, en la posicion DE
+C 0x6A72 Donde va, apuntado en 0xEC19
+C 0x6A76 Y el tipo, en 0xE120
+C 0x6A84 El tipo 0x1E ocupa tres ranuras
+C 0x6A89 Y el 0x0E va a la otra tabla
+C 0x6A8D Las doce ranuras de 0xE300, de 0x20 en 0x20
+L 0x6A98 busca_tres_ranuras_seguidas   El objeto grande necesita tres huecos consecutivos; si no los hay, no sale
+C 0x6AA1 Tres seguidos
+C 0x6AA3 Tres huecos seguidos
+C 0x6AA4 Se compara con cero: ranura libre
+C 0x6AA5 Treinta y dos bytes: la ranura siguiente
+C 0x6AB2 Se retrocede a la primera de las tres
+C 0x6AB7 Y dos mas en la cuenta de vivos: son tres ranuras
+L 0x6ABF busca_en_la_otra_tabla   El tipo 0x0E vive en 0xE460, ocho ranuras contadas hacia atras
+C 0x6ABF El tipo 0x0E va a la tabla de 0xE460
+C 0x6AC4 Ocho ranuras contando hacia atras
+L 0x6AC7 busca_ranura_libre   La primera con el primer byte a cero
+L 0x6ACE monta_el_objeto   Rellena la ranura: tipo, contadores a cero, la posicion, y los cuatro bytes de la tabla de 0x6BA3
+C 0x6ACE La posicion, que se aparco en 0xEC19
+C 0x6AD3 Una mas en la cuenta de objetos vivos
+C 0x6AE1 El byte 27 a tres
+C 0x6AED La Y va al byte 4...
+C 0x6AF0 ...y la X al 6
+C 0x6AF5 La tabla de 0x6BA3: cuatro bytes por tipo
+C 0x6AFB Por cuatro
+C 0x6B02 Tres bytes de la ficha del tipo
+C 0x6B09 Con el ajuste puesto, el byte 13 lleva 8; el tipo 0x0D, 6
+C 0x6B0C El byte 13: ocho, o seis si es el tipo 0x0D
+C 0x6B0D El tipo 0x0D lleva seis
+C 0x6B21 La velocidad, que sale de la dificultad y del registro R
+C 0x6B28 Los tipos 2, 0x0A y 0x0C llevan dos bytes mas
+C 0x6B2B El tipo, otra vez
+C 0x6B3B 0xE166
+C 0x6B3F Y cada tipo remata su ficha por su cuenta: treinta y una salidas
+D 0x6B46 0x6B84 tabla_del_despachador_6B43  Treinta y una palabras pegadas detras del `call 0x4067` de 0x6B43. Casi todos los destinos caen en el banco 3 (0xA000-0xBFFF).
+F 0x6B46 w2
+B 0x6B84 LA VELOCIDAD DE LOS DISPAROS: DIFICULTAD MAS REGISTRO R
+B 0x6B84 La velocidad con la que sale un disparo no es fija ni es un azar de
+B 0x6B84 verdad: se coge de la tabla de 0x6B97 el valor que le toca a la
+B 0x6B84 dificultad (0xE111, doce escalones de 0x80 a 0x1C, o sea cuanto mas
+B 0x6B84 dificil mas rapido) y se le SUMA lo que digan tres bits del registro R
+B 0x6B84 del Z80, el del refresco de la memoria. Es la tercera vez que este
+B 0x6B84 cartucho usa el R como generador de numeros: las otras dos son las
+B 0x6B84 estrellas del fondo y la metralla de la explosion, las dos en el banco 0.
+L 0x6B84 velocidad_del_disparo   El escalon de velocidad que diga la dificultad, mas cero a siete del registro R
+C 0x6B85 0xE111 es la dificultad
+C 0x6B90 El registro R: tres bits de desigualdad
+D 0x6B97 0x6BA3 velocidades_por_dificultad  Doce escalones de velocidad, uno por nivel de dificultad (0xE111), en cuesta abajo: 0x80, 0x70, 0x68, 0x60, 0x48, 0x40, 0x38, 0x30, 0x28, 0x24, 0x20 y 0x1C. Cuanto mas bajo el numero, mas rapido va el disparo. Los lee 0x6B88, que ademas le suma tres bits del registro R.
+F 0x6B97 12
+D 0x6BA3 0x6C23 fichas_por_tipo  Cuatro bytes por tipo de objeto, que 0x6AF5 copia tal cual a la ranura recien montada: es la ficha de arranque de cada bicho. Treinta y dos tipos.
+F 0x6BA3 4
+L 0x6C23 remata_el_tipo_1   Le pone la velocidad partida por dos y el dibujo que digan los bits 5 y 6 de 0xE122
+C 0x6C26 Partida por dos, con el signo
+C 0x6C30 El bit 5 de 0xE122...
+C 0x6C36 ...y el bit 6: entre los dos eligen uno de cuatro dibujos
+L 0x6C3F remata_el_tipo_7   El bicho de la escotilla: sale hacia un lado o hacia el otro, segun el bit 0 del tipo de quien lo suelta, y sin velocidad vertical
+C 0x6C42 0x0400 hacia la derecha...
+C 0x6C48 ...o 0xFC00 hacia la izquierda
+L 0x6C53 remata_con_punteria_lenta   Velocidad base 0x50 mas dos veces la dificultad
+L 0x6C57 remata_con_punteria   Lo mismo pero con base 0x60
+C 0x6C59 La dificultad por dos, sumada a la base
+L 0x6C61 apunta_desde_donde_esta   Con la posicion del objeto, calcula las dos velocidades hacia la nave y se las guarda
+C 0x6C6A La velocidad vertical...
+C 0x6C71 ...y la horizontal
+L 0x6C77 remata_el_tipo_15   Copia las velocidades de 0xE142 y 0xE144, y le pone de seis a ocho de contador con el registro R
+C 0x6C77 La velocidad que lleva el fondo
+C 0x6C89 En la fase 4 el desplazamiento va al reves
+C 0x6C9C El registro R otra vez: seis u ocho
+L 0x6CA6 remata_el_tipo_16   El dibujo sale de 0xEC1B y no lleva velocidad
+C 0x6CA9 El dibujo, del byte 12
+C 0x6CAF Sin velocidad
+L 0x6CB4 pon_las_dos_velocidades   Las dos velocidades, cruzadas: primero la de Y y luego la de X
+C 0x6CB8 Primero la de Y...
+C 0x6CBB ...y luego la de X
+L 0x6CBF pon_la_velocidad_vertical   La velocidad vertical del objeto, en los bytes 7 y 8
+L 0x6CC6 pon_la_velocidad_horizontal   Y la horizontal, en los bytes 9 y 10
+C 0x6CC6 Los bytes 9 y 10
+L 0x6CCD reparte_por_la_fase   Doce salidas, una por fase
+D 0x6CD7 0x6CEF tabla_del_despachador_6CD4  Doce palabras pegadas detras del `call 0x4067` de 0x6CD4.
+F 0x6CD7 w2
+B 0x6CEF EL FINAL DE CADA FASE, UNO POR FASE
+B 0x6CEF La tabla de 0x6CD7 reparte por la fase: cada una tiene aqui su propia
+B 0x6CEF maquinita de estados, con el paso en 0xE065, y todas siguen el mismo
+B 0x6CEF guion: se espera a que la distancia recorrida llegue a un punto, se
+B 0x6CEF enciende el jefe (0xE151), se espera a que lo maten (0xE150) y se deja
+B 0x6CEF pasar a la fase siguiente. Lo que cambia de una a otra son las distancias
+B 0x6CEF y a que rutina del banco 2 o 3 se llama.
+L 0x6CEF final_de_la_fase_1   Espera a la distancia 0x165, enciende el aviso de 0xE140 y deja el limite en 0x1C2
+C 0x6CEF 0xE065: el paso del final de fase
+C 0x6CF2 0xE065: el paso del final de fase
+C 0x6D01 La distancia recorrida...
+C 0x6D04 ...contra 0x165
+C 0x6D0B Solo en los pasos con columna nueva
+C 0x6D15 Y el desplazamiento se para en 0x1C2
+L 0x6D1B sube_el_paso_del_final   0xE065 + 1
+L 0x6D20 apaga_el_jefe   Con 0xE150 puesto, apaga la bandera y el aviso de 0xE1B0
+C 0x6D20 0xE150: hasta que no muera, no
+L 0x6D2C espera_a_que_muera   Hasta que 0xE150 no se ponga, no se sigue; luego suelta el desplazamiento hasta 0x1C0
+C 0x6D2C 0xE150: hasta que no muera, no
+C 0x6D2F 0xE150: hasta que no muera, no
+C 0x6D36 El desplazamiento llega hasta 0x1C0
+L 0x6D3E enciende_al_jefe   0xE151 a uno: el jefe entra en pantalla
+C 0x6D43 0xE150 a cero y 0xE114 a uno
+C 0x6D48 0xE114 a uno
+C 0x6D4B Y 0xE151 y 0xE152: el jefe en su primer paso
+L 0x6D53 acaba_la_fase   Apaga al jefe y, si la nave sigue viva, pasa a la fase siguiente
+C 0x6D5E Con 0xE200 en negativo la nave esta muerta
+L 0x6D66 final_de_la_fase_2   Con la pantalla parada suelta el objeto 9; si no, el mismo guion de cuatro pasos
+C 0x6D66 0xE1C0: la pantalla esta parada
+C 0x6D76 0xE065: el paso del final de fase
+C 0x6D82 Solo en los pasos con columna
+L 0x6D8C espera_a_que_muera_y_borra   Igual, y ademas borra 0xE972
+C 0x6D8C 0xE150: hasta que no muera, no
+C 0x6D97 El desplazamiento llega hasta 0x1DF
+L 0x6DA0 enciende_al_jefe_2   Lo mismo que 0x6D3E
+L 0x6DA7 final_de_la_fase_3   Como el anterior, pero el objeto que suelta es el 0x0A
+C 0x6DA7 0xE1C0: la pantalla esta parada
+C 0x6DAA Solo en los pasos con columna
+C 0x6DB7 0xE065: el paso del final de fase
+C 0x6DC4 0xE151: si ya hay jefe en pantalla
+C 0x6DCA La distancia recorrida...
+C 0x6DCD ...contra 0x60
+C 0x6DD8 0x0101 en 0xE151: el jefe, en su primer paso
+L 0x6DE1 el_otro_jefe   Con 0xE06A puesto sale el jefe 6 en vez del 1
+C 0x6DE1 0xE06A: la vuelta que va
+L 0x6DED espera_y_apaga   Al morir el jefe, apaga las dos banderas
+C 0x6DED 0xE150: hasta que no muera, no
+L 0x6DF9 espera_y_suelta_el_scroll   Al morir el jefe, apaga las banderas y deja el desplazamiento correr hasta 0x1AF
+C 0x6DF9 0xE150: hasta que no muera, no
+C 0x6DFC 0xE150 a cero
+C 0x6E04 El desplazamiento llega hasta 0x1AF
+L 0x6E0D enciende_al_jefe_3
+L 0x6E15 final_de_la_fase_4   Con la pantalla parada suelta el objeto 0x0B; si no, cinco pasos con dos jefes
+C 0x6E15 0xE1C0: la pantalla esta parada
+C 0x6E1B Solo en los pasos con columna
+C 0x6E28 0xE065: el paso del final de fase
+C 0x6E35 0xE140: el aviso de que hay algo esperando
+C 0x6E3B La distancia...
+C 0x6E3E ...contra 0x128
+C 0x6E43 0xE140 a dos, el limite en 0xB4 y 0xD0 en 0xE141
+L 0x6E54 espera_al_primero   Al morir el primero, apaga el aviso y pasa al paso siguiente
+C 0x6E54 0xE150: hasta que no muera, no
+C 0x6E57 0xE150: hasta que no muera, no
+C 0x6E58 0xE150: hasta que no muera, no
+L 0x6E62 el_jefe_de_la_mitad   A la distancia 0x171 llama al banco 2; si no, saca el jefe 5
+C 0x6E6B La distancia 0x171
+C 0x6E77 0x0501 en 0xE151: el jefe 5
+L 0x6E80 espera_al_de_la_mitad   Al morir, apaga 0xE1B0
+C 0x6E80 0xE150: hasta que no muera, no
+L 0x6E8C espera_y_suelta_hasta_1C0   Al morir el jefe, el desplazamiento llega hasta 0x1C0
+C 0x6E8C 0xE150: hasta que no muera, no
+C 0x6E97 El desplazamiento llega hasta 0x1C0
+L 0x6EA0 enciende_al_jefe_4
+C 0x6EA0 Solo en los pasos con columna
+L 0x6EA8 final_de_la_fase_5   Cuatro pasos, con dos llamadas al banco 3 y el desplazamiento soltado hasta 0x1FF
+C 0x6EAB 0xE065: el paso del final de fase
+C 0x6EB1 Al paso 4, que acaba la fase
+C 0x6EB8 Solo en los pasos con columna
+C 0x6EBD Una rutina del banco 3 monta lo que toque
+L 0x6EC3 espera_y_llama_al_banco3   Al morir, borra 0xE988 y llama otra vez al banco 3
+C 0x6EC3 0xE150: hasta que no muera, no
+L 0x6ED4 espera_y_suelta_hasta_1FF   Al morir, borra 0xE990 y el desplazamiento llega hasta 0x1FF
+C 0x6ED4 0xE150: hasta que no muera, no
+C 0x6EDB Al morir, el desplazamiento llega hasta 0x1FF
+L 0x6EE8 enciende_al_jefe_5
+C 0x6EE8 Solo en los pasos con columna
+L 0x6EF0 final_de_la_fase_6   Pasada la distancia 0xA0 saca el jefe 2, y al morir deja el limite donde este
+C 0x6EF0 0xE065: el paso del final de fase
+C 0x6EFD La distancia 0xA0
+C 0x6F02 0x0201 en 0xE151: el jefe 2
+L 0x6F0B espera_y_para_donde_este   Al morir el jefe, el limite se queda en la distancia actual
+C 0x6F0B 0xE150: hasta que no muera, no
+L 0x6F19 final_de_la_fase_7   Con la pantalla parada suelta el objeto 0x0C; si no, saca el jefe 3
+C 0x6F19 0xE1C0: la pantalla esta parada
+C 0x6F1F Solo en los pasos con columna
+C 0x6F2C 0xE065: el paso del final de fase
+C 0x6F35 0xE114 a uno
+C 0x6F3A 0x0301 en 0xE151: el jefe 3
+L 0x6F43 final_de_la_fase_8   A la distancia 0x16E saca el jefe 4 y, al matarlo, arranca la explosion del final
+C 0x6F50 La distancia 0x16E
+C 0x6F55 0x0401 en 0xE151: el jefe 4
+C 0x6F58 0x0401 en 0xE151: el jefe 4
+L 0x6F5E arranca_el_final_del_juego   Muerto el ultimo jefe, y con la nave viva, enciende 0xE1D0: la secuencia final
+C 0x6F6D Con 0xE200 en negativo, la nave ya estaba muerta
+C 0x6F72 0xE1D0 a uno: arranca la explosion del final
+C 0x6F78 0x0300 en 0xE1D3
+C 0x6F7E El sonido 0x41
+L 0x6F86 acaba_el_final   Apaga 0xE1D0 y pasa de fase
+C 0x6F86 0xE150: hasta que no muera, no
+C 0x6F89 0xE150: hasta que no muera, no
+C 0x6F8A 0xE150: hasta que no muera, no
+L 0x6F97 final_de_la_fase_9   Suelta el objeto 3
+C 0x6F9C El objeto 3
+L 0x6FA0 final_de_la_fase_10   Suelta el objeto 4
+C 0x6FA0 Solo en los pasos con columna
+C 0x6FA5 El objeto 4
+L 0x6FA9 final_de_la_fase_11   Suelta el objeto 5
+C 0x6FA9 Solo en los pasos con columna
+C 0x6FAE El objeto 5
+L 0x6FB2 final_de_la_fase_12   Suelta el objeto 8
+C 0x6FB2 Solo en los pasos con columna
+C 0x6FB7 El objeto 8
+L 0x6FB9 salta_a_la_fase   Deja la fase en A, borra los contadores y arranca por 0x4100; se come la direccion de retorno con un `pop hl`
+C 0x6FBD 0xE107, 0xE065 y 0xE1C0 a cero
+C 0x6FC9 0x1F de distancia recorrida
+C 0x6FCE Se tira el retorno: de aqui no se vuelve
+L 0x6FD0 pasa_a_la_fase_siguiente   Sube la fase; pasada la octava vuelve a la primera, baja cuatro escalones de dificultad y sube la vuelta
+C 0x6FD7 0xE066 cuenta las fases jugadas
+C 0x6FE1 Pasada la octava, se vuelve a la primera
+C 0x6FE8 Y la dificultad baja cuatro escalones
+C 0x6FF2 0xE06C y 0xE06D a cero
+C 0x6FF8 0xE06A: la vuelta que va
+B 0x7003 LA MUSICA CAMBIA CON LA DISTANCIA RECORRIDA
+B 0x7003 La musica de cada fase no se lanza una vez: hay una lista por fase -la
+B 0x7003 tabla de 0x7056 dice cual- con parejas [distancia][que suena], y en cada
+B 0x7003 cuadro se busca en ella el tramo en el que cae la distancia recorrida. Si
+B 0x7003 lo que sale es distinto de lo que ya suena (0xE012), se apunta el cambio.
+L 0x7003 mira_que_musica_toca   Busca en la lista de la fase el tramo de distancia en el que se esta y, si la musica es otra, la apunta
+C 0x7003 Con la nave muerta, no
+C 0x7008 Ni con la pantalla parada
+C 0x700D Ni con 0xE114 puesto
+C 0x7012 0xE113: ya hay un cambio de musica pendiente
+C 0x701C La tabla de 0x7056: una lista por fase
+C 0x7024 La distancia recorrida
+C 0x7027 Cada renglon: dos bytes de distancia y uno de musica
+C 0x702D DCOMPR: se busca el tramo
+C 0x7034 Si es la que ya suena, no se toca nada
+C 0x7039 Y si no, se apunta en 0xE113
+L 0x704A arranca_la_musica_apuntada   Cuando el canal calla, lanza la musica que se aparco en 0xE113; el 0xFF solo la borra
+C 0x704A Hasta que el canal no calle, no se cambia
+C 0x7050 El 0xFF quiere decir silencio
+D 0x7056 0x70CA tabla_7056  Palabras que 0x701C indexa con la base 0x7056: 0x7070, 0x7079, 0x7082, 0x708B, ... todas de este mismo banco.
+F 0x7056 w2
+L 0x70CA sube_la_dificultad   Un escalon mas en 0xE111, hasta el 0x0F
+C 0x70D1 Dieciseis escalones como mucho
+L 0x70D6 corre_la_tanda_de_enemigos   Con 0xE140 puesto, va soltando enemigos del tipo 0x0F cada dos cuadros hasta agotar la cuenta de 0xE148
+C 0x70D6 Con la pantalla parada, no
+C 0x70DB 0xE140: la tanda en marcha
+C 0x70E5 En los pasos con columna, la tanda se corre ocho puntos a la izquierda
+C 0x70F1 Uno de cada dos cuadros
+C 0x70F7 0xE148: los que quedan por salir
+C 0x710B Y sale un enemigo del tipo 0x0F
+C 0x710F El objeto 0x0F: el enemigo de la tanda
+C 0x7111 Sin ajuste
+L 0x7116 acaba_la_tanda_de_enemigos   0xE150 a uno: la tanda esta agotada
+L 0x711C pon_donde_sale   Con 0xE140 en uno, alterna entre las dos posiciones de 0x7189 segun el bit 0 de la cuenta
+C 0x7125 El bit 0 de la cuenta: una vez arriba y otra abajo
+C 0x7128 El bit 0: una vez arriba y otra abajo
+L 0x7132 pon_donde_sale_por_altura   Con 0xE140 en dos, la posicion sale de la altura de 0xE141 y la columna 0x20
+L 0x713C velocidad_de_la_tanda   El registro R elige una de las ocho parejas de velocidad de 0x718D; en la fase 1 se le da la vuelta, y a media tanda se parte por dos
+C 0x713C El registro R: una de ocho parejas
+C 0x7140 Por dos: dos palabras por pareja
+C 0x714E En la fase 1, al reves
+C 0x7156 Pasada la mitad de la tanda...
+C 0x7166 ...la velocidad se parte por dos
+C 0x716E 0xE142: la velocidad vertical del fondo
+C 0x717D Y un bit de la cuenta le da la vuelta a la horizontal: los enemigos salen alternos
+C 0x7184 Y 0xE144: la horizontal
+D 0x7189 0x718D tabla_7189  Cuatro bytes que lee 0x7122.
+F 0x7189 4
+D 0x718D 0x71AD tabla_718D  Treinta y dos bytes que lee 0x7141.
+F 0x718D 4
+L 0x71AD mira_si_choca_con_el_mapa_2   Le pasa al banco 2 la posicion del objeto, con 0x10 de correccion si el bit 7 del byte 8 esta a cero
+C 0x71B0 La posicion del objeto
+C 0x71B3 La posicion del objeto
+C 0x71B6 El bit 7 del byte 8 dice si se corre 0x10
+C 0x71C0 Y el banco 2 responde
+L 0x71C7 suena_al_llegar   En la fase 1, a la cuenta 0x1C1 suena el 0x32; en las demas, a la 0xB3 suena el 0x13
+C 0x71D0 En la fase 1, a la cuenta 0x1C1
+C 0x71D9 El sonido 0x32
+C 0x71DE Y en las demas, a la 0xB3
+C 0x71E3 El sonido 0x13
+L 0x71E8 corre_la_nave   La tira de rutinas que mueven a la nave, sus disparos y sus opciones
+C 0x71E8 Con la pantalla parada, la nave no se mueve
+C 0x71ED Primero, los disparos de la nave contra todo lo que hay
+C 0x71F9 Y los choques con el mapa y con los enemigos
+L 0x7208 mira_los_choques_de_eb00   Los cinco objetos de 0xEB00, solo si 0xE1B0 esta puesto
+C 0x7208 Sin 0xE1B0 no hay nada que mirar
+B 0x7216 LOS CHOQUES ENTRE LOS DISPAROS DE LA NAVE Y LOS ENEMIGOS
+B 0x7216 Cada cuadro se cruzan las dos listas: por cada enemigo vivo cuyo bit 1
+B 0x7216 del byte 27 este puesto, se recorren los NUEVE disparos de la nave
+B 0x7216 (0xE260, fichas de 0x10 bytes) y se mira si alguno cae dentro de su caja.
+B 0x7216 La caja no es cuadrada: 0x12 de ancho por 0x20 de alto, y el disparo de
+B 0x7216 tipo 3 -el laser- se mide de otra manera, con la altura sacada de su
+B 0x7216 propia ficha por ocho.
+L 0x7216 mira_los_choques   Los doce enemigos de 0xE300 contra los nueve disparos de la nave
+C 0x7216 Doce enemigos
+C 0x7223 El bit 1 del byte 27: este se puede tocar
+C 0x7229 Los nueve disparos de la nave, de 0x10 en 0x10 bytes
+C 0x722E La ranura del disparo se aparca en 0xEC00
+C 0x723B Dieciseis bytes: el disparo siguiente
+C 0x7242 Treinta y dos bytes: el enemigo siguiente
+L 0x724A mira_un_disparo   Mira si el disparo cae en la caja del enemigo: 0x12 de ancho por 0x20 de alto
+C 0x724A El tipo 3 -el laser- se mide aparte
+C 0x7255 0x12 de ancho
+C 0x725D Pasada la Y 0xF0, el disparo se ha ido
+C 0x7265 Y 0x20 de alto
+C 0x7268 El disparo se gasta
+C 0x7270 Los tipos 0x0B, 0x1B y 0x1E aguantan
+C 0x7284 Y a los demas les baja un punto de vida el byte 15
+L 0x728B mira_el_laser   El laser mide distinto: la altura sale de su propia ficha, multiplicada por ocho
+C 0x7292 0x12 de ancho, igual
+C 0x7294 0x12 de ancho
+C 0x72A2 Siete bytes mas alla: el largo del laser
+C 0x72A7 Por ocho
+C 0x72AE Los tipos 0x0B, 0x1B y 0x1E aguantan
+C 0x72B1 Los tipos 0x0B, 0x1B y 0x1E aguantan
+C 0x72B3 Los tipos que aguantan
+L 0x72C2 cobra_el_enemigo   Un punto, o cinco si es del tipo 0x1F
+C 0x72C8 El tipo 0x1F paga cinco
+L 0x72D2 revienta_el_enemigo   Suena lo que diga la tabla de 0x730F para ese tipo, y el objeto pasa a ser explosion del tipo 0x15
+C 0x72D7 La tabla de 0x730F: que sonido lleva cada tipo
+C 0x72DF Tipo 0x15, dibujo 0x78
+C 0x72E5 El tipo 0x0D lleva otro dibujo
+C 0x72F2 Si se dibujaba con caracteres, quince cuadros de explosion
+C 0x7307 Sale con acarreo: se ha reventado
+L 0x7309 solo_suena   Los que aguantan el impacto solo hacen sonar el 6
+D 0x730F 0x732F tabla_730F  Treinta y dos bytes que lee 0x72D7 con la base 0x730F.
+F 0x730F 16
+L 0x732F mira_si_la_nave_choca_con_el_mapa   Le pregunta al banco 2; si choca, la nave muere
+C 0x732F Con 0xE200 en 0xFF no hay nave
+L 0x733B mira_si_la_nave_choca_con_un_disparo   Los diez de 0xE500 contra la nave, con caja de dos por dos
+C 0x7340 Los diez disparos enemigos
+C 0x7346 Dos de ancho por dos de alto
+L 0x7357 hay_alguno_encima   Recorre las ranuras buscando alguno cuya caja pille el punto (0xE204+4, 0xE206+1)
+C 0x7357 La fila de la nave mas cuatro
+C 0x735D Y su columna mas uno
+C 0x7363 Treinta y dos bytes por ranura
+C 0x7366 La caja: 0x0C de alto por 8 de ancho
+C 0x736A La ranura a cero esta libre
+C 0x7370 El bit 0 del byte 27: este puede tocar a la nave
+C 0x7374 Treinta y dos bytes por ranura
+C 0x7382 Y la Y
+C 0x738C Treinta y dos bytes: la ranura siguiente
+L 0x7395 mira_si_la_nave_choca_con_un_enemigo   Con el escudo por debajo de 2, los diez de 0xE500 pueden matarla
+C 0x7395 0xE200 por debajo de dos: sin escudo
+C 0x739F Diez disparos
+C 0x73A1 La fila de la nave y su columna mas doce
+C 0x73AB Treinta y dos bytes por ranura
+C 0x73B5 La caja es de 0x0B de alto, o de 0x19 si el disparo se dibuja con caracteres
+C 0x73C3 0x13 de ancho
+C 0x73C9 0x13 de ancho
+C 0x73CD Pasada la caja, el disparo no toca
+L 0x73D7 la_nave_toca_algo   Si lo tocado se dibuja con caracteres, la nave revienta; si no, solo pierde escudo
+C 0x73D7 El byte 11: si se dibuja con caracteres
+L 0x73E0 apaga_la_ranura   Deja la ranura libre
+C 0x73E1 La ranura queda libre
+L 0x73E8 muere_la_nave   0xE200 a uno y 0xE201 a cero: la nave se acabo
+C 0x73EB Y la nave se acabo
+L 0x73F4 quita_escudo_y_cobra   Baja el escudo y, segun el tipo, revienta al enemigo o cobra sus puntos
+C 0x73FA El tipo 0x1E: el grande
+C 0x7404 Los tipos del 0x12 al 0x1A son explosiones: no cobran
+L 0x740C baja_el_escudo   0xE201 baja; con menos de dos queda el escudo flojo, y al llegar a cero se apaga
+C 0x7411 Un punto menos de escudo
+C 0x7415 Por debajo de dos, el escudo va justo
+L 0x7420 mira_si_la_nave_choca_con_un_enemigo_2   Los doce de 0xE300, con caja de 0x21 por 0x15
+C 0x7420 0xE200 por debajo de dos: sin escudo
+C 0x742A Doce enemigos
+C 0x742C La fila de la nave y su columna mas doce
+C 0x743F El bit 1 del byte 27: este se puede tocar
+C 0x744B 0x21 de ancho...
+C 0x7455 ...y 0x15 de alto
+C 0x7457 0x15 de alto
+L 0x745E mira_si_la_opcion_toca_algo   La misma cuenta pero para las opciones, con caja de 0x0C por 0x0C
+C 0x7469 Doce de ancho por doce de alto
+C 0x7473 Los tipos del 0x12 al 0x1A son explosiones
+L 0x7482 cobra_y_muere   Cobra el enemigo y la nave se va
+L 0x7488 cobra_el_objeto_grande   El objeto de tres ranuras: se retrocede a la primera, se avisa al banco 3 y se cobran 0x10 puntos
+C 0x748A El byte 19 dice cual de las tres ranuras es
+C 0x7490 0x20 o 0x40 bytes hacia atras: la primera
+C 0x749D Diez puntos en BCD
+L 0x74A6 reparte_por_el_tipo_tocado   Segun el tipo, la opcion se lleva una mejora, una nave o un premio
+C 0x74A6 El tipo 0 es la mejora del medidor
+C 0x74AA El 1, la bomba
+C 0x74AB El tipo 4 es la nave de regalo
+C 0x74B2 Los tipos 5 y 6, la capsula
+C 0x74B8 Y el 7, la explosion
+L 0x74BC recoge_una_nave   Convierte el objeto en el 0x1A, le pone el dibujo 0xE0, suena el 0x11 y regala una nave
+C 0x74C7 El sonido 0x11
+C 0x74CC Y una nave mas
+L 0x74CF recoge_una_capsula   Lo mismo, con el dibujo sacado de 0xE128 y el sonido 0x10
+C 0x74D9 0xE128: cuantas capsulas seguidas van
+C 0x74E3 El sonido 0x10
+L 0x74E8 empieza_a_explotar   El objeto pasa a ser explosion: tipo (byte 14) mas 0x13, deja de poder tocarse y se borra su dibujo de la pantalla
+C 0x74E8 El byte 14 dice de que tipo era
+C 0x74EC Mas 0x13: los tipos de explosion
+C 0x74EE El tipo de explosion que le toca
+C 0x74F4 El dibujo 0x37, o el 0x38 con su color
+C 0x7506 Se apaga el bit 1: ya no choca con nada
+C 0x750B Los cuatro caracteres del objeto, a cero
+C 0x7517 La casilla donde estaba
+C 0x751A El byte 15 se queda con el tipo
+C 0x7521 Los dos caracteres de arriba...
+C 0x7524 ...y los dos de abajo
+L 0x752D convierte_en_premio   El objeto se guarda su tipo en el byte 24 y pasa a ser el 0x1A, el que sube flotando
+C 0x752D El byte 24 se queda con el tipo de antes
+C 0x7530 Los cuatro caracteres del objeto, a cero
+C 0x753E El byte 25 se queda con la X
+C 0x7541 Y deja de dibujarse y de chocar
+C 0x7545 Y la marca de vivo, a cero
+L 0x754A cobra_la_capsula   Sube la cuenta de capsulas y paga lo que diga la tabla de 0x7561
+L 0x7556 sube_la_cuenta_de_capsulas   0xE128 sube hasta siete y ahi se queda
+C 0x755B Siete es el tope
+D 0x7561 0x7571 puntos_de_la_capsula  Ocho palabras en BCD, cada una el doble o el quintuplo de la anterior: lo que paga la capsula numero N, con N contando en 0xE128 y topando en siete. Las lee 0x754D.
+F 0x7561 w1
+L 0x7571 recoge_la_mejora_del_medidor   Avanza la casilla del medidor de mejoras -de una a seis, en redondo-, cobra cinco puntos y suena el 0x11
+C 0x7576 Seis casillas, y de la sexta vuelve a la primera
+C 0x7580 Cinco puntos
+C 0x7586 El sonido 0x11
+L 0x758E recoge_la_bomba   Suena el 0x12 y revienta de golpe todo lo que hay en las dos tablas
+C 0x7591 El sonido 0x12
+L 0x7596 revienta_todo   Los doce de 0xE460 y los cinco de 0xEB80, contados hacia atras
+C 0x759A Doce ranuras
+C 0x75A3 Y cinco mas
+C 0x75AA Los tipos del 1 al 0x0F: los que cobran
+C 0x75B0 Treinta y dos bytes hacia atras
+L 0x75B8 hay_alguno_sobre_la_nave   Como 0x7357, pero con IX ya puesto: recorre L ranuras buscando la que pille el punto de la nave
+C 0x75B8 La fila de la nave mas cuatro y su columna mas uno
+C 0x75C4 Treinta y dos bytes por ranura
+C 0x75C7 La caja: 0x0C de alto por 8 de ancho
+C 0x75CB El bit 0 del byte 27: este puede tocar a la nave
+C 0x75CF El bit 0 del byte 27
+C 0x75DD Y la Y
+C 0x75E7 Treinta y dos bytes: la ranura siguiente
+C 0x75E8 Treinta y dos bytes: la ranura siguiente
+L 0x75F0 la_nave_ha_muerto   Borra el mando, suena el 0x47 y se lo lleva el banco 2
+C 0x75F5 El sonido 0x47
+L 0x75FD cae_dentro_de_la_caja   Mira si el punto de HL cae dentro de la caja de BC alrededor de DE
+C 0x75FD La X contra la caja
+C 0x7606 Y la Y
+L 0x760E mira_los_choques_con_el_jefe   Los nueve disparos de la nave contra las piezas del jefe, mientras 0xE155 este a cero
+C 0x760E Sin jefe no hay nada que mirar
+C 0x7618 Los nueve disparos, de 0x10 en 0x10
+C 0x761D Cada uno se aparca en 0xEC00
+C 0x7620 Cada disparo se aparca en 0xEC00
+C 0x7628 Dieciseis bytes: el siguiente
+L 0x762F mira_un_disparo_contra_el_jefe   Recorre las piezas del jefe de 0xE780; cuantas hay lo dice la tabla de 0x7674, indexada por el paso 0xE152
+C 0x7633 Dieciseis bytes por pieza
+C 0x7636 La caja: 0x10 de alto por 2 de ancho
+C 0x7639 Dieciseis bytes por pieza
+C 0x7645 El disparo 3 -el laser- se mide aparte
+C 0x764D La tabla de 0x7674: cuantas piezas tiene el jefe en cada paso
+C 0x7656 La ranura a cero esta libre
+C 0x7659 La posicion de la pieza
+C 0x766D Dieciseis bytes: la pieza siguiente
+D 0x7674 0x767B tabla_7674  Siete bytes que lee 0x764D.
+F 0x7674 7
+L 0x767B alto_del_laser   El laser mide lo que diga su ficha, mas uno y por ocho
+C 0x767B Siete bytes mas alla: el largo
+C 0x7681 Mas uno y por ocho
+L 0x7688 caja_de_la_pieza   Cada pieza del jefe tiene su propia caja, y las de los tipos 4 y 7 salen de la tabla de 0x76EF
+C 0x7688 El tipo de pieza manda
+C 0x768E El tipo 1
+C 0x7691 El tipo 2
+C 0x7694 El tipo 3
+C 0x7697 El tipo 4
+C 0x769A Y el tipo 5
+C 0x76A0 0x58 de alto por 0x40 de ancho
+C 0x76A4 0x20 por 0x20, o mas pequena segun el paso
+C 0x76B4 0x10 por 0x10
+C 0x76B9 La tabla de 0x76EF, indexada por la Y
+C 0x76C3 8 de ancho por 0x10 de alto
+L 0x76C7 corre_el_centro   Suma a HL la pareja de la tabla, mas seis en la X
+C 0x76C7 Por dos: dos bytes por entrada
+C 0x76CD Y seis mas en la X
+C 0x76D5 0x20 por 0x20
+C 0x76D9 8 por 8, y el centro sale de otra tabla del banco 2
+C 0x76EB 0x18 de ancho por 0x20 de alto
+D 0x76EF 0x773F tabla_76EF  Ochenta bytes que leen 0x76B9 y 0x76DD.
+F 0x76EF 16
+L 0x773F le_da_al_jefe   Gasta el disparo -uno si es laser, cuatro si no-, le quita vida a la pieza y mira si se acabo
+C 0x7746 El disparo que ha dado
+C 0x774C El tipo 3 -el laser- no se gasta: solo quita uno
+C 0x7750 Los demas quitan cuatro y desaparecen
+C 0x7757 El byte 9 es la vida de la pieza
+C 0x7760 Cada tipo de pieza remata su golpe por su lado
+C 0x7767 El tipo 4
+C 0x776A El tipo 5
+C 0x776D El tipo 6
+C 0x7770 Y el tipo 7
+L 0x7773 golpe_a_la_pieza_5   Con vida de sobra suena el 6; si no, cobra 0x10 puntos
+C 0x777A El sonido 6: el golpe que aguanta
+L 0x777F golpe_a_la_pieza_1   Igual, y al agotarse baja la cuenta de piezas de 0xE15B
+C 0x7788 El byte 14 dice de que grupo es
+C 0x778B 0xE15B: cuantas piezas de ese grupo quedan
+C 0x7791 0x30 puntos
+L 0x7797 revienta_la_pieza_grande   Al agotarse pone el submodo en 1, suena el 0x0E, cobra 0x10 y monta la explosion
+C 0x77A1 0xE10A a uno
+C 0x77A6 El sonido 0x0E
+C 0x77AB Diez puntos
+L 0x77BA revienta_sin_explosion   Libera la ranura, cobra 0x30 y suena el 0x0E
+C 0x77BA La ranura queda libre
+L 0x77C8 revienta_y_cobra   Suena el 0x0E, cobra lo que traiga DE, libera la ranura y monta la explosion
+C 0x77C8 El sonido 0x0E
+C 0x77CD Cobra lo que traiga DE
+L 0x77E6 revienta_esta_pieza   Avisa al banco 2 y cobra 0x10
+C 0x77E6 La ranura a cero ya esta libre
+L 0x77F3 golpe_a_la_pieza_2   Segun la vida que le quede, cambia el dibujo -tres estados- y suena el 0x0D
+C 0x77F9 Por debajo de 0x10, el ultimo dibujo
+C 0x77FE Y por debajo de 0x20, el de en medio
+C 0x7806 El sonido 0x0D
+L 0x780B revienta_las_tres_piezas   Cobra 0x50 por esta y revienta ademas las dos ranuras siguientes
+C 0x780E Cincuenta puntos
+C 0x7814 Dieciseis bytes: la pieza siguiente
+C 0x7817 Dieciseis bytes: la pieza siguiente
+L 0x7827 golpe_al_nucleo   Solo los disparos impares cuentan, y solo por delante: monta la explosion en 0xE300 y le quita vida al nucleo
+C 0x782B El bit 0 del tipo: solo la mitad de los disparos valen
+C 0x7833 0xE155: con el nucleo ya reventado, no
+C 0x783F 0x1C por delante y ocho de margen
+C 0x7846 Tipo 0x15: la explosion
+C 0x784B 0x18 mas abajo y 0x0C a la derecha
+C 0x784E 0x18 mas abajo y 0x0C a la derecha
+C 0x7850 0x18 mas abajo
+C 0x7867 El laser no se gasta
+C 0x786D El byte 9 es la vida del nucleo
+C 0x7872 0xE155 a uno: el nucleo esta muerto
+C 0x7879 Y cada tres golpes, cinco puntos
+L 0x788C solo_suena_el_seis   Al nucleo por detras no se le hace nada
+C 0x788C Solo el laser suena
+L 0x7898 mira_los_choques_con_el_fondo   Los nueve disparos de la nave contra los objetos del fondo de 0xE700; las fases 3 y 5 van por su lado
+C 0x789B Nueve disparos
+C 0x78A0 La fase 3 tiene su propia cuenta
+C 0x78A5 Y la fase 5 tambien
+C 0x78B5 Dieciseis bytes: el disparo siguiente
+L 0x78BC mira_un_disparo_contra_el_fondo   Recorre los dos objetos de fondo y mira si el disparo cae dentro
+C 0x78C1 Ocho bytes por objeto
+C 0x78C5 La posicion del disparo
+C 0x78C6 El tipo del disparo
+C 0x78D3 El laser se mide aparte
+C 0x78D8 Dos objetos
+C 0x78E6 0x22 de ancho
+C 0x78ED Pasada la Y 0xE8, el objeto se ha ido
+C 0x78F6 Y 0x20 de alto
+C 0x78FC Ocho bytes: el objeto siguiente
+L 0x7902 choques_del_fondo_fase_3   La fase 3 tiene ocho objetos de fondo y su propia tabla de posiciones
+C 0x7903 0xE1FF a cero
+C 0x7911 Dieciseis bytes: el disparo siguiente
+L 0x7918 un_disparo_contra_el_fondo_3   Ocho objetos, cada uno con su desplazamiento sacado de la tabla de 0x7B38
+C 0x791D Ocho bytes por objeto
+C 0x7920 La posicion del disparo
+C 0x7921 El tipo del disparo
+C 0x792F El laser se mide aparte
+C 0x7934 Ocho objetos
+C 0x7936 Solo los que van por el paso 1
+C 0x7942 La tabla de 0x7B38: el centro de cada tipo
+C 0x7950 0x10 de ancho
+C 0x795B Pasada la Y 0xF0, se ha ido
+C 0x7964 Y 0x10 de alto
+C 0x7966 0x10 de alto
+C 0x7969 0x10 de alto
+L 0x7970 choques_del_fondo_fase_5   Lo mismo para la fase 5
+C 0x797B Dieciseis bytes: el disparo siguiente
+L 0x7982 un_disparo_contra_el_fondo_5   Ocho objetos, y solo los tipos por debajo de 5 que vayan por el paso 2
+C 0x7987 Ocho bytes por objeto
+C 0x798E La posicion del disparo
+C 0x7999 El laser se mide aparte
+C 0x79A6 Del tipo 5 en adelante se acaba la cuenta
+C 0x79AD Solo los del paso 2
+C 0x79B7 0x10 de ancho
+C 0x79BD El bit 0 del tipo dice si mira arriba o abajo
+C 0x79CD Y 0x10 de alto
+C 0x79CF Y 0x10 de alto
+C 0x79D2 Ocho bytes: el objeto siguiente
+L 0x79D9 un_disparo_contra_los_muros   Los tipos por debajo de 9 de la fase 5 se miden con tres cajas distintas segun el tipo
+C 0x79E2 Del tipo 9 en adelante, nada
+C 0x79E6 Los tipos 7 y 8 llevan otra caja
+C 0x79EA Y el 6, otra
+C 0x79F4 0x10 de ancho
+C 0x79FB Pasada la Y 0xC8, se ha ido
+C 0x7A04 0x20 de alto
+L 0x7A0B caja_del_tipo_6   Ocho de ancho, corrida 0x12
+C 0x7A0B Ocho de ancho
+C 0x7A15 Pasada la Y 0xC8, se ha ido
+L 0x7A28 caja_de_los_tipos_7_y_8   0x10 de ancho y con el tope de Y en 0xE8
+C 0x7A28 0x10 de ancho
+C 0x7A32 Pasada la Y 0xE8, se ha ido
+L 0x7A45 alto_del_laser_por_ocho   El largo del laser, sacado de su ficha y multiplicado por ocho
+C 0x7A45 Siete bytes mas alla: el largo
+C 0x7A47 Siete bytes mas alla: el largo del laser
+C 0x7A48 Por ocho
+L 0x7A4F le_da_al_muro   Le quita tres de vida si es laser y cinco si no; al agotarse cobra 0x10 y monta la explosion
+C 0x7A55 El laser quita tres y no se gasta
+C 0x7A59 Los demas quitan cinco y desaparecen
+C 0x7A5D El byte 5 es la vida del muro
+C 0x7A68 El sonido 6: aun aguanta
+C 0x7A6D Diez puntos
+C 0x7A73 El sonido 0x0E
+C 0x7A7B El tipo sube cuatro: el muro roto
+C 0x7A87 El tipo 0x0B se corre 0x18
+L 0x7A90 le_da_al_muro_de_la_fase_5   La misma cuenta con el dibujo 0x0F
+C 0x7A90 El laser quita tres y no se gasta
+C 0x7A9E El byte 5 es la vida
+L 0x7AB0 le_da_al_objeto_del_fondo   Le pone el dibujo por dos menos uno, le quita vida y, al agotarse, suena el 0x0E y lo borra
+C 0x7AB3 El tipo por dos menos uno: el dibujo tocado
+C 0x7ABE El laser quita tres y no se gasta
+C 0x7AC6 El byte 5 es la vida
+C 0x7AD1 El sonido 6: aun aguanta
+L 0x7AD8 borra_y_cobra   Suena, borra el objeto de la pantalla, cobra 0x10 y monta la explosion
+C 0x7ADE Diez puntos
+L 0x7AF0 le_da_al_objeto_de_la_fase_3   Igual, pero enciende 0xE1FF, lo deja en el paso 2 y corre la explosion con la tabla de 0x7B40
+C 0x7AF0 0xE1FF a uno
+C 0x7AF2 0xE1FF a uno
+C 0x7B03 El byte 5 es la vida
+C 0x7B0E El sonido 6
+C 0x7B16 Diez puntos
+C 0x7B1C El sonido 0x0F
+C 0x7B27 El objeto pasa al paso 2
+C 0x7B2F La tabla de 0x7B40: donde cae la explosion de cada tipo
+C 0x7B32 La tabla de 0x7B40: donde cae la explosion
+C 0x7B35 Y la Y
+D 0x7B3E 0x7B40 tabla_7B38  Los dos ultimos bytes de la tabla de ocho que 0x7942 declara con la base 0x7B38: los seis primeros caen encima del codigo, o sea que solo se usan los indices altos.
+F 0x7B3E 2
+D 0x7B40 0x7B4E tabla_7B40  Catorce bytes que lee 0x7B2F.
+F 0x7B40 2
+L 0x7B4E monta_la_explosion_del_fondo   Busca hueco en las cuatro ranuras de 0xE800 y monta ahi la explosion, con su espejo de 0xEA80 a cero
+C 0x7B51 Cuatro ranuras
+C 0x7B57 Ocho bytes por ranura
+C 0x7B63 Tipo 0x20 y contador 4
+C 0x7B65 Tipo 0x20 y contador 4: la explosion
+C 0x7B69 Donde cae
+C 0x7B74 La fase 6 no lleva espejo
+C 0x7B77 Cuatro menos la ranura, por dieciseis: su hueco en 0xEA80
+C 0x7B78 0xEC1E se queda con el hueco del espejo
+C 0x7B7A Por dieciseis: su hueco en el espejo
+C 0x7B88 Dieciseis bytes a cero
+L 0x7B91 mira_los_choques_de_la_fase_5   Solo en la fase 5: los nueve disparos contra las cuatro piezas de 0xE880
+C 0x7B91 Solo la fase 5
+C 0x7B9A Nueve disparos
+C 0x7BA7 Dieciseis bytes: el disparo siguiente
+C 0x7BAA Dieciseis bytes: el disparo siguiente
+L 0x7BAE un_disparo_contra_las_piezas   Cuatro piezas de ocho bytes, con caja de 0x22 por 0x20
+C 0x7BB3 Ocho bytes por pieza
+C 0x7BB7 La posicion del disparo
+C 0x7BB8 El tipo del disparo
+C 0x7BC5 El laser se mide aparte
+C 0x7BCA Cuatro piezas
+C 0x7BD2 El byte 6 a cero: esta pieza no cuenta
+C 0x7BDE 0x22 de ancho
+C 0x7BEA Y 0x20 de alto
+L 0x7BF6 le_da_a_la_pieza_de_la_fase_5   Le pone el dibujo tocado, le quita vida y, al agotarse, cobra 0x10 y monta la explosion
+C 0x7BF9 El tipo por dos menos uno
+C 0x7C04 El laser quita tres
+C 0x7C0C El byte 5 es la vida
+C 0x7C17 El sonido 6
+C 0x7C1C Diez puntos
+C 0x7C22 El sonido 0x0F
+L 0x7C34 despacha_el_paso_del_jefe   0xE151 dice si hay jefe y 0xE152 en que paso va: siete salidas
+C 0x7C34 Con 0xE151 a cero no hay jefe
+D 0x7C41 0x7C4F tabla_del_despachador_7C3E  Siete palabras pegadas detras del `call 0x4067` de 0x7C3E.
+F 0x7C41 w2
+L 0x7C4F arranca_el_jefe   Sube el paso, pone 0xE190 a cero y deja 0x1E cuadros en 0xE153
+C 0x7C54 0x1E cuadros
+L 0x7C5A despacha_el_paso_del_jefe_2   Otra tabla de siete, indexada por el mismo 0xE152
+C 0x7C5A Con 0xE151 a cero no hay jefe
+D 0x7C65 0x7C73 tabla_del_despachador_7C62  Siete palabras pegadas detras del `call 0x4067` de 0x7C62.
+F 0x7C65 w2
+L 0x7C73 no_hace_nada   Un `ret` suelto: el hueco de las tablas que no tienen nada que hacer en ese paso
+L 0x7C74 despacha_el_dibujo_del_jefe   La tercera tabla de siete: quien guarda lo que hay debajo del jefe
+C 0x7C74 Con 0xE151 a cero no hay jefe
+D 0x7C7F 0x7C8D tabla_del_despachador_7C7C  Siete palabras pegadas detras del `call 0x4067` de 0x7C7C.
+F 0x7C7F w2
+L 0x7C8D despacha_el_paso_del_nucleo   Cinco pasos, contados en 0xE190
+D 0x7C93 0x7C9D tabla_del_despachador_7C90  Cinco palabras pegadas detras del `call 0x4067` de 0x7C90.
+F 0x7C93 w2
+B 0x7C9D EL JEFE DEL FINAL DE FASE, PASO A PASO
+B 0x7C9D 0xE151 dice que hay jefe y 0xE152 por que paso va; dentro del paso, 0xE190
+B 0x7C9D lleva la cuenta del nucleo y 0xE153 los cuadros que faltan. Son cinco
+B 0x7C9D pasos: esperar a que la pantalla se quede vacia, bajar el nucleo,
+B 0x7C9D esperar a que lo maten, y las dos salidas.
+L 0x7C9D espera_a_que_no_quede_nadie   Hasta que no se vacien las veintidos ranuras, el jefe no entra; entonces carga sus graficos y monta la primera pieza
+C 0x7CA2 Las doce ranuras de 0xE300...
+C 0x7CB1 ...y las diez de 0xE500
+C 0x7CBD Los graficos de la explosion
+C 0x7CC1 0xE155 a cero: el nucleo aun vive
+C 0x7CC4 Los trece bytes de 0x7ED9 a 0xE780: la primera pieza
+C 0x7CCF 0x3C cuadros
+L 0x7CD4 paso_siguiente_del_nucleo   0xE190 + 1
+L 0x7CD9 espera_un_cuadro_mas   Aun queda algo vivo: se vuelve a mirar al cuadro siguiente
+L 0x7CDF entra_el_nucleo   Cada ocho cuadros lo corre ocho puntos a la izquierda hasta la columna 0x98, y ahi se queda 0x2D0 cuadros
+C 0x7CDF Uno de cada ocho cuadros
+C 0x7CE9 Ocho puntos a la izquierda
+C 0x7CEC Hasta la columna 0x98
+C 0x7CEF 0x2D0 cuadros parado
+L 0x7CFC el_nucleo_espera   Mientras viva, dispara y cambia de cara segun los cuadros que le queden: a los 0x258 una, a los 0x78 otra
+C 0x7CFC 0xE155 puesto: el nucleo ya esta muerto
+C 0x7D0F A falta de 0x258 cuadros, la primera cara
+C 0x7D1A Y a falta de 0x78, la segunda
+C 0x7D26 Con la cuenta agotada, el nucleo se va
+L 0x7D29 el_nucleo_se_va   Cara 2, 0x28 cuadros y al paso siguiente
+C 0x7D2E 0x28 cuadros
+L 0x7D35 revienta_el_nucleo   Lo borra, monta la explosion, suena el 0x3B y, si estaba vivo, cobra 0x100
+C 0x7D38 0xE153: los cuadros que faltan
+C 0x7D3B 0xE780 a cero: la pieza se va
+C 0x7D48 El sonido 0x3B
+C 0x7D4D Cien puntos, y solo si el nucleo seguia vivo
+C 0x7D57 0x78 cuadros
+C 0x7D59 0x78 cuadros
+L 0x7D5F acaba_el_jefe   Al agotarse la cuenta, 0xE150 a uno: la fase puede seguir
+L 0x7D64 marca_que_el_jefe_murio   0xE150 a uno
+L 0x7D6A el_nucleo_dispara   De la segunda vuelta en adelante: cada seis disparos del jugador suelta uno apuntado, con velocidad 0x60
+C 0x7D6A Solo de la segunda vuelta en adelante
+C 0x7D6F 0xE78C: los que le quedan por soltar
+C 0x7D76 El bit 4 de lo recien pulsado: el disparo del jugador
+C 0x7D7C Seis de una tacada
+C 0x7D80 Sale 0x1C por debajo del nucleo y ocho a su derecha
+C 0x7D8C Velocidad 0x60
+C 0x7D96 Las seis ranuras de 0xE580
+C 0x7DA0 Treinta y dos bytes: la siguiente
+C 0x7DA2 Treinta y dos bytes: la ranura siguiente
+L 0x7DA8 suelta_cuatro_disparos   Monta las cuatro ranuras de 0xE500 con los cuatro disparos, cada uno con su desplazamiento de la tabla de 0x7E03
+C 0x7DB1 La tabla de 0x7E03: donde sale cada uno
+C 0x7DB8 Cuatro disparos
+L 0x7DBA monta_uno_de_los_cuatro   Rellena la ranura y le pone la velocidad, que sale de la dificultad: cuanto mayor, mas rapido
+C 0x7DBB La ranura queda ocupada
+C 0x7DBD Cuatro bytes mas alla
+C 0x7DC5 La X de partida...
+C 0x7DC6 La X, y el byte de al lado a cero
+C 0x7DCF ...y la Y
+C 0x7DD2 Los contadores, a cero
+C 0x7DD8 La dificultad, en negativo
+C 0x7DE1 Por 0x20
+C 0x7DE6 Sumada a 0xFA00: la velocidad
+C 0x7DF0 El bit 0 del contador: uno de dos dibujos
+C 0x7DF6 Dieciseis bytes mas alla, la marca
+C 0x7DFA Y la marca de vivo
+C 0x7DFC Cinco bytes mas: la ranura siguiente
+D 0x7E03 0x7E0B tabla_7E03  Ocho bytes que lee 0x7DB1.
+F 0x7E03 2
+L 0x7E0B mueve_al_jefe   Elige un dibujo con el registro R, decide hacia que lado va segun donde este la nave, y va dando pasos
+C 0x7E0B 0xE781: si ya esta en marcha
+C 0x7E13 El registro R: uno de cuatro dibujos
+C 0x7E1A 0x18 a la derecha del jefe
+C 0x7E20 La fila de la nave: hacia ese lado va
+L 0x7E2F da_un_paso_el_jefe   Cada tantos cuadros -menos cuantos mas difícil- se corre ocho puntos, y a los once pasos se para
+C 0x7E2F 0xE78A: los cuadros que faltan para el paso siguiente
+C 0x7E34 La dificultad: cinco, cuatro o tres cuadros por paso
+C 0x7E37 La dificultad manda los cuadros por paso
+C 0x7E43 Y se apunta para el paso siguiente
+C 0x7E47 Once pasos y se para
+C 0x7E50 0xE787 dice hacia que lado
+C 0x7E54 Ocho a la izquierda o a la derecha
+C 0x7E56 Ocho a un lado o al otro
+C 0x7E63 Por debajo de la X 0x10 se da la vuelta
+C 0x7E68 Y por encima de la 0x78, tambien
+C 0x7E6A Se apunta hacia que lado va
+C 0x7E6B Y se guarda el lado
+L 0x7E70 dibuja_al_jefe   Pinta las tres partes: el cuerpo de 0x0B por 8 caracteres, el ojo y la boca, cada una con su tabla
+C 0x7E7D 0x0B de ancho por 8 de alto: el cuerpo
+C 0x7E86 El ojo, ocho a la derecha y 0x18 mas abajo
+C 0x7E91 0xE789 elige uno de los dibujos del ojo
+C 0x7E99 Por tres: tres caracteres por dibujo
+C 0x7E9D Tres de ancho por dos de alto
+C 0x7EA3 Y la boca, 0x20 a la derecha
+C 0x7EAD 0xE786: la cara que toca
+L 0x7EBD casilla_del_jefe   La posicion del jefe mas el desplazamiento que traiga DE
+C 0x7EBD La fila del jefe -0xE783- y su columna -0xE785-, mas lo que traiga DE
+L 0x7EC8 borra_al_jefe   Borra el rectangulo de 0x0B por 8 del cuerpo
+C 0x7EC8 Solo con 0xE780 en uno
+D 0x7ED9 0x7EE6 primera_pieza_del_jefe  Los trece bytes que 0x7CC7 copia a 0xE780 cuando el jefe entra: la ficha de arranque de su primera pieza.
+F 0x7ED9 13
+D 0x7EE6 0x7F3E dibujo_del_cuerpo  Los 88 caracteres del cuerpo del jefe, 0x0B de ancho por 8 de alto, que 0x7E80 copia al mapa con 0x490C.
+F 0x7EE6 11
+D 0x7F3E 0x7F62 tabla_7F3E  Treinta y seis bytes que lee 0x7E8E.
+F 0x7F3E 8
+D 0x7F62 0x7F74 tabla_7F62  Dieciocho bytes que lee 0x7EAA.
+F 0x7F62 8
+L 0x7F74 paso_del_jefe_de_la_fase_5   Espera a que se vacien las doce ranuras, deja 0x40 cuadros y arranca el jefe de esa fase
+C 0x7F7D Las doce ranuras de 0xE300
+C 0x7F8B 0x40 cuadros
+C 0x7F96 Pasada la distancia 0xFF, arranca en el paso 2
+C 0x7F99 La distancia 0xFF
+L 0x7FA9 corre_al_jefe_de_la_fase_5   Con el banco 10 puesto, cuatro rutinas suyas; cuando 0xE790 y 0xE7C0 se apagan, se acaba
+C 0x7FA9 Banco 10 en 0xA000
+C 0x7FAA Banco 10 en 0xA000
+C 0x7FBF Devuelto el 3
+C 0x7FC9 0xE117: el jefe ya esta en marcha
+C 0x7FCE Hasta que las dos casillas no esten a cero, sigue
+C 0x7FD1 Y 0xE7C0
+L 0x7FD8 acaba_el_jefe_de_la_fase_5   0xE150 a uno
+L 0x7FDE arranca_o_avanza   Pasada la distancia 0x1A0 se enciende 0xE117; si no, cada 0xC0 cuadros avanza el guion de 0xE116
+C 0x7FE1 La distancia 0x1A0
+C 0x7FED 0xE153: los cuadros que faltan
+C 0x7FF2 Otros 0xC0
+C 0x7FF9 Dieciseis pasos en redondo
+B 0x7FFE LA ULTIMA INSTRUCCION SE PARTE ENTRE ESTE BANCO Y EL SIGUIENTE
+D 0x7FFE 0x8000 instruccion_partida  Los dos primeros bytes de un `ld hl,0x8041` cuyo tercer byte -el 0x80- es el PRIMER byte del banco 2. La instruccion existe solo cuando el banco 1 esta en 0x6000 y el 2 en 0x8000, que es como los mapea siempre INIT. Se listan como bytes porque este listado acaba en 0x7FFF.
+F 0x7FFE 2
