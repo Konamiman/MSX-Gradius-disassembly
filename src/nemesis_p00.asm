@@ -245,7 +245,7 @@ arranca_la_partida:		; Deja el marcador a cero, borra los 0x900 bytes de objetos
 	ldir		;4121
 	call carga_los_datos_de_la_fase		;4123   ; Y los datos de la fase que toque
 	jp arranca_el_desplazamiento		;4126
-siguiente_fase:		; Sube 0xE061; pasada la novena, la tabla de 0x418F dice por cual se sigue, y se vuelve a empezar la ronda
+monta_la_fase_que_toque:		; NO sube la fase: con 0xE061 a cero la pone a uno, y de la novena en adelante la cambia por la que diga la tabla de 0x418F; luego la monta
 	ld hl,0e061h		;4129
 	ld a,(hl)			;412c   ; Con la fase a cero, se arranca por la primera
 	and a			;412d
@@ -253,9 +253,9 @@ siguiente_fase:		; Sube 0xE061; pasada la novena, la tabla de 0x418F dice por cu
 	ld (hl),001h		;4130
 L_4132:
 	ld a,(hl)			;4132
-	sub 009h		;4133   ; Por debajo de la nueve no hay vuelta que dar
+	sub 009h		;4133   ; Por debajo de la nueve la fase se monta tal cual
 	jr c,arranca_la_fase		;4135
-	ld de,0418fh		;4137   ; La tabla de 0x418F: la fase con la que sigue la ronda
+	ld de,0418fh		;4137   ; La tabla de 0x418F, indexada por la fase menos nueve: solo tiene cuatro entradas
 	call suma_a_a_de		;413a
 	ld a,(de)			;413d
 	ld (0e061h),a		;413e
@@ -295,10 +295,12 @@ L_418B:
 	ret			;418e
 
 ; ----------------------------------------------------------------------
-; DATOS fases_por_ronda: Los primeros doce bytes los indexa 0x4137 con `ld
-;   de,0x418F` + 0x4062: dan el numero de fase (0xE061) que toca. Los cuatro
-;   ultimos los copia 0x4173 desde 0x4193 a 0xE200, dieciseis bytes de una
-;   vez.
+; DATOS fases_por_ronda: Solo CUATRO bytes utiles, de 0x418F a 0x4192: 0x03,
+;   0x04, 0x05 y 0x08. Los indexa 0x4137 con `ld de,0x418F` + 0x4062 y el
+;   indice es (0xE061 menos 9), asi que dicen por que fase se sigue despues de
+;   la 9, la 10, la 11 y la 12. NO hay una quinta entrada: el byte de 0x4193
+;   ya es el primero de los DIECISEIS que 0x416D copia a 0xE200 (la ficha con
+;   la que arranca la nave).
 ;   0x418f..0x41a3  (20 bytes)
 DATA_fases_por_ronda:
 	defb 003h,004h,005h,008h	; 418f
@@ -2845,7 +2847,7 @@ estado_4:		; Borra el rotulo de 0x5820, pasa a la fase siguiente y enciende el a
 	ret nz			;53b7
 	ld de,05820h		;53b8
 	call borra_caracteres		;53bb
-	call siguiente_fase		;53be
+	call monta_la_fase_que_toque		;53be
 	ld a,001h		;53c1
 	ld (0e05fh),a		;53c3
 	jr estado_siguiente		;53c6
@@ -3931,7 +3933,7 @@ L_5CA1:
 	xor a			;5cae
 	ld (0e00dh),a		;5caf
 	ld (0e06ah),a		;5cb2
-	call siguiente_fase		;5cb5
+	call monta_la_fase_que_toque		;5cb5
 	call 0a0d8h		;5cb8   ; Y todas las mejoras de golpe, como la clave HYPER
 	jp escribe_los_rotulos		;5cbb
 corre_la_demo:		; Mientras dure, va sacando de la grabacion el valor del mando y se lo pasa al juego como si lo hubiera pulsado alguien

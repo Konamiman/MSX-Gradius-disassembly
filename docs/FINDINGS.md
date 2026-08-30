@@ -87,6 +87,26 @@ forty-three appearances in eighty-six bytes at 0xAF3F. Each one is a single
 word — the low byte and bit 0 of the high byte are a nine-bit distance, bits 1
 and 2 are the variant, and the top five are the row.
 
+## The stages are not played in order, and four of them are bonus
+
+There are two ways out of a stage. `acaba_la_fase` (0x6D53) adds one to 0xE061;
+`salta_a_la_fase` (0x6FB9) writes a number straight into it, and **eight places
+jump there, each with its own number**. Put them together and the running order
+is:
+
+    1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - ending - 1
+
+Stages 9 to 12 are **bonus stages** slipped in between the others: no boss, and
+an end-of-stage routine six instructions long that puts the stage back to 3, 4,
+5 and 8 — exactly the four bytes of the table at 0x418F.
+
+What opens them is the **target**. The finals of stages 2, 3, 4 and 7 test
+0xE1C0, and the only instruction in the whole 128 KB that makes that byte
+non-zero is 0xB130, inside `cierra_el_tramo`, which runs when the ship touches
+the target at the end of the stage. Touch it and you go to the bonus stage; miss
+it and the normal script carries on. Stage 1 has a target as well, and it leads
+to no bonus.
+
 ## Stages 3 and 6 have no terrain at all
 
 Their script range is 0xFFFF, so the test that decides whether the script

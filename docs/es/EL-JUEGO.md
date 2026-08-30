@@ -12,11 +12,24 @@ qué país es la máquina y pone el título japonés o el occidental. El cartuch
 sí solo sabe un nombre: la marca escondida al final del banco 3 pone
 グラディウス, *Gradius*.
 
-## Las doce fases
+## Las doce fases, y las cuatro que son de bonus
 
-El número de fase vive en 0xE061, y la tabla de 0x418F dice con cuál se sigue
-pasada la novena, así que las fases no se juegan simplemente en orden para
-siempre: la ronda da la vuelta.
+El número de fase vive en 0xE061, y **no** se sube sin más. De una fase se sale
+por dos sitios: `acaba_la_fase` (0x6D53), que suma uno, y `salta_a_la_fase`
+(0x6FB9), que le mete un número escrito a mano. A este segundo saltan ocho
+sitios, cada uno con el suyo, y de ahí sale el recorrido de verdad:
+
+    1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - final - 1
+
+**Las fases 9, 10, 11 y 12 son de bonus**, metidas entre las otras. No llevan
+jefe: su final son seis instrucciones que devuelven la fase a la 3, la 4, la 5 y
+la 8, que son los cuatro bytes de la tabla de 0x418F.
+
+Y lo que las abre es el blanco. Los finales de las fases 2, 3, 4 y 7 miran
+0xE1C0, y lo único en los 128 KB que pone ese byte distinto de cero es 0xB130,
+que corre cuando la nave toca el blanco del final de la fase. O sea que
+**tocarlo te manda a la fase de bonus, y no tocarlo sigue el guion normal**. La
+fase 1 también tiene blanco, y no lleva a ninguna.
 
 La fase 3 y la 6 **no tienen terreno ninguno**. Su tramo de guión es 0xFFFF, así
 que el montador de columnas siempre acaba en la rutina de estrellas y la fase

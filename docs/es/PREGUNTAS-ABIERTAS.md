@@ -3,16 +3,17 @@
 Lo que sigue sin estar zanjado. Todo esto está escrito como pregunta a
 propósito: nada de ello se da por supuesto en el listado.
 
-## Qué decide el límite de scroll a partir del tercer blanco
+## Para qué sirve el contador de 0xE06C
 
 Cinco fases llevan escrito un blanco a una distancia fija: la 1, la 2, la 3, la
 4 y la 7. Tocarlo revienta todo lo que hay en pantalla, para la pantalla y fija
-el límite del scroll. Las fases 2, 3 y 6 tienen su límite propio; las demás
+el límite del scroll; y, en las fases 2, 3, 4 y 7, esa pantalla parada es lo que
+manda a la fase de bonus. Las fases 2, 3 y 6 tienen su límite propio; las demás
 pasan por un contador en 0xE06C que solo avanza cuando el blanco es de un tipo
 **distinto** del anterior, y al tercero distinto el límite pasa a ser 0x01C0.
 
-Para qué sirve ese contador jugando — si es la ruta escondida, o la dificultad
-de la vuelta, o alguna otra cosa — no está zanjado.
+El camino a las fases de bonus ya está zanjado. Lo que ese contador cambia
+encima, no.
 
 ## Los 399 bytes de delante de la marca
 

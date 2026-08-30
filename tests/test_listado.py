@@ -453,6 +453,29 @@ class TestElCartucho(unittest.TestCase):
         # El hueco de dentro del banco 3, delante de la marca.
         self.assertEqual(cola - 47820, 399)
 
+    def test_el_orden_de_las_fases_y_las_cuatro_de_bonus(self):
+        """1-2-9-3-10-4-11-5-6-7-12-8: los ocho saltos que lo montan."""
+        listado = asm(1)
+        # Los cuatro que ENTRAN en las fases de bonus, desde la 2, 3, 4 y 7.
+        for fase, sitio in ((0x09, "6d71"), (0x0A, "6db2"),
+                            (0x0B, "6e20"), (0x0C, "6f24")):
+            self.assertIn("ld a,0%02xh		;%s" % (fase, sitio), listado,
+                          "ya no se salta a la fase 0x%02X desde 0x%s"
+                          % (fase, sitio))
+        # Y los cuatro que SALEN de ellas, a la 3, la 4, la 5 y la 8.
+        for fase, sitio in ((0x03, "6f9c"), (0x04, "6fa5"),
+                            (0x05, "6fae"), (0x08, "6fb7")):
+            self.assertIn("ld a,0%02xh		;%s" % (fase, sitio), listado,
+                          "la fase de bonus de 0x%s ya no vuelve a la 0x%02X"
+                          % (sitio, fase))
+        # Los cuatro de vuelta son exactamente fases_por_ronda.
+        self.assertEqual([self.p00[0x418F + i] for i in range(4)],
+                         [0x03, 0x04, 0x05, 0x08])
+        # Y lo unico que para la pantalla -lo que abre el bonus- es 0xB130.
+        paradas = [l for l in asm(3).splitlines()
+                   if "ld (0e1c0h),a" in l]
+        self.assertEqual(len(paradas), 2, paradas)   # 0xB054 pone 2, 0xB130 pone 1
+
     def test_los_dos_juegos_de_piezas_del_mapa(self):
         """Las fases 5, 9, 10 y 12 leen las piezas de 0x8FF0 y el resto de 0x8000."""
         # La comparacion que lo decide esta en 0x46F5, y se lee en el listado.

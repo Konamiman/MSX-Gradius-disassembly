@@ -21,10 +21,10 @@ exists to make sure the listing does not *lie* about what it reassembles.
 | traced code | 25,471 bytes |
 | identified data | 105,601 bytes |
 | unexplained | 0 bytes |
-| listing | 26,343 lines |
+| listing | 26,373 lines |
 | entry points, each with its justification | 277 |
 | named labels | 916 |
-| anchored comments | 2,978 |
+| anchored comments | 2,982 |
 | explained data ranges | 242 |
 
 The commentary is finished to the standard of the series: **23.3% of the

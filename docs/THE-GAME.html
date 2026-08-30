@@ -87,8 +87,11 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <p>Konami&#x27;s Gradius, released for the MSX1 in 1986 as <b>Nemesis</b> outside Japan. A horizontally scrolling shooter: twelve stages, a power-up meter you fill by collecting capsules, and options that trail the ship copying its path.</p>
 <h2 id="which-name-it-shows">Which name it shows</h2>
 <p>Both. The logo is chosen at boot: the cartridge asks the BIOS which country the machine is and picks the Japanese title or the western one. The cartridge itself only knows one name — the hidden mark at the end of bank 3 reads グラディウス, <em>Gradius</em>.</p>
-<h2 id="the-twelve-stages">The twelve stages</h2>
-<p>The stage number lives in 0xE061, and the table at 0x418F says which one follows which once the ninth is past, so the stages are not simply played in order for ever: the round loops.</p>
+<h2 id="the-twelve-stages-and-the-four-that-are-bonus">The twelve stages, and the four that are bonus</h2>
+<p>The stage number lives in 0xE061, and it is <b>not</b> simply counted up. There are two ways out of a stage: <code>acaba_la_fase</code> (0x6D53) adds one, and <code>salta_a_la_fase</code> (0x6FB9) writes a number straight in. Eight places jump to the second one, each with its own number, and that is where the real running order comes from:</p>
+<pre><code>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - ending - 1</code></pre>
+<p><b>Stages 9, 10, 11 and 12 are bonus stages</b> slipped in between the others. They have no boss: their end-of-stage routine is six instructions that put the stage back to 3, 4, 5 and 8 — the four bytes of the table at 0x418F.</p>
+<p>And what opens them is the target. The finals of stages 2, 3, 4 and 7 look at 0xE1C0, and the only thing in the whole 128 KB that makes that byte non-zero is 0xB130, which runs when the ship touches the target at the end of the stage. So <b>touching the target sends you to the bonus stage; missing it carries on with the normal script</b>. Stage 1 has a target too, and it leads to no bonus.</p>
 <p>Stage 3 and stage 6 have <b>no terrain at all</b>. Their script range is 0xFFFF, so the column builder always falls through to the star routine and the whole stage is sky. The other ten have their terrain written as a script of piece numbers; the maps on the front page are those scripts drawn out end to end.</p>
 <p>Each stage also has a <b>checkpoint</b>, in the table at 0x4212. When the stage is set up, 0x41E1 compares the distance already travelled with that number: if you had got past it, the stage restarts right there, and if not, at 0x20.</p>
 <h2 id="the-power-up-meter">The power-up meter</h2>

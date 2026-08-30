@@ -3,16 +3,18 @@
 What is still not settled. Everything here is written as a question on purpose:
 none of it is guessed at in the listing.
 
-## What decides the scroll limit after the third gate
+## What the 0xE06C counter is for
 
 Five stages have a target written into them at a fixed distance — 1, 2, 3, 4 and
 7. Touching it blows up everything on screen, stops the screen and sets the
-scroll limit. Stages 2, 3 and 6 have their own limit; the rest go through a
-counter at 0xE06C that only advances when the target is of a **different kind**
-from the last one, and at the third different one the limit becomes 0x01C0.
+scroll limit; and, in stages 2, 3, 4 and 7, that stopped screen is what sends
+you to the bonus stage. Stages 2, 3 and 6 have their own limit; the rest go
+through a counter at 0xE06C that only advances when the target is of a
+**different kind** from the last one, and at the third different one the limit
+becomes 0x01C0.
 
-What that counter is for in play — whether it is the hidden route, or the
-difficulty of the loop, or something else — is not settled.
+The route to the bonus stages is settled. What that counter changes on top of it
+is not.
 
 ## The 399 bytes before the hidden mark
 

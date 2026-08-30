@@ -79,10 +79,10 @@ C 0x4107 0xE071 a cero: la cuenta de mejoras
 C 0x410A 0xE108, 0xE063 y 0xE127 a cero de dos en dos bytes
 C 0x4116 Los 0x900 bytes de la tabla de objetos, a cero
 C 0x4123 Y los datos de la fase que toque
-L 0x4129 siguiente_fase   Sube 0xE061; pasada la novena, la tabla de 0x418F dice por cual se sigue, y se vuelve a empezar la ronda
+L 0x4129 monta_la_fase_que_toque   NO sube la fase: con 0xE061 a cero la pone a uno, y de la novena en adelante la cambia por la que diga la tabla de 0x418F; luego la monta
 C 0x412C Con la fase a cero, se arranca por la primera
-C 0x4133 Por debajo de la nueve no hay vuelta que dar
-C 0x4137 La tabla de 0x418F: la fase con la que sigue la ronda
+C 0x4133 Por debajo de la nueve la fase se monta tal cual
+C 0x4137 La tabla de 0x418F, indexada por la fase menos nueve: solo tiene cuatro entradas
 C 0x4141 Y la cuenta de mejoras y el marcador de la fase, a cero
 L 0x414B arranca_la_fase   Borra los 0xE00 bytes de 0xE100, apaga los 128 sprites, carga los datos de la fase y espera 0x3C cuadros
 C 0x414E Los 0xE00 bytes de 0xE100 en adelante, a cero
@@ -90,7 +90,7 @@ C 0x415B 0xE0 en las 128 Y del buffer de sprites: ninguno se dibuja
 C 0x416D Dieciseis bytes de 0x4193 a 0xE200
 C 0x417B 0x3C cuadros de espera antes de empezar
 L 0x4183 marca_si_hay_dos_jugadores   0xE130 a uno si 0xE06B no esta a cero
-D 0x418F 0x41A3 fases_por_ronda  Los primeros doce bytes los indexa 0x4137 con `ld de,0x418F` + 0x4062: dan el numero de fase (0xE061) que toca. Los cuatro ultimos los copia 0x4173 desde 0x4193 a 0xE200, dieciseis bytes de una vez.
+D 0x418F 0x41A3 fases_por_ronda  Solo CUATRO bytes utiles, de 0x418F a 0x4192: 0x03, 0x04, 0x05 y 0x08. Los indexa 0x4137 con `ld de,0x418F` + 0x4062 y el indice es (0xE061 menos 9), asi que dicen por que fase se sigue despues de la 9, la 10, la 11 y la 12. NO hay una quinta entrada: el byte de 0x4193 ya es el primero de los DIECISEIS que 0x416D copia a 0xE200 (la ficha con la que arranca la nave).
 F 0x418F 4
 L 0x41A3 dificultad_de_la_fase   0xE111 sale de la ronda por cuatro mas la fase, topado en 0x0F; pasada la novena, de 0xE066
 C 0x41A6 De la novena en adelante, la dificultad la manda 0xE066

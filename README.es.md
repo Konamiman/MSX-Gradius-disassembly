@@ -21,10 +21,10 @@ que además el listado no *mienta* sobre lo que reensambla.
 | código trazado | 25.471 bytes |
 | datos identificados | 105.601 bytes |
 | sin explicar | 0 bytes |
-| listado | 26.343 líneas |
+| listado | 26.373 líneas |
 | puntos de entrada, cada uno con su justificación | 277 |
 | etiquetas con nombre | 916 |
-| comentarios anclados | 2.978 |
+| comentarios anclados | 2.982 |
 | rangos de datos con explicación | 242 |
 
 Los comentarios están acabados al listón de la serie: **el 23,3 % de las

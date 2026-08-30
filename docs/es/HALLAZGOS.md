@@ -86,6 +86,25 @@ cuarenta y tres apariciones en ochenta y seis bytes, en 0xAF3F. Cada una es una
 sola palabra: el byte bajo y el bit 0 del alto son una distancia de nueve bits,
 los bits 1 y 2 son la variante, y los cinco de arriba, la fila.
 
+## Las fases no van en orden, y cuatro de ellas son de bonus
+
+De una fase se sale por dos sitios. `acaba_la_fase` (0x6D53) le suma uno a
+0xE061; `salta_a_la_fase` (0x6FB9) le mete un número escrito a mano, y **a ese
+saltan ocho sitios, cada uno con el suyo**. Juntándolos sale el recorrido de
+verdad:
+
+    1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - final - 1
+
+Las fases 9 a 12 son **de bonus**, metidas entre las otras: no llevan jefe, y su
+final son seis instrucciones que devuelven la fase a la 3, la 4, la 5 y la 8,
+que son justo los cuatro bytes de la tabla de 0x418F.
+
+Lo que las abre es el **blanco**. Los finales de las fases 2, 3, 4 y 7 miran
+0xE1C0, y la única instrucción de los 128 KB que pone ese byte distinto de cero
+es 0xB130, dentro de `cierra_el_tramo`, que corre cuando la nave toca el blanco
+del final de la fase. Tocarlo te lleva a la de bonus; no tocarlo sigue el guion
+normal. La fase 1 también tiene blanco, y no lleva a ninguna.
+
 ## Las fases 3 y 6 no tienen terreno
 
 Su tramo de guión es 0xFFFF, así que la comprobación que decide si el guión

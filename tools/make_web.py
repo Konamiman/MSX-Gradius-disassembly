@@ -116,6 +116,16 @@ TXT = {
 
 HALLAZGOS = {
     "es": [
+        ("Las fases no van en orden, y cuatro de ellas son de bonus",
+         "<p>De una fase se sale por dos sitios: <code>acaba_la_fase</code> le "
+         "suma uno al numero de fase, y <code>salta_a_la_fase</code> le mete uno "
+         "escrito a mano. A este segundo saltan OCHO sitios, cada uno con el "
+         "suyo, y de ahi sale el recorrido de verdad: "
+         "<b>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8</b>. Las fases 9 a "
+         "12 son <b>de bonus</b>: no llevan jefe y su final devuelve la fase a la "
+         "3, la 4, la 5 y la 8. Y lo que las abre es el <b>blanco</b> del final "
+         "de la fase: 0xB130, la unica instruccion de los 128 KB que para la "
+         "pantalla, es la que miran los finales de la 2, la 3, la 4 y la 7.</p>"),
         ("La VRAM de este cartucho va del revés que la de la BIOS",
          "<p>Los ocho bytes de 0x575A programan los registros del VDP y no "
          "dejan nada donde lo deja la BIOS: los <b>patrones viven en 0x2000</b> "
@@ -186,6 +196,17 @@ HALLAZGOS = {
          "fue <b>Manuel Pazos</b>.</p>"),
     ],
     "en": [
+        ("The stages are not played in order, and four of them are bonus",
+         "<p>There are two ways out of a stage: <code>acaba_la_fase</code> adds "
+         "one to the stage number, and <code>salta_a_la_fase</code> writes one "
+         "straight in. EIGHT places jump to the second, each with its own "
+         "number, and that gives the real running order: "
+         "<b>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8</b>. Stages 9 to "
+         "12 are <b>bonus stages</b>: no boss, and their ending puts the stage "
+         "back to 3, 4, 5 and 8. What opens them is the <b>target</b> at the end "
+         "of the stage: 0xB130, the only instruction in the whole 128 KB that "
+         "stops the screen, is the one the finals of stages 2, 3, 4 and 7 "
+         "test.</p>"),
         ("This cartridge turns the VRAM map upside down",
          "<p>The eight bytes at 0x575A program the VDP registers and put "
          "nothing where the BIOS puts it: <b>patterns live at 0x2000</b> and "
@@ -311,17 +332,17 @@ GALERIA = [
      "Fase 8, la del laberinto de celdas",
      "Stage 8, the cell maze one"),
     ("mapa_fase09.png",
-     "Fase 9",
-     "Stage 9"),
+     "Fase 9, la primera de las cuatro de BONUS: se entra tocando el blanco al final de la segunda, y al acabar se sale a la tercera",
+     "Stage 9, the first of the four BONUS stages: you get in by touching the target at the end of stage 2, and it drops you into stage 3"),
     ("mapa_fase10.png",
-     "Fase 10",
-     "Stage 10"),
+     "Fase 10, de BONUS: se entra desde la tercera y se sale a la cuarta",
+     "Stage 10, a BONUS stage: entered from stage 3 and leaving into stage 4"),
     ("mapa_fase11.png",
-     "Fase 11, la fortaleza",
-     "Stage 11, the fortress"),
+     "Fase 11, de BONUS: se entra desde la cuarta y se sale a la quinta",
+     "Stage 11, a BONUS stage: entered from stage 4 and leaving into stage 5"),
     ("mapa_fase12.png",
-     "Fase 12, la última",
-     "Stage 12, the last one"),
+     "Fase 12, de BONUS: se entra desde la septima y se sale a la octava, que es la ultima",
+     "Stage 12, a BONUS stage: entered from stage 7 and leaving into stage 8, the last one"),
     ("caracteres_fase01.png",
      "Los 256 caracteres de cada uno de los tres tercios con los que se dibuja "
      "la primera fase, tal como los deja el cargador de 0x42FC. En el tercero "

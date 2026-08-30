@@ -11,11 +11,25 @@ machine is and picks the Japanese title or the western one. The cartridge itself
 only knows one name — the hidden mark at the end of bank 3 reads グラディウス,
 *Gradius*.
 
-## The twelve stages
+## The twelve stages, and the four that are bonus
 
-The stage number lives in 0xE061, and the table at 0x418F says which one follows
-which once the ninth is past, so the stages are not simply played in order for
-ever: the round loops.
+The stage number lives in 0xE061, and it is **not** simply counted up. There are
+two ways out of a stage: `acaba_la_fase` (0x6D53) adds one, and
+`salta_a_la_fase` (0x6FB9) writes a number straight in. Eight places jump to the
+second one, each with its own number, and that is where the real running order
+comes from:
+
+    1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - ending - 1
+
+**Stages 9, 10, 11 and 12 are bonus stages** slipped in between the others. They
+have no boss: their end-of-stage routine is six instructions that put the stage
+back to 3, 4, 5 and 8 — the four bytes of the table at 0x418F.
+
+And what opens them is the target. The finals of stages 2, 3, 4 and 7 look at
+0xE1C0, and the only thing in the whole 128 KB that makes that byte non-zero is
+0xB130, which runs when the ship touches the target at the end of the stage. So
+**touching the target sends you to the bonus stage; missing it carries on with
+the normal script**. Stage 1 has a target too, and it leads to no bonus.
 
 Stage 3 and stage 6 have **no terrain at all**. Their script range is 0xFFFF, so
 the column builder always falls through to the star routine and the whole stage

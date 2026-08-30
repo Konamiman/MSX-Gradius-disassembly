@@ -1608,7 +1608,24 @@ L_6D43:
 	ld hl,00001h		;6d4b   ; Y 0xE151 y 0xE152: el jefe en su primer paso
 	ld (0e151h),hl		;6d4e
 	jr sube_el_paso_del_final		;6d51
-acaba_la_fase:		; Apaga al jefe y, si la nave sigue viva, pasa a la fase siguiente
+
+; ----------------------------------------------------------------------
+; EL ORDEN DE LAS FASES NO ES 1, 2, 3...
+; De una fase se sale por dos sitios distintos, y de ahi sale el recorrido
+; de verdad del cartucho:
+; - acaba_la_fase (0x6D53) llama a pasa_a_la_fase_siguiente, que sube
+; 0xE061 en uno y da la vuelta pasada la octava.
+; - salta_a_la_fase (0x6FB9) le mete a 0xE061 un numero escrito a mano,
+; y a el saltan OCHO sitios, cada uno con su numero.
+; Las fases 2, 3, 4 y 7 miran 0xE1C0 -la pantalla parada- y, si lo esta,
+; saltan a la 9, la 10, la 11 y la 12; y esas cuatro, al acabar, saltan a
+; la 3, la 4, la 5 y la 8, que son los cuatro bytes de fases_por_ronda.
+; O sea que las doce fases se juegan asi:
+; 1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - final - 1
+; Las cuatro de dos cifras son interludios metidos entre las otras, no una
+; segunda vuelta ni un tramo suelto.
+; ----------------------------------------------------------------------
+acaba_la_fase:		; Apaga al jefe y, si la nave sigue viva, sube la fase en uno
 	ld a,(0e150h)		;6d53
 	and a			;6d56
 	ret z			;6d57
@@ -1618,14 +1635,14 @@ acaba_la_fase:		; Apaga al jefe y, si la nave sigue viva, pasa a la fase siguien
 	and a			;6d61
 	ret m			;6d62
 	jp pasa_a_la_fase_siguiente		;6d63
-final_de_la_fase_2:		; Con la pantalla parada suelta el objeto 9; si no, el mismo guion de cuatro pasos
+final_de_la_fase_2:		; Con la pantalla parada SALTA A LA FASE 9; si no, sigue el guion de cuatro pasos y acaba en la 3
 	ld a,(0e1c0h)		;6d66   ; 0xE1C0: la pantalla esta parada
 	and a			;6d69
 	jr z,L_6D76		;6d6a
 	ld a,(0e107h)		;6d6c
 	and a			;6d6f
 	ret z			;6d70
-	ld a,009h		;6d71
+	ld a,009h		;6d71   ; La fase 9
 	jp salta_a_la_fase		;6d73
 L_6D76:
 	ld a,(0e065h)		;6d76   ; 0xE065: el paso del final de fase
@@ -1656,14 +1673,14 @@ enciende_al_jefe_2:		; Lo mismo que 0x6D3E
 	and a			;6da3
 	ret z			;6da4
 	jr L_6D43		;6da5
-final_de_la_fase_3:		; Como el anterior, pero el objeto que suelta es el 0x0A
+final_de_la_fase_3:		; Como el anterior, pero la fase a la que salta es la 10
 	ld a,(0e1c0h)		;6da7   ; 0xE1C0: la pantalla esta parada
 	and a			;6daa   ; Solo en los pasos con columna
 	jr z,L_6DB7		;6dab
 	ld a,(0e107h)		;6dad
 	and a			;6db0
 	ret z			;6db1
-	ld a,00ah		;6db2
+	ld a,00ah		;6db2   ; La fase 10
 	jp salta_a_la_fase		;6db4
 L_6DB7:
 	ld a,(0e065h)		;6db7   ; 0xE065: el paso del final de fase
@@ -1718,14 +1735,14 @@ enciende_al_jefe_3:
 	and a			;6e10
 	ret z			;6e11
 	jp L_6D43		;6e12
-final_de_la_fase_4:		; Con la pantalla parada suelta el objeto 0x0B; si no, cinco pasos con dos jefes
+final_de_la_fase_4:		; Con la pantalla parada SALTA A LA FASE 11; si no, cinco pasos con dos jefes
 	ld a,(0e1c0h)		;6e15   ; 0xE1C0: la pantalla esta parada
 	and a			;6e18
 	jr z,L_6E25		;6e19
 	ld a,(0e107h)		;6e1b   ; Solo en los pasos con columna
 	and a			;6e1e
 	ret z			;6e1f
-	ld a,00bh		;6e20
+	ld a,00bh		;6e20   ; La fase 11
 	jp salta_a_la_fase		;6e22
 L_6E25:
 	ld a,(0e065h)		;6e25
@@ -1860,14 +1877,14 @@ espera_y_para_donde_este:		; Al morir el jefe, el limite se queda en la distanci
 	ld hl,(0e063h)		;6f10
 	ld (0e105h),hl		;6f13
 	jp L_6D43		;6f16
-final_de_la_fase_7:		; Con la pantalla parada suelta el objeto 0x0C; si no, saca el jefe 3
+final_de_la_fase_7:		; Con la pantalla parada SALTA A LA FASE 12; si no, saca el jefe 3
 	ld a,(0e1c0h)		;6f19   ; 0xE1C0: la pantalla esta parada
 	and a			;6f1c
 	jr z,L_6F29		;6f1d
 	ld a,(0e107h)		;6f1f   ; Solo en los pasos con columna
 	and a			;6f22
 	ret z			;6f23
-	ld a,00ch		;6f24
+	ld a,00ch		;6f24   ; La fase 12
 	jp salta_a_la_fase		;6f26
 L_6F29:
 	ld a,(0e065h)		;6f29
@@ -1921,30 +1938,30 @@ acaba_el_final:		; Apaga 0xE1D0 y pasa de fase
 	ld hl,00000h		;6f8e
 	ld (0e1d0h),hl		;6f91
 	jp pasa_a_la_fase_siguiente		;6f94
-final_de_la_fase_9:		; Suelta el objeto 3
+final_de_la_fase_9:		; Acabado el interludio, se vuelve a la fase 3
 	ld a,(0e107h)		;6f97
 	and a			;6f9a
 	ret z			;6f9b
-	ld a,003h		;6f9c   ; El objeto 3
+	ld a,003h		;6f9c   ; La fase 3, no un objeto
 	jr salta_a_la_fase		;6f9e
-final_de_la_fase_10:		; Suelta el objeto 4
+final_de_la_fase_10:		; Se vuelve a la fase 4
 	ld a,(0e107h)		;6fa0   ; Solo en los pasos con columna
 	and a			;6fa3
 	ret z			;6fa4
-	ld a,004h		;6fa5   ; El objeto 4
+	ld a,004h		;6fa5   ; La fase 4
 	jr salta_a_la_fase		;6fa7
-final_de_la_fase_11:		; Suelta el objeto 5
+final_de_la_fase_11:		; Se vuelve a la fase 5
 	ld a,(0e107h)		;6fa9   ; Solo en los pasos con columna
 	and a			;6fac
 	ret z			;6fad
-	ld a,005h		;6fae   ; El objeto 5
+	ld a,005h		;6fae   ; La fase 5
 	jr salta_a_la_fase		;6fb0
-final_de_la_fase_12:		; Suelta el objeto 8
+final_de_la_fase_12:		; Se vuelve a la fase 8, la ultima
 	ld a,(0e107h)		;6fb2   ; Solo en los pasos con columna
 	and a			;6fb5
 	ret z			;6fb6
-	ld a,008h		;6fb7   ; El objeto 8
-salta_a_la_fase:		; Deja la fase en A, borra los contadores y arranca por 0x4100; se come la direccion de retorno con un `pop hl`
+	ld a,008h		;6fb7   ; La fase 8
+salta_a_la_fase:		; Le mete a 0xE061 la fase que traiga A, borra los contadores y arranca por 0x4100; se come la direccion de retorno con un `pop hl`
 	ld (0e061h),a		;6fb9
 	xor a			;6fbc
 	ld (0e107h),a		;6fbd   ; 0xE107, 0xE065 y 0xE1C0 a cero

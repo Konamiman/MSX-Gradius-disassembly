@@ -2695,13 +2695,19 @@ DATA_tabla_B03C:
 
 
 ; ----------------------------------------------------------------------
-; EL BLANCO QUE CIERRA EL TRAMO
+; EL BLANCO QUE CIERRA EL TRAMO Y ABRE LA FASE DE BONUS
 ; Cinco fases -la 1, la 2, la 3, la 4 y la 7- llevan escrita una distancia
 ; a la que aparece un blanco: no es un objeto de los de siempre, sino tres
 ; bytes sueltos en 0xE1C1..0xE1C3 -tipo, fila y columna- que se corren con
 ; el scroll. Si la nave le pasa por encima, con margen de 0x10 en las dos
 ; direcciones, revienta todo lo que hay en pantalla, para el scroll en un
 ; limite propio de la fase, borra el renglon del guion y suena el 0xCD.
+; Y ADEMAS ES LA PUERTA DE LAS FASES DE BONUS. 0xB130 es lo UNICO en los
+; 128 KB que pone 0xE1C0 distinto de cero, y p01:0x6D66, 0x6DA7, 0x6E15 y
+; 0x6F19 -los finales de las fases 2, 3, 4 y 7- miran justo ese byte: con
+; la pantalla parada saltan a las fases 9, 10, 11 y 12, y sin parar siguen
+; su guion normal. O sea que tocar el blanco al final de esas cuatro fases
+; es lo que abre el interludio. El blanco de la fase 1 no lleva a ninguno.
 ; ----------------------------------------------------------------------
 mira_el_blanco_del_tramo:		; Con la pantalla parada cuenta hasta 0x40 y la suelta; y si no, mira si toca sacar el blanco y si la nave lo ha tocado
 	ld a,(0e200h)		;b042   ; Sin nave no hay nada que mirar
@@ -2846,7 +2852,7 @@ cierra_el_tramo:		; Para el scroll en su limite, borra el renglon del guion, rev
 	ld (0e105h),hl		;b126   ; 0xE105: hasta donde llega el scroll
 	ld a,040h		;b129   ; 0x40 cuadros parada
 	ld (0e1c5h),a		;b12b
-	ld a,001h		;b12e   ; 0xE1C0 a uno: la pantalla se para
+	ld a,001h		;b12e   ; 0xE1C0 a uno: la pantalla se para, y de ahi cuelga la fase de bonus
 	ld (0e1c0h),a		;b130
 	ld hl,00000h		;b133   ; El renglon del guion, a cero
 	ld (0e127h),hl		;b136

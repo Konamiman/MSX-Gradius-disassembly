@@ -413,19 +413,35 @@ L 0x6D3E enciende_al_jefe   0xE151 a uno: el jefe entra en pantalla
 C 0x6D43 0xE150 a cero y 0xE114 a uno
 C 0x6D48 0xE114 a uno
 C 0x6D4B Y 0xE151 y 0xE152: el jefe en su primer paso
-L 0x6D53 acaba_la_fase   Apaga al jefe y, si la nave sigue viva, pasa a la fase siguiente
+B 0x6D53 EL ORDEN DE LAS FASES NO ES 1, 2, 3...
+B 0x6D53 De una fase se sale por dos sitios distintos, y de ahi sale el recorrido
+B 0x6D53 de verdad del cartucho:
+B 0x6D53   - acaba_la_fase (0x6D53) llama a pasa_a_la_fase_siguiente, que sube
+B 0x6D53     0xE061 en uno y da la vuelta pasada la octava.
+B 0x6D53   - salta_a_la_fase (0x6FB9) le mete a 0xE061 un numero escrito a mano,
+B 0x6D53     y a el saltan OCHO sitios, cada uno con su numero.
+B 0x6D53 Las fases 2, 3, 4 y 7 miran 0xE1C0 -la pantalla parada- y, si lo esta,
+B 0x6D53 saltan a la 9, la 10, la 11 y la 12; y esas cuatro, al acabar, saltan a
+B 0x6D53 la 3, la 4, la 5 y la 8, que son los cuatro bytes de fases_por_ronda.
+B 0x6D53 O sea que las doce fases se juegan asi:
+B 0x6D53     1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - final - 1
+B 0x6D53 Las cuatro de dos cifras son interludios metidos entre las otras, no una
+B 0x6D53 segunda vuelta ni un tramo suelto.
+L 0x6D53 acaba_la_fase   Apaga al jefe y, si la nave sigue viva, sube la fase en uno
 C 0x6D5E Con 0xE200 en negativo la nave esta muerta
-L 0x6D66 final_de_la_fase_2   Con la pantalla parada suelta el objeto 9; si no, el mismo guion de cuatro pasos
+L 0x6D66 final_de_la_fase_2   Con la pantalla parada SALTA A LA FASE 9; si no, sigue el guion de cuatro pasos y acaba en la 3
 C 0x6D66 0xE1C0: la pantalla esta parada
+C 0x6D71 La fase 9
 C 0x6D76 0xE065: el paso del final de fase
 C 0x6D82 Solo en los pasos con columna
 L 0x6D8C espera_a_que_muera_y_borra   Igual, y ademas borra 0xE972
 C 0x6D8C 0xE150: hasta que no muera, no
 C 0x6D97 El desplazamiento llega hasta 0x1DF
 L 0x6DA0 enciende_al_jefe_2   Lo mismo que 0x6D3E
-L 0x6DA7 final_de_la_fase_3   Como el anterior, pero el objeto que suelta es el 0x0A
+L 0x6DA7 final_de_la_fase_3   Como el anterior, pero la fase a la que salta es la 10
 C 0x6DA7 0xE1C0: la pantalla esta parada
 C 0x6DAA Solo en los pasos con columna
+C 0x6DB2 La fase 10
 C 0x6DB7 0xE065: el paso del final de fase
 C 0x6DC4 0xE151: si ya hay jefe en pantalla
 C 0x6DCA La distancia recorrida...
@@ -440,9 +456,10 @@ C 0x6DF9 0xE150: hasta que no muera, no
 C 0x6DFC 0xE150 a cero
 C 0x6E04 El desplazamiento llega hasta 0x1AF
 L 0x6E0D enciende_al_jefe_3
-L 0x6E15 final_de_la_fase_4   Con la pantalla parada suelta el objeto 0x0B; si no, cinco pasos con dos jefes
+L 0x6E15 final_de_la_fase_4   Con la pantalla parada SALTA A LA FASE 11; si no, cinco pasos con dos jefes
 C 0x6E15 0xE1C0: la pantalla esta parada
 C 0x6E1B Solo en los pasos con columna
+C 0x6E20 La fase 11
 C 0x6E28 0xE065: el paso del final de fase
 C 0x6E35 0xE140: el aviso de que hay algo esperando
 C 0x6E3B La distancia...
@@ -480,9 +497,10 @@ C 0x6EFD La distancia 0xA0
 C 0x6F02 0x0201 en 0xE151: el jefe 2
 L 0x6F0B espera_y_para_donde_este   Al morir el jefe, el limite se queda en la distancia actual
 C 0x6F0B 0xE150: hasta que no muera, no
-L 0x6F19 final_de_la_fase_7   Con la pantalla parada suelta el objeto 0x0C; si no, saca el jefe 3
+L 0x6F19 final_de_la_fase_7   Con la pantalla parada SALTA A LA FASE 12; si no, saca el jefe 3
 C 0x6F19 0xE1C0: la pantalla esta parada
 C 0x6F1F Solo en los pasos con columna
+C 0x6F24 La fase 12
 C 0x6F2C 0xE065: el paso del final de fase
 C 0x6F35 0xE114 a uno
 C 0x6F3A 0x0301 en 0xE151: el jefe 3
@@ -499,18 +517,18 @@ L 0x6F86 acaba_el_final   Apaga 0xE1D0 y pasa de fase
 C 0x6F86 0xE150: hasta que no muera, no
 C 0x6F89 0xE150: hasta que no muera, no
 C 0x6F8A 0xE150: hasta que no muera, no
-L 0x6F97 final_de_la_fase_9   Suelta el objeto 3
-C 0x6F9C El objeto 3
-L 0x6FA0 final_de_la_fase_10   Suelta el objeto 4
+L 0x6F97 final_de_la_fase_9   Acabado el interludio, se vuelve a la fase 3
+C 0x6F9C La fase 3, no un objeto
+L 0x6FA0 final_de_la_fase_10   Se vuelve a la fase 4
 C 0x6FA0 Solo en los pasos con columna
-C 0x6FA5 El objeto 4
-L 0x6FA9 final_de_la_fase_11   Suelta el objeto 5
+C 0x6FA5 La fase 4
+L 0x6FA9 final_de_la_fase_11   Se vuelve a la fase 5
 C 0x6FA9 Solo en los pasos con columna
-C 0x6FAE El objeto 5
-L 0x6FB2 final_de_la_fase_12   Suelta el objeto 8
+C 0x6FAE La fase 5
+L 0x6FB2 final_de_la_fase_12   Se vuelve a la fase 8, la ultima
 C 0x6FB2 Solo en los pasos con columna
-C 0x6FB7 El objeto 8
-L 0x6FB9 salta_a_la_fase   Deja la fase en A, borra los contadores y arranca por 0x4100; se come la direccion de retorno con un `pop hl`
+C 0x6FB7 La fase 8
+L 0x6FB9 salta_a_la_fase   Le mete a 0xE061 la fase que traiga A, borra los contadores y arranca por 0x4100; se come la direccion de retorno con un `pop hl`
 C 0x6FBD 0xE107, 0xE065 y 0xE1C0 a cero
 C 0x6FC9 0x1F de distancia recorrida
 C 0x6FCE Se tira el retorno: de aqui no se vuelve

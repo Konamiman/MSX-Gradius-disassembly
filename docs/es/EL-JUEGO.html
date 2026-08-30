@@ -87,8 +87,11 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <p>El Gradius de Konami, publicado para MSX1 en 1986 y llamado <b>Nemesis</b> fuera de Japón. Un matamarcianos de scroll horizontal: doce fases, un medidor de mejoras que se llena recogiendo cápsulas, y opciones que van detrás de la nave copiando su recorrido.</p>
 <h2 id="que-nombre-ensena">Qué nombre enseña</h2>
 <p>Los dos. El logotipo se elige al arrancar: el cartucho le pregunta a la BIOS de qué país es la máquina y pone el título japonés o el occidental. El cartucho en sí solo sabe un nombre: la marca escondida al final del banco 3 pone グラディウス, <em>Gradius</em>.</p>
-<h2 id="las-doce-fases">Las doce fases</h2>
-<p>El número de fase vive en 0xE061, y la tabla de 0x418F dice con cuál se sigue pasada la novena, así que las fases no se juegan simplemente en orden para siempre: la ronda da la vuelta.</p>
+<h2 id="las-doce-fases-y-las-cuatro-que-son-de-bonus">Las doce fases, y las cuatro que son de bonus</h2>
+<p>El número de fase vive en 0xE061, y <b>no</b> se sube sin más. De una fase se sale por dos sitios: <code>acaba_la_fase</code> (0x6D53), que suma uno, y <code>salta_a_la_fase</code> (0x6FB9), que le mete un número escrito a mano. A este segundo saltan ocho sitios, cada uno con el suyo, y de ahí sale el recorrido de verdad:</p>
+<pre><code>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - final - 1</code></pre>
+<p><b>Las fases 9, 10, 11 y 12 son de bonus</b>, metidas entre las otras. No llevan jefe: su final son seis instrucciones que devuelven la fase a la 3, la 4, la 5 y la 8, que son los cuatro bytes de la tabla de 0x418F.</p>
+<p>Y lo que las abre es el blanco. Los finales de las fases 2, 3, 4 y 7 miran 0xE1C0, y lo único en los 128 KB que pone ese byte distinto de cero es 0xB130, que corre cuando la nave toca el blanco del final de la fase. O sea que <b>tocarlo te manda a la fase de bonus, y no tocarlo sigue el guion normal</b>. La fase 1 también tiene blanco, y no lleva a ninguna.</p>
 <p>La fase 3 y la 6 <b>no tienen terreno ninguno</b>. Su tramo de guión es 0xFFFF, así que el montador de columnas siempre acaba en la rutina de estrellas y la fase entera es cielo. Las otras diez llevan su terreno escrito como un guión de números de pieza; los mapas de la portada son esos guiones dibujados de punta a punta.</p>
 <p>Cada fase tiene además su <b>punto de control</b>, en la tabla de 0x4212. Al montar la fase, 0x41E1 compara la distancia ya recorrida con ese número: si la habías pasado, la fase vuelve a arrancar justo ahí, y si no, en 0x20.</p>
 <h2 id="el-medidor-de-mejoras">El medidor de mejoras</h2>

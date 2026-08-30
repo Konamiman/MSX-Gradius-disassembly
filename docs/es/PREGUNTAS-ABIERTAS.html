@@ -85,9 +85,9 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <div class="w"><nav class="top"><a href="index.html">Portada</a><a href="EMPEZAR.html">Empezar</a><a href="EL-JUEGO.html">El juego</a><a href="EL-CARTUCHO.html">El cartucho</a><a href="EL-CODIGO.html">El código</a><a href="HALLAZGOS.html">Hallazgos</a><a href="EN-EL-EMULADOR.html">En el emulador</a><a href="PREGUNTAS-ABIERTAS.html" style=color:var(--tinta)>Preguntas abiertas</a><a href="../OPEN-QUESTIONS.html" style="margin-left:auto;color:var(--oro)">English</a></nav>
 <h1 id="preguntas-abiertas">Preguntas abiertas</h1>
 <p>Lo que sigue sin estar zanjado. Todo esto está escrito como pregunta a propósito: nada de ello se da por supuesto en el listado.</p>
-<h2 id="que-decide-el-limite-de-scroll-a-partir-del-tercer-blanco">Qué decide el límite de scroll a partir del tercer blanco</h2>
-<p>Cinco fases llevan escrito un blanco a una distancia fija: la 1, la 2, la 3, la 4 y la 7. Tocarlo revienta todo lo que hay en pantalla, para la pantalla y fija el límite del scroll. Las fases 2, 3 y 6 tienen su límite propio; las demás pasan por un contador en 0xE06C que solo avanza cuando el blanco es de un tipo <b>distinto</b> del anterior, y al tercero distinto el límite pasa a ser 0x01C0.</p>
-<p>Para qué sirve ese contador jugando — si es la ruta escondida, o la dificultad de la vuelta, o alguna otra cosa — no está zanjado.</p>
+<h2 id="para-que-sirve-el-contador-de-0xe06c">Para qué sirve el contador de 0xE06C</h2>
+<p>Cinco fases llevan escrito un blanco a una distancia fija: la 1, la 2, la 3, la 4 y la 7. Tocarlo revienta todo lo que hay en pantalla, para la pantalla y fija el límite del scroll; y, en las fases 2, 3, 4 y 7, esa pantalla parada es lo que manda a la fase de bonus. Las fases 2, 3 y 6 tienen su límite propio; las demás pasan por un contador en 0xE06C que solo avanza cuando el blanco es de un tipo <b>distinto</b> del anterior, y al tercero distinto el límite pasa a ser 0x01C0.</p>
+<p>El camino a las fases de bonus ya está zanjado. Lo que ese contador cambia encima, no.</p>
 <h2 id="los-399-bytes-de-delante-de-la-marca">Los 399 bytes de delante de la marca</h2>
 <p>El banco 3 acaba con un hueco de 399 bytes entre el último dato y los once bytes de la marca de Konami. Están declarados como rango, pero no se sabe qué fueron: pueden ser relleno para que la marca caiga justo al final, o la cola de algo que se cortó.</p>
 <h2 id="que-fases-de-la-ronda-se-alcanzan-de-verdad">Qué fases de la ronda se alcanzan de verdad</h2>
