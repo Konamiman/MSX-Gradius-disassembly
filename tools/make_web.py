@@ -297,6 +297,9 @@ GALERIA = [
      "bank 3- and it uses the other set of pieces, the one at 0x8FF0. Most of "
      "what moves in it is not in the map at all: they are rectangles of "
      "characters erased and repainted every frame"),
+    ("mapa_fase06.png",
+     "Fase 6. La otra fase de puro cielo, como la tercera",
+     "Stage 6. The other pure-sky stage, like the third one"),
     ("mapa_fase07.png",
      "Fase 7, la única que lleva las apariciones escritas una a una: cuarenta y "
      "tres palabras en 0xAF3F, cada una con nueve bits de distancia, cinco de "
@@ -310,6 +313,9 @@ GALERIA = [
     ("mapa_fase09.png",
      "Fase 9",
      "Stage 9"),
+    ("mapa_fase10.png",
+     "Fase 10",
+     "Stage 10"),
     ("mapa_fase11.png",
      "Fase 11, la fortaleza",
      "Stage 11, the fortress"),
@@ -326,6 +332,13 @@ GALERIA = [
      "just as the loader at 0x42FC leaves them. In the third one you can read "
      "the power-up meter labels: <code>SPEED UP</code>, <code>MISSILE</code>, "
      "<code>DOUBLE</code>, <code>LASER</code> and <code>OPTION</code>"),
+    ("caracteres_del_final.png",
+     "Y los del final de la partida, que salen del banco 10. La tabla de nombres "
+     "de esa pantalla casi no se usa: lo unico que se escribe encima es el "
+     "dibujo de cuatro por cuatro del flujo de 0x4FB2",
+     "And the ones for the end of the game, which come from bank 10. The name "
+     "table of that screen is almost unused: the only thing written over it is "
+     "the four-by-four drawing from the stream at 0x4FB2"),
     ("sprites.png",
      "Los patrones de sprite de 16x16 descomprimidos en la VRAM 0x1800. Los "
      "tres primeros son la nave con sus tres inclinaciones; detrás van las "
