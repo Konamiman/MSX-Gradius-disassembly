@@ -128,4 +128,19 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <p>The fifth stage is the only one with its own background engine. Its objects have no sprite card: they are rectangles of characters written into the map. Two twin routines run one frame apart — first they are erased, then, once moved, painted again — and the turret that slides out is drawn half way while it emerges, with only as many rows as it has come out.</p>
 <h2 id="the-hidden-konami-mark">The hidden Konami mark</h2>
 <p>At the end of bank 3, at offset 0x07FFF of the dump: <b>RC-742</b> and eight katakana that read <b>グラディウス</b>, <em>Gradius</em>. The signature Konami hid in its cartridges, found and documented by <b>Manuel Pazos</b>.</p>
+<h2 id="the-cartridge-carries-a-second-header-and-it-is-not-for-the-msx">The cartridge carries a second header, and it is not for the MSX</h2>
+<p>Right behind the standard <code>AB</code> header there are 21 bytes that no instruction in the whole 128 KB ever reads. They are not for this cartridge to read: they are for the one plugged into the <b>next slot</b>. Konami&#x27;s Game Master is a cheat cartridge that gives you infinite lives and stage select, and to do that it has to know where <em>this</em> game keeps its things. So the game tells it, in a header of its own:</p>
+<pre><code>4010  43 44        &quot;CD&quot;, the format mark
+4012  07 42        the catalogue number in BCD, high byte first: RC-742
+4014  80           which fields follow
+4015  00 E0 04     game state at 0xE000; there is a game running from 4 on
+4018  61 E0 08     stage at 0xE061, and there are 8 of them
+401B  60 E0        lives at 0xE060
+401D  53 E0        hi-score at 0xE053
+401F  5B E0        one player&#x27;s score at 0xE05B
+4021  57 E0        the other player&#x27;s at 0xE057
+4023  02 E0        game flags at 0xE002</code></pre>
+<p>The 0x80 is a bit mask read from bit 0 upwards, and a <b>clear</b> bit means the field is present. Seven are, and the eighth —a callback the Game Master would call into the game— is not. Sixteen bytes of fields, and the block ends exactly at 0x4025, which is where the 19 bytes the Game Master copies run out. Not one byte over.</p>
+<p>And the addresses check out against this cartridge on its own, which is what settles it rather than the format alone. 0xE060 is where 0x54C0 puts the three ships back, in BCD. 0xE061 is the stage 0x4129 bumps. 0x53B1 —state 4— is where a stage actually starts. And the prettiest one: 0x5558 wipes everything from 0xE057 up to 0xEFFF when a game begins, and the four bytes at 0xE053 are exactly what it leaves standing, which is what a hi-score has to do.</p>
+<p>The identification is <b>Néstor Sancho</b>&#x27;s (<a href="https://github.com/theNestruo">@theNestruo</a>), and the format is documented in <b>Ricardo Bittencourt</b>&#x27;s <a href="https://github.com/ricbit/game-master">disassembly of the Game Master</a>.</p>
 <footer><p><em>Nemesis / Gradius</em> was published by Konami for the MSX in 1986; its catalogue number is RC-742 and it is 128 KB. All rights in the game remain with their holders. This is preservation, study and documentation work, and the cartridge image is not distributed.</p></footer></div>

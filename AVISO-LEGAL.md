@@ -36,9 +36,11 @@ medirlo corriendo, y cada afirmacion lleva su evidencia al lado: la instruccion
 que lee un dato, la tabla que cierra exactamente donde tiene que cerrar, o la
 medida hecha en el emulador. Lo que no esta cerrado se dice que no lo esta.
 
-Donde se cita algo de fuera del cartucho -el formato de la marca oculta de
-Konami, que descubrio Manuel Pazos- se dice de donde sale y se da las gracias a
-quien lo hallo.
+Donde se cita algo de fuera del cartucho se dice de donde sale y se da las
+gracias a quien lo hallo: el formato de la marca oculta de Konami, que
+descubrio Manuel Pazos, y la cabecera del Game Master, que identifico aqui
+Nestor Sancho (theNestruo) y que esta documentada en el desensamblado del Game
+Master de Ricardo Bittencourt.
 
 ## Si eres uno de los autores
 

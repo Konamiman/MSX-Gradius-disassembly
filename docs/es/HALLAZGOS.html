@@ -128,4 +128,19 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <p>La quinta fase es la única con motor de fondo propio. Sus objetos no llevan ficha de sprite: son rectángulos de caracteres escritos en el mapa. Dos rutinas gemelas se llaman con un cuadro de por medio — primero se borran, y después, ya movidos, se vuelven a pintar — y la torreta que asoma se dibuja a medias mientras sale, con solo tantas filas como lleve fuera.</p>
 <h2 id="la-marca-escondida-de-konami">La marca escondida de Konami</h2>
 <p>Al final del banco 3, en el offset 0x07FFF del volcado: <b>RC-742</b> y ocho katakana que se leen <b>グラディウス</b>, <em>Gradius</em>. La firma que Konami escondía en sus cartuchos, descubierta y documentada por <b>Manuel Pazos</b>.</p>
+<h2 id="el-cartucho-lleva-una-segunda-cabecera-y-no-es-para-el-msx">El cartucho lleva una segunda cabecera, y no es para el MSX</h2>
+<p>Justo detrás de la cabecera <code>AB</code> de siempre hay 21 bytes que ninguna instrucción de los 128 KB llega a leer. No son para que los lea este cartucho: son para el que se enchufa en la <b>ranura de al lado</b>. El Game Master de Konami es un cartucho de trucos que da vidas infinitas y salto de fase, y para eso tiene que saber dónde guarda <em>este</em> juego sus cosas. Así que el juego se lo dice, en una cabecera suya:</p>
+<pre><code>4010  43 44        &quot;CD&quot;, la marca del formato
+4012  07 42        el número de catálogo en BCD, byte alto primero: RC-742
+4014  80           qué campos vienen detrás
+4015  00 E0 04     el estado en 0xE000; del 4 en adelante hay partida
+4018  61 E0 08     la fase en 0xE061, y son 8
+401B  60 E0        las naves en 0xE060
+401D  53 E0        el récord en 0xE053
+401F  5B E0        el marcador de un jugador en 0xE05B
+4021  57 E0        el del otro en 0xE057
+4023  02 E0        las banderas de la partida en 0xE002</code></pre>
+<p>El 0x80 es una máscara que se lee del bit 0 hacia arriba, y el bit <b>claro</b> quiere decir que el campo viene. Vienen siete, y el octavo —un callback al que el Game Master llamaría dentro del juego— no. Dieciséis bytes de campos, y el bloque acaba justo en 0x4025, que es donde se agotan los 19 bytes que el Game Master copia. Ni uno de sobra.</p>
+<p>Y las direcciones cuadran con este cartucho por sí solo, que es lo que lo cierra de verdad, más que el formato. 0xE060 es donde 0x54C0 vuelve a poner las tres naves, en BCD. 0xE061 es la fase que sube 0x4129. 0x53B1 —el estado 4— es donde arranca una fase de verdad. Y la más bonita: 0x5558 borra todo desde 0xE057 hasta 0xEFFF al empezar una partida, y los cuatro bytes de 0xE053 son justo los que deja en pie, que es lo que tiene que hacer un récord.</p>
+<p>La identificación es de <b>Néstor Sancho</b> (<a href="https://github.com/theNestruo">@theNestruo</a>), y el formato está documentado en el <a href="https://github.com/ricbit/game-master">desensamblado del Game Master</a> de <b>Ricardo Bittencourt</b>.</p>
 <footer><p><em>Nemesis / Gradius</em> lo publico Konami para MSX en 1986; su numero de catalogo es RC-742 y son 128 KB. Todos los derechos sobre el juego siguen siendo de sus titulares. Este trabajo es de preservacion, estudio y documentacion, y la imagen del cartucho no se distribuye.</p></footer></div>

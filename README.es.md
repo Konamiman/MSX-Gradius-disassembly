@@ -25,7 +25,7 @@ que además el listado no *mienta* sobre lo que reensambla.
 | puntos de entrada, cada uno con su justificación | 277 |
 | etiquetas con nombre | 916 |
 | comentarios anclados | 2.982 |
-| rangos de datos con explicación | 242 |
+| rangos de datos con explicación | 244 |
 
 Los comentarios están acabados al listón de la serie: **el 23,3 % de las
 instrucciones lleva comentario de línea** — 3.022 de 12.959 en los seis bancos

@@ -42,25 +42,46 @@ DATA_cabecera:
 	defb 000h,000h,000h,000h,000h,000h	; 400a
 
 ; ----------------------------------------------------------------------
-; DATOS bytes_sin_identificar: Once bytes pegados detras de la cabecera que
-;   ninguna instruccion trazada lee: 43 44 07 42 80 00 E0 04 61 E0 08. Los dos
-;   primeros son "CD" en ASCII. SUPOSICION: los cinco ultimos parecen la
-;   primera parte de la lista de direcciones de RAM que sigue debajo, pero no
-;   hay ni una instruccion que lo demuestre.
-;   0x4010..0x401b  (11 bytes)
-DATA_bytes_sin_identificar:
-	defb 043h,044h,007h,042h,080h,000h,0e0h,004h,061h,0e0h,008h	; 4010  CD.B....a..
+; DATOS gm_marca: La marca del formato: "CD" en ASCII (43 44). Es la que el
+;   Game Master busca para saber que este cartucho trae la cabecera larga; los
+;   que traen la corta ponen "AB".
+;   0x4010..0x4012  (2 bytes)
+DATA_gm_marca:
+	defb 043h,044h	; 4010
 
 ; ----------------------------------------------------------------------
-; DATOS direcciones_de_ram: Cinco palabras que son direcciones de la memoria
-;   del juego: 0xE060, 0xE05A, 0xE05B, 0xE057 y 0xE002. SUPOSICION: nadie las
-;   lee desde el codigo trazado, asi que quien las use tiene que ser la rutina
-;   que el banco 10 copia a la RAM (0xA849 -> 0xE710), que este desensamblado
-;   no puede seguir.
-;   0x401b..0x4025  (10 bytes)
-DATA_direcciones_de_ram:
-	defw 0e060h,0e053h	; 401b
-	defw 0e05bh,0e057h	; 401f
+; DATOS gm_catalogo: El numero de catalogo en BCD y por el byte alto primero:
+;   07 42, o sea RC-742, que es el de este cartucho.
+;   0x4012..0x4014  (2 bytes)
+DATA_gm_catalogo:
+	defb 007h,042h	; 4012
+
+; ----------------------------------------------------------------------
+; DATOS gm_banderas: 0x80: dice que campos vienen detras. Se leen del bit 0 al
+;   7 y el bit CLARO significa "este campo viene en el flujo". Aqui vienen los
+;   siete primeros y falta el ultimo, que es un callback por CALSLT.
+;   0x4014..0x4015  (1 bytes)
+DATA_gm_banderas:
+	defb 080h	; 4014
+
+; ----------------------------------------------------------------------
+; DATOS gm_campos: Los siete campos que anuncia el byte de banderas, en el
+;   orden de los bits: 0xE000 con el 0x04 que dice cuando hay partida viva
+;   (0x53B1 estado_4 es donde arranca la fase); 0xE061 la fase con su modulo
+;   de 8 (0x4129); 0xE060 las naves (0x53CC, en BCD); 0xE053 el record; 0xE05B
+;   el marcador de un jugador y 0xE057 el del otro (0x54AA elige entre los dos
+;   por el bit 7 de 0xE002 y borra cuatro bytes); y 0xE002, las banderas de la
+;   partida. Que 0xE053 sea el record lo dice el propio cartucho: 0x5558 borra
+;   de 0xE057 hasta 0xEFFF al empezar una partida y esos cuatro bytes son
+;   justo los que deja en pie.
+;   0x4015..0x4025  (16 bytes)
+DATA_gm_campos:
+	defb 000h,0e0h,004h	; 4015
+	defb 061h,0e0h,008h	; 4018
+	defw 0e060h	; 401b
+	defw 0e053h	; 401d
+	defw 0e05bh	; 401f
+	defw 0e057h	; 4021
 	defw 0e002h	; 4023
 
 ; ======================================================================

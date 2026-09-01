@@ -168,3 +168,40 @@ only as many rows as it has come out.
 At the end of bank 3, at offset 0x07FFF of the dump: **RC-742** and eight
 katakana that read **グラディウス**, *Gradius*. The signature Konami hid in its
 cartridges, found and documented by **Manuel Pazos**.
+
+## The cartridge carries a second header, and it is not for the MSX
+
+Right behind the standard `AB` header there are 21 bytes that no instruction in
+the whole 128 KB ever reads. They are not for this cartridge to read: they are
+for the one plugged into the **next slot**. Konami's Game Master is a cheat
+cartridge that gives you infinite lives and stage select, and to do that it has
+to know where *this* game keeps its things. So the game tells it, in a header of
+its own:
+
+    4010  43 44        "CD", the format mark
+    4012  07 42        the catalogue number in BCD, high byte first: RC-742
+    4014  80           which fields follow
+    4015  00 E0 04     game state at 0xE000; there is a game running from 4 on
+    4018  61 E0 08     stage at 0xE061, and there are 8 of them
+    401B  60 E0        lives at 0xE060
+    401D  53 E0        hi-score at 0xE053
+    401F  5B E0        one player's score at 0xE05B
+    4021  57 E0        the other player's at 0xE057
+    4023  02 E0        game flags at 0xE002
+
+The 0x80 is a bit mask read from bit 0 upwards, and a **clear** bit means the
+field is present. Seven are, and the eighth —a callback the Game Master would
+call into the game— is not. Sixteen bytes of fields, and the block ends exactly
+at 0x4025, which is where the 19 bytes the Game Master copies run out. Not one
+byte over.
+
+And the addresses check out against this cartridge on its own, which is what
+settles it rather than the format alone. 0xE060 is where 0x54C0 puts the three
+ships back, in BCD. 0xE061 is the stage 0x4129 bumps. 0x53B1 —state 4— is where
+a stage actually starts. And the prettiest one: 0x5558 wipes everything from
+0xE057 up to 0xEFFF when a game begins, and the four bytes at 0xE053 are exactly
+what it leaves standing, which is what a hi-score has to do.
+
+The identification is **Néstor Sancho**'s ([@theNestruo](https://github.com/theNestruo)),
+and the format is documented in **Ricardo Bittencourt**'s
+[disassembly of the Game Master](https://github.com/ricbit/game-master).

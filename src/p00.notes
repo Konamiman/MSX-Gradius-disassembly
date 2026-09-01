@@ -22,10 +22,20 @@
 B 0x4000 CABECERA DEL CARTUCHO
 D 0x4000 0x4010 cabecera  Cabecera de cartucho de MSX: "AB", INIT = 0x4071, y las otras tres entradas (STATEMENT, DEVICE, TEXT) a cero, mas seis bytes reservados.
 F 0x4000 2,w1,w1,w1,w1,6
-D 0x4010 0x401B bytes_sin_identificar  Once bytes pegados detras de la cabecera que ninguna instruccion trazada lee: 43 44 07 42 80 00 E0 04 61 E0 08. Los dos primeros son "CD" en ASCII. SUPOSICION: los cinco ultimos parecen la primera parte de la lista de direcciones de RAM que sigue debajo, pero no hay ni una instruccion que lo demuestre.
-F 0x4010 11
-D 0x401B 0x4025 direcciones_de_ram  Cinco palabras que son direcciones de la memoria del juego: 0xE060, 0xE05A, 0xE05B, 0xE057 y 0xE002. SUPOSICION: nadie las lee desde el codigo trazado, asi que quien las use tiene que ser la rutina que el banco 10 copia a la RAM (0xA849 -> 0xE710), que este desensamblado no puede seguir.
-F 0x401B w2
+# --- La segunda cabecera, la del Game Master. Ninguna instruccion del cartucho
+# la lee: la lee el OTRO cartucho, el Game Master de Konami, que se enchufa en
+# la ranura de al lado y necesita saber donde guarda este sus cosas para poder
+# trucarlas. Formato "CD": marca, numero de catalogo, un byte de banderas y
+# solo los campos que ese byte anuncia. Los 19 bytes que el Game Master copia
+# empiezan en 0x4012, y la cuenta cierra justo en 0x4025.
+D 0x4010 0x4012 gm_marca  La marca del formato: "CD" en ASCII (43 44). Es la que el Game Master busca para saber que este cartucho trae la cabecera larga; los que traen la corta ponen "AB".
+F 0x4010 2
+D 0x4012 0x4014 gm_catalogo  El numero de catalogo en BCD y por el byte alto primero: 07 42, o sea RC-742, que es el de este cartucho.
+F 0x4012 2
+D 0x4014 0x4015 gm_banderas  0x80: dice que campos vienen detras. Se leen del bit 0 al 7 y el bit CLARO significa "este campo viene en el flujo". Aqui vienen los siete primeros y falta el ultimo, que es un callback por CALSLT.
+F 0x4014 1
+D 0x4015 0x4025 gm_campos  Los siete campos que anuncia el byte de banderas, en el orden de los bits: 0xE000 con el 0x04 que dice cuando hay partida viva (0x53B1 estado_4 es donde arranca la fase); 0xE061 la fase con su modulo de 8 (0x4129); 0xE060 las naves (0x53CC, en BCD); 0xE053 el record; 0xE05B el marcador de un jugador y 0xE057 el del otro (0x54AA elige entre los dos por el bit 7 de 0xE002 y borra cuatro bytes); y 0xE002, las banderas de la partida. Que 0xE053 sea el record lo dice el propio cartucho: 0x5558 borra de 0xE057 hasta 0xEFFF al empezar una partida y esos cuatro bytes son justo los que deja en pie.
+F 0x4015 3,3,w1
 L 0x4025 salta_a_la_presentacion   `jp 0x5A54`. Es el unico sitio que entra en la presentacion.
 B 0x4028 LA INTERRUPCION
 L 0x4028 interrupcion   Lo que INIT instala en el gancho H.KEYI (0xFD9A). AQUI CORRE TODO EL JUEGO.

@@ -169,3 +169,41 @@ mientras sale, con solo tantas filas como lleve fuera.
 Al final del banco 3, en el offset 0x07FFF del volcado: **RC-742** y ocho
 katakana que se leen **グラディウス**, *Gradius*. La firma que Konami escondía
 en sus cartuchos, descubierta y documentada por **Manuel Pazos**.
+
+## El cartucho lleva una segunda cabecera, y no es para el MSX
+
+Justo detrás de la cabecera `AB` de siempre hay 21 bytes que ninguna instrucción
+de los 128 KB llega a leer. No son para que los lea este cartucho: son para el
+que se enchufa en la **ranura de al lado**. El Game Master de Konami es un
+cartucho de trucos que da vidas infinitas y salto de fase, y para eso tiene que
+saber dónde guarda *este* juego sus cosas. Así que el juego se lo dice, en una
+cabecera suya:
+
+    4010  43 44        "CD", la marca del formato
+    4012  07 42        el número de catálogo en BCD, byte alto primero: RC-742
+    4014  80           qué campos vienen detrás
+    4015  00 E0 04     el estado en 0xE000; del 4 en adelante hay partida
+    4018  61 E0 08     la fase en 0xE061, y son 8
+    401B  60 E0        las naves en 0xE060
+    401D  53 E0        el récord en 0xE053
+    401F  5B E0        el marcador de un jugador en 0xE05B
+    4021  57 E0        el del otro en 0xE057
+    4023  02 E0        las banderas de la partida en 0xE002
+
+El 0x80 es una máscara que se lee del bit 0 hacia arriba, y el bit **claro**
+quiere decir que el campo viene. Vienen siete, y el octavo —un callback al que
+el Game Master llamaría dentro del juego— no. Dieciséis bytes de campos, y el
+bloque acaba justo en 0x4025, que es donde se agotan los 19 bytes que el Game
+Master copia. Ni uno de sobra.
+
+Y las direcciones cuadran con este cartucho por sí solo, que es lo que lo cierra
+de verdad, más que el formato. 0xE060 es donde 0x54C0 vuelve a poner las tres
+naves, en BCD. 0xE061 es la fase que sube 0x4129. 0x53B1 —el estado 4— es donde
+arranca una fase de verdad. Y la más bonita: 0x5558 borra todo desde 0xE057
+hasta 0xEFFF al empezar una partida, y los cuatro bytes de 0xE053 son justo los
+que deja en pie, que es lo que tiene que hacer un récord.
+
+La identificación es de **Néstor Sancho**
+([@theNestruo](https://github.com/theNestruo)), y el formato está documentado en
+el [desensamblado del Game Master](https://github.com/ricbit/game-master) de
+**Ricardo Bittencourt**.

@@ -25,7 +25,7 @@ exists to make sure the listing does not *lie* about what it reassembles.
 | entry points, each with its justification | 277 |
 | named labels | 916 |
 | anchored comments | 2,982 |
-| explained data ranges | 242 |
+| explained data ranges | 244 |
 
 The commentary is finished to the standard of the series: **23.3% of the
 instructions carry a line comment** — 3,022 of 12,959 across the six banks that

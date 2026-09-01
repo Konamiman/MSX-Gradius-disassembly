@@ -37,9 +37,11 @@ from measuring it running, and each claim carries its evidence next to it: the
 instruction that reads a datum, the table that ends exactly where it has to end,
 or the measurement made in the emulator. What is not settled is said not to be.
 
-Where something outside the cartridge is cited -the format of Konami's hidden
-mark, which Manuel Pazos discovered- its source is named and the person who
-found it is thanked.
+Where something outside the cartridge is cited, its source is named and the
+person who found it is thanked: the format of Konami's hidden mark, which Manuel
+Pazos discovered, and the Game Master header, which Nestor Sancho (theNestruo)
+identified here and which is documented in Ricardo Bittencourt's disassembly of
+the Game Master.
 
 ## If you are one of the authors
 
