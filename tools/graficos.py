@@ -353,6 +353,35 @@ def pantalla_del_marcador(rom):
     return vram
 
 
+def pantalla_del_titulo(rom, japones=False):
+    """monta_la_pantalla_del_titulo (0x5B31) y escribe_el_panel_del_titulo
+    (0x5B77), con los bancos 9 y 10 puestos.
+
+    Aqui esta el logotipo, y el cartucho lleva LOS DOS: lee el juego de
+    caracteres de la maquina en 0x002B de la BIOS y, con el nibble bajo a
+    cero -maquina japonesa-, escribe el panel de 0x9BCB, que pone GRADIUS;
+    con cualquier otra cosa el de 0x9B3F, que pone NEMESIS. Mismo binario.
+    """
+    vram = bytearray(0x4000)
+    for destino, origen in ((0x2468, 0x9C57), (0x0468, 0x9EAB)):
+        for tercio in range(3):
+            descomprime(rom, vram, 9, origen, destino + tercio * 0x800)
+    # El panel: cinco filas de 28 caracteres desde 0x3882, o sea fila 4,
+    # columna 2. Cruza la frontera del primer tercio, y por eso los patrones
+    # se descomprimen en los tres.
+    panel = 0x9BCB if japones else 0x9B3F
+    for fila in range(5):
+        for col in range(28):
+            vram[0x3882 + fila * 32 + col] = lee(rom, 9, panel + fila * 28 + col)
+    return vram
+
+
+def dibuja_rotulo(vram, escala=3):
+    """Solo el panel del logotipo: 28 x 5 caracteres desde la fila 4."""
+    img = dibuja_pantalla(vram).crop((2 * 8, 4 * 8, 30 * 8, 9 * 8))
+    return img.resize((img.width * escala, img.height * escala), Image.NEAREST)
+
+
 # ------------------------------------------------------------------ main
 
 def guarda(img, nombre):
@@ -374,6 +403,10 @@ def haz_las_pantallas(rom):
     print("Pantallas fijas:")
     vram, _ = pantalla_de_records(rom)
     guarda(dibuja_pantalla(vram), "presentacion.png")
+    guarda(dibuja_pantalla(pantalla_del_titulo(rom)), "titulo.png")
+    guarda(dibuja_rotulo(pantalla_del_titulo(rom)), "rotulo.png")
+    guarda(dibuja_rotulo(pantalla_del_titulo(rom, japones=True)),
+           "rotulo_gradius.png")
     vram2 = pantalla_del_marcador(rom)
     guarda(dibuja_juego_de_caracteres(vram2), "caracteres_del_final.png")
     guarda(dibuja_juego_de_caracteres(caracteres_de_la_fase(rom, 1)),

@@ -3484,7 +3484,7 @@ lee_el_joystick:		; El registro 15 del PSG elige el puerto y el 14 lo lee; llega
 ; ----------------------------------------------------------------------
 ; DATOS mensajes: Los textos de la pantalla, con SUS PROPIOS CODIGOS DE
 ;   CARACTER: 0x00 es el espacio, 0x10 a 0x19 son las cifras 0 a 9 y 0x21 a
-;   0x3A las letras (o sea, ASCII menos 0x40). Se leen con dos rutinas
+;   0x3A las letras (o sea, ASCII menos 0x20). Se leen con dos rutinas
 ;   distintas, y las dos empiezan cogiendo del propio flujo la direccion de
 ;   VRAM: 0x4998 escribe caracter a caracter (0xFE = viene otra direccion,
 ;   0xFF = fin) y 0x49B3 los descomprime con el formato de 0x49B9. Por ahi

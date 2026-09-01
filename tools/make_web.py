@@ -283,10 +283,33 @@ GALERIA = [
      "bloques comprimidos del banco 9 a los tres tercios de patrones y de "
      "colores, los caracteres del marco desde el banco 10 y la tabla de "
      "nombres, 768 bytes sin comprimir, del principio del banco 9",
-     "The title screen, built the way the cartridge builds it: six compressed "
+     "The attract screen, built the way the cartridge builds it: six compressed "
      "blocks from bank 9 into the three thirds of patterns and colours, the "
      "frame characters from bank 10, and the name table, 768 uncompressed "
      "bytes, from the start of bank 9"),
+    ("titulo.png",
+     "La pantalla del título, la otra: monta_la_pantalla_del_titulo (0x5B31) "
+     "descomprime sus patrones de 0x9C57 y sus colores de 0x9EAB en los tres "
+     "tercios, y encima escribe_el_panel_del_titulo (0x5B77) pone el panel del "
+     "logotipo, cinco filas de 28 caracteres desde la casilla 0x3882",
+     "The title screen proper, which is a different one: monta_la_pantalla_del_"
+     "titulo (0x5B31) decompresses its patterns from 0x9C57 and its colours "
+     "from 0x9EAB into the three thirds, and on top of that escribe_el_panel_"
+     "del_titulo (0x5B77) writes the logo panel, five rows of 28 characters "
+     "from cell 0x3882"),
+    ("rotulo_gradius.png",
+     "EL MISMO BINARIO LLEVA LOS DOS NOMBRES. Este es el otro panel, el de "
+     "0x9BCB, dibujado igual que el de la cabecera. El cartucho lee el juego de "
+     "caracteres de la máquina en 0x002B de la BIOS y, con el nibble bajo a "
+     "cero -máquina japonesa-, escribe éste; con cualquier otra cosa, el de "
+     "0x9B3F, que pone NEMESIS. No son dos versiones del cartucho: los dos "
+     "paneles están pegados el uno al otro en el banco 9",
+     "THE SAME BINARY CARRIES BOTH NAMES. This is the other panel, the one at "
+     "0x9BCB, drawn just like the one in the header. The cartridge reads the "
+     "machine's character set from 0x002B of the BIOS and, with the low nibble "
+     "at zero -a Japanese machine-, writes this one; with anything else, the "
+     "one at 0x9B3F, which reads NEMESIS. These are not two versions of the "
+     "cartridge: the two panels sit right next to each other in bank 9"),
     ("mapa_fase01.png",
      "Fase 1 entera. Los primeros 0x80 pasos son cielo -una estrella por "
      "columna, en la fila que diga la tabla de 0x478E- y a partir de ahí manda "
@@ -382,7 +405,14 @@ def main(argv):
     imgdir, salida, idioma = argv[1:4]
     t = TXT[idioma]
 
-    cabecera = "<h1>Nemesis <span style='opacity:.55'>/ Gradius</span></h1>"
+    # El "logotipo" de la cabecera no es un montaje ni una captura: es el panel
+    # de 28x5 que el propio cartucho escribe en la fila 4 de su pantalla de
+    # titulo -0x9B3F, banco 9-, dibujado desde la ROM por graficos.py. Si el PNG
+    # no esta, se cae al texto.
+    ruta_logo = os.path.join(imgdir, "rotulo.png")
+    cabecera = (f'<img src="{img64(ruta_logo)}" alt="Nemesis">'
+                if os.path.exists(ruta_logo)
+                else "<h1>Nemesis <span style='opacity:.55'>/ Gradius</span></h1>")
 
     nav = "".join(f'<a href="{h}">{x}</a>' for h, x in t["nav"])
     nav += "".join(f'<a href="{h}">{x}</a>' for h, x in t["docnav"])
