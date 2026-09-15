@@ -47,8 +47,8 @@ of bank 1, of bank 4 and of bank 7.
 
 `make sanity` prints the budget: **25,471 bytes of traced code** and **105,601
 bytes of data in named ranges**, 0 unexplained, 131,072 in total. `make
-densidad` prints the comment density per bank: 12,959 instructions, 3,022 line
-comments, **23.3%**, and not one routine below 10% out of 1,540.
+densidad` prints the comment density per bank: 12,959 instructions, 3,027 line
+comments, **23.4%**, and not one routine below 10% out of 1,540.
 
 Every figure on this site comes from those two commands, not from an estimate.
 

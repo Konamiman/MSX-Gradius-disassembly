@@ -50,7 +50,7 @@ del banco 1, del 4 y del 7.
 `make sanity` imprime el presupuesto: **25.471 bytes de código trazado** y
 **105.601 bytes de datos en rangos con nombre**, 0 sin explicar, 131.072 en
 total. `make densidad` imprime la densidad de comentario por banco: 12.959
-instrucciones, 3.022 comentarios de línea, **23,3 %**, y ni una rutina por
+instrucciones, 3.027 comentarios de línea, **23,4 %**, y ni una rutina por
 debajo del 10 % de 1.540.
 
 Todas las cifras de esta web salen de esas dos órdenes, no de una estimación.

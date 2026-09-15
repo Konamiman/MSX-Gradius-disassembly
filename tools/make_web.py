@@ -26,7 +26,7 @@ CODIGO = 25471
 DATOS = 105601
 RUTINAS = 916
 FASES = 12
-DENSIDAD = "23,3"
+DENSIDAD = "23,4"
 
 
 def mil(n, idioma):

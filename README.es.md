@@ -27,8 +27,8 @@ que además el listado no *mienta* sobre lo que reensambla.
 | comentarios anclados | 2.982 |
 | rangos de datos con explicación | 244 |
 
-Los comentarios están acabados al listón de la serie: **el 23,3 % de las
-instrucciones lleva comentario de línea** — 3.022 de 12.959 en los seis bancos
+Los comentarios están acabados al listón de la serie: **el 23,4 % de las
+instrucciones lleva comentario de línea** — 3.027 de 12.959 en los seis bancos
 con código — y **ni una de las 1.540 rutinas está por debajo del 10 %**. `make
 densidad` lo imprime banco a banco, y `tests/test_listado.py` guarda, banco a
 banco, cuántas rutinas llamadas siguen sin nombre, de modo que la cifra sólo

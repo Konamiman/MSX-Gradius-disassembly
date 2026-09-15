@@ -27,8 +27,8 @@ exists to make sure the listing does not *lie* about what it reassembles.
 | anchored comments | 2,982 |
 | explained data ranges | 244 |
 
-The commentary is finished to the standard of the series: **23.3% of the
-instructions carry a line comment** — 3,022 of 12,959 across the six banks that
+The commentary is finished to the standard of the series: **23.4% of the
+instructions carry a line comment** — 3,027 of 12,959 across the six banks that
 hold code — and **not one routine of the 1,540 is below 10%**. `make densidad`
 prints it bank by bank, and `tests/test_listado.py` keeps a per-bank ceiling of
 how many called routines still lack a name, so the number can only go down.
