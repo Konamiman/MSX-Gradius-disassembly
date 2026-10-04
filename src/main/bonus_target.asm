@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - bonus_target.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public check_stretch_target,run_four_at_e880
 	extrn blow_up_everything,release_fan
 
@@ -22,32 +24,32 @@
 ; of stage 1 leads to none.
 ; ----------------------------------------------------------------------
 check_stretch_target:		; With the screen stopped, counts up to 0x40 and releases it; otherwise, checks whether the target is due and whether the ship has touched it
-	ld a,(0e200h)		; No ship, nothing to check
+	ld a,(SHIP)		; No ship, nothing to check
 	dec a
 	ret m
-	ld a,(0e1c0h)		; 0xE1C0: the screen is stopped
+	ld a,(SCROLL_MODE)	; The screen is stopped
 	and a
 	jr z,L_B05C
-	ld hl,0e1c5h		; 0xE1C5: the frames left
+	ld hl,STOP_TIMER	; The frames left
 	dec (hl)
 	ret nz
 	ld a,002h		; 0xE1C0 to two and sound 0x41
-	ld (0e1c0h),a
+	ld (SCROLL_MODE),a
 	ld a,041h
 	jp 049deh
 L_B05C:
 	call spawn_target_if_due
-	ld a,(0e1c1h)		; 0xE1C1: only if the target is in place
+	ld a,(TARGET)		; Only if the target is in place
 	and a
 	ret z
 	call check_ship_touches_it
 	jp run_target
 spawn_target_if_due:		; Each stage has its distance and its row; those not in the list have no target
-	ld a,(0e100h)		; Only on steps with a new column
+	ld a,(NEW_COLUMN)	; Only on steps with a new column
 	and a
 	ret z
-	ld a,(0e061h)		; The stage and the distance travelled
-	ld hl,(0e063h)
+	ld a,(STAGE)		; The stage and the distance travelled
+	ld hl,(DISTANCE)
 	dec a
 	jr z,stage_1_target
 	dec a
@@ -98,7 +100,7 @@ stage_7_target:		; At 0x177, along row 0x38
 set_target:		; Type, row and column in 0xE1C1, 0xE1C2 and 0xE1C3
 	ld c,001h
 L_B0C1:
-	ld hl,0e1c1h
+	ld hl,TARGET
 	ld (hl),c
 	inc l
 	ld (hl),e
@@ -106,10 +108,10 @@ L_B0C1:
 	ld (hl),0f0h		; It always comes in through column 0xF0
 	ret
 run_target:		; Eight points to the left for each new column; when it goes off screen, it is removed
-	ld a,(0e100h)
+	ld a,(NEW_COLUMN)
 	and a
 	ret z
-	ld hl,0e1c3h
+	ld hl,TARGET+2
 	ld a,(hl)
 	sub 008h		; Eight points to the left
 	ld (hl),a
@@ -119,31 +121,31 @@ run_target:		; Eight points to the left for each new column; when it goes off sc
 	ld (hl),000h		; Off screen, the target is removed
 	ret
 check_ship_touches_it:		; With the ship less than 0x10 away in row and in column, the stretch ends
-	ld hl,0e1c2h
-	ld a,(0e204h)		; The ship's row against the target's
+	ld hl,TARGET+1
+	ld a,(SHIP_ROW)		; The ship's row against the target's
 	sub (hl)
 	add a,008h
 	cp 010h			; A margin of 0x10
 	ret nc
 	inc l
-	ld a,(0e206h)		; And the same with the column
+	ld a,(SHIP_COLUMN)	; And the same with the column
 	sub (hl)
 	cp 010h
 	ret nc
-	ld a,(0e061h)		; Stages 2, 3 and 6 have their own limit
+	ld a,(STAGE)		; Stages 2, 3 and 6 have their own limit
 	sub 002h
 	jr z,stage_2_limit
 	dec a
 	jr z,stage_3_limit
 	cp 004h
 	jr z,stage_6_limit
-	ld hl,0e06ch		; And in the others the count is kept in 0xE06C
-	ld a,(0e1c1h)
+	ld hl,TARGET_KIND	; And in the others the count is kept here
+	ld a,(TARGET)
 	cp (hl)			; If it is of the same type as the last one, it does not count
 	ret z
 	ld (hl),a
 	xor a
-	ld (0e1c1h),a
+	ld (TARGET),a
 	inc hl
 	inc (hl)		; One more time, and on the third different one...
 	ld a,(hl)
@@ -161,20 +163,20 @@ stage_2_limit:		; At 0x1CF
 stage_3_limit:		; At 0x19F
 	ld hl,0019fh
 close_stretch:		; Stops the scroll at its limit, erases the script line, blows everything up and plays 0xCD
-	ld (0e105h),hl		; 0xE105: how far the scroll goes
+	ld (SCROLL_LIMIT),hl	; How far the scroll goes
 	ld a,040h		; 0x40 frames stopped
-	ld (0e1c5h),a
+	ld (STOP_TIMER),a
 	ld a,001h		; 0xE1C0 to one: the screen stops, and the bonus stage hangs off this
-	ld (0e1c0h),a
+	ld (SCROLL_MODE),a
 	ld hl,00000h		; The script line, to zero
-	ld (0e127h),hl
+	ld (STAGE_SCRIPT_ROW),hl
 	xor a
-	ld (0e1c1h),a
+	ld (TARGET),a
 	call blow_up_everything	; And everything on screen, blown up
 	ld a,0cdh		; Sound 0xCD
 	jp 049deh
 run_four_at_e880:		; The four eight-byte cards at 0xE880, one by one
-	ld ix,0e880h
+	ld ix,TURRETS
 	ld b,004h		; Four cards
 L_B14B:
 	push bc
@@ -187,7 +189,7 @@ L_B14B:
 	djnz L_B14B
 	ret
 step_one_at_e880:		; Moves with the scroll and, when it goes off screen, is switched off; otherwise, it takes its step
-	ld a,(0e100h)		; Only on steps with a new column
+	ld a,(NEW_COLUMN)	; Only on steps with a new column
 	and a
 	jr z,L_B171
 	ld a,(ix+003h)
@@ -254,7 +256,7 @@ e880_step_3:		; Byte 6 to one, and when the wait runs out it releases the fan an
 	ret nz
 	call release_fan	; And releases the fan
 	dec (ix+001h)
-	ld a,(0e111h)		; The difficulty halved, subtracted from 0x18: how long until it fires again
+	ld a,(DIFFICULTY)	; The difficulty halved, subtracted from 0x18: how long until it fires again
 	sra a
 	ld c,a
 	ld a,018h

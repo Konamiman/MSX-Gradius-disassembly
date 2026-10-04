@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - enemy_types.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public finish_type_16,finish_type_17,finish_type_18,finish_type_19,finish_type_3,finish_type_4
 	public move_type_1A,move_type_3,move_types_17_and_18
 
@@ -59,7 +61,7 @@ left_unclaimed:		; When it leaves through the edge, the capsule chain starts ove
 	ret z
 L_A81C:
 	xor a
-	ld (0e128h),a		; 0xE128 to zero: the next capsule pays one point again
+	ld (CAPSULE_STREAK),a	; To zero: the next capsule pays one point again
 	ret
 finish_type_3:		; Down four, two to the left, and its path curves
 	ld de,00400h		; Four points per frame downwards

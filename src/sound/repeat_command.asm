@@ -7,7 +7,7 @@
 ; carries on after the command. Reached from run_channel (interpreter.mac).
 
 	include "bios.inc"
-	include "sound_ram.inc"
+	include "variables.inc"
 
 	public repeat_stream
 	extrn run_channel,save_pointer

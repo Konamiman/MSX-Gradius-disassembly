@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - moving_background.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public animate_three_characters
 	extrn animate_seven_cells
 
@@ -16,15 +18,15 @@
 ; ----------------------------------------------------------------------
 animate_three_characters:		; Rewrites in VRAM the eight bytes of characters 0xF6, 0xF7 and 0xF8
 	call animate_seven_cells
-	ld hl,0e700h		; Character 0xF6, with its count at 0xE700
+	ld hl,CHAR_ANIM+1	; Character 0xF6, with its count
 	ld de,0be19h
 	ld c,0f6h
 	call animate_character
-	ld hl,0e702h		; 0xF7, with its own at 0xE702
+	ld hl,CHAR_ANIM+3	; 0xF7, with its own
 	ld de,0be1fh
 	ld c,0f7h
 	call animate_character
-	ld hl,0e704h		; And 0xF8, at 0xE704
+	ld hl,CHAR_ANIM+5	; And 0xF8
 	ld de,0be25h
 	ld c,0f8h
 animate_character:		; When the count runs out, moves on to the next of the six drawings and uploads it to VRAM

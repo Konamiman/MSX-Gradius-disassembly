@@ -23,14 +23,15 @@ para que además los fuentes no *mientan* sobre lo que ensamblan.
 | datos identificados | 105.598 bytes |
 | sin explicar | 0 bytes |
 | módulos | 72 |
-| líneas de fuente | 23.203 |
+| líneas de fuente | 23.297 |
 | rutinas con nombre | 910 |
-| comentarios de línea | 2.984 |
+| comentarios de línea | 2.981 |
 | rangos de datos con explicación | 232 |
 
-**El 23,0 % de las instrucciones lleva comentario de línea** — 2.983 de 12.959
-en las tres imágenes con código — y sólo **4 de las 1.535 rutinas están por
-debajo del 10 %**, todas ellas bucles cortos alrededor de una llamada a la BIOS.
+**El 23,0 % de las instrucciones lleva comentario de línea** — 2.980 de 12.959
+en las tres imágenes con código — y sólo **5 de las 1.535 rutinas están por
+debajo del 10 %**, cuatro de ellas bucles cortos alrededor de una llamada a la
+BIOS.
 `make density` lo imprime imagen a imagen, y `tests/test_sources.py` guarda,
 banco a banco, cuántas rutinas llamadas siguen sin nombre, de modo que la cifra
 sólo puede bajar.
@@ -146,7 +147,7 @@ puede cazar:
 
 ```
 src/<imagen>/*.asm  los módulos, un directorio por imagen
-src/inc/            los puntos de entrada de la BIOS y la RAM del reproductor de sonido
+src/inc/            los puntos de entrada de la BIOS y las variables de RAM del juego
 src/seeds.txt       los puntos de entrada que el trazador no encuentra solo
 tools/              el trazador, las comprobaciones y los generadores de la web
 build/              todo lo que produce make (no está en el repositorio)

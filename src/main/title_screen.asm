@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "screens_symbols.inc"
+	include "variables.inc"
 
 	public blink_selection,build_high_score_screen,L_5BDD
 	extrn add_a_to_hl,clear_screen,decompress,decompress_three_thirds,dump_to_vram,L_49A0
@@ -50,18 +51,18 @@ L_5BA6:
 	di
 	ld a,002h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld de,057ebh		; And on top, the two messages at 0x57EB
 	call write_characters
 	jp write_characters
 blink_selection:		; A bit of 0xE004 turns off and on the message of the option selected in the intro
-	ld hl,0e004h
+	ld hl,STATE_TIMER
 	bit 3,(hl)		; Bit 3 of the counter: on and off
 	ld c,0ffh
 	jr nz,L_5BDD
@@ -69,7 +70,7 @@ blink_selection:		; A bit of 0xE004 turns off and on the message of the option s
 L_5BDD:
 	ld hl,03a2ah		; Row 17, column 10, and the one 0x40 further down
 	ld de,03a6ah
-	ld a,(0e052h)		; 0xE052 says which of the two is selected
+	ld a,(INTRO_CHOICE)	; Says which of the two is selected
 	or a
 	jr z,L_5BEA
 	ex de,hl
@@ -92,12 +93,12 @@ build_high_score_screen:		; With banks 9 and 10, decompresses the six blocks of 
 	di
 	ld a,009h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ah
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld hl,02008h		; Three pattern blocks, at 0x2008, 0x2808 and 0x3008
 	ld de,08300h
@@ -134,12 +135,12 @@ build_high_score_screen:		; With banks 9 and 10, decompresses the six blocks of 
 	di
 	ld a,002h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld a,0a6h		; Sound 0xA6
 	jp request_sound

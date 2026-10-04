@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - map_collisions.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public collides_at_this_cell,collides_with_map,collides_with_map_2,collides_with_map_3,is_special_cell,object_collides_with_map
 	public ship_collides
 
@@ -29,7 +31,7 @@ L_9864:
 	cp 077h			; Below 0x77 it is background
 	ret c
 	ld c,a
-	ld a,(0e061h)		; On stage 1 only two characters collide
+	ld a,(STAGE)		; On stage 1 only two characters collide
 	dec a
 	jp z,stage_1_wall
 	sub 002h		; And on stage 3, a whole range
@@ -52,7 +54,7 @@ L_9886:
 	cp 077h			; Below 0x77 it is background
 	ret c
 	ld c,a
-	ld a,(0e061h)
+	ld a,(STAGE)
 	sub 003h
 	jp z,stage_3_wall
 	xor a
@@ -85,7 +87,7 @@ object_collides_with_map:		; The same, taking the position of the object IX poin
 	cp 077h
 	ret c
 	ld c,a
-	ld a,(0e061h)
+	ld a,(STAGE)
 	dec a
 	jr z,stage_1_wall
 	sub 002h
@@ -99,13 +101,13 @@ collides_at_this_cell:		; The cell already comes in DE
 	cp 077h			; Below 0x77 it is background
 	ret c
 	ld c,a
-	ld a,(0e061h)
+	ld a,(STAGE)
 	sub 003h
 	jp z,stage_3_wall
 	xor a
 	ret
 ship_collides:		; Looks at the two cells the ship passes through: the one of its point and the one next to it
-	ld ix,0e200h		; 0xE200: the ship's card
+	ld ix,SHIP		; The ship's card
 	ld a,(ix+004h)		; Eight to the right of its X
 	add a,008h
 	ld l,a
@@ -133,7 +135,7 @@ L_98FF:
 	cp 077h
 	ret c
 	ld c,a			; The character is kept in C
-	ld a,(0e061h)
+	ld a,(STAGE)
 	sub 003h
 	jr z,stage_4_wall
 	dec a
@@ -166,7 +168,7 @@ stage_5_wall:		; From 0xBA to 0xC5
 	cp 00ch
 	ret
 is_special_cell:		; On stages 2, 7 and from 9 onwards there are characters that are not walls but count: returns which one in C
-	ld a,(0e061h)		; 0xE061: the stage
+	ld a,(STAGE)		; The stage
 	cp 002h			; Stage 2 has one group
 	jr z,L_9940
 	cp 007h
@@ -176,7 +178,7 @@ is_special_cell:		; On stages 2, 7 and from 9 onwards there are characters that 
 	xor a
 	ret
 L_9940:
-	ld a,(0e151h)		; Not with the boss on screen
+	ld a,(BOSS_STATE)	; Not with the boss on screen
 	and a
 	ret nz
 	ld c,005h		; Group 5: characters 0x44 and 0x45

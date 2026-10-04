@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - three_shot_fan.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public release_fan
 
 ; ----------------------------------------------------------------------
@@ -27,15 +29,15 @@ release_fan:		; Measures the angle to the ship and releases three shots: the one
 	call insert_shot
 	ld c,0ffh		; ...and the one before
 insert_shot:		; Looks for a free slot among the ten at 0xE500 and fills it with the position and with the speed for that direction
-	ld a,(0ec18h)		; The high nibble of the angle: sixteen directions
+	ld a,(SHIP_ANGLE)	; The high nibble of the angle: sixteen directions
 	rra
 	rra
 	rra
 	rra
 	add a,c			; Plus the fan offset
 	and 00fh
-	ld (0ec00h),a
-	ld hl,0e500h		; The ten slots at 0xE500, 0x20 apart
+	ld (FAN_DIRECTION),a
+	ld hl,ENEMY_SHOTS	; The ten slots, 0x20 apart
 	ld de,00020h
 	ld b,00ah
 	xor a
@@ -60,7 +62,7 @@ L_B234:
 	add a,010h
 	ld (hl),a
 	ld de,0b26ah		; The table at 0xB26A: four bytes per direction
-	ld a,(0ec00h)
+	ld a,(FAN_DIRECTION)
 	add a,a
 	add a,a
 	call 04062h

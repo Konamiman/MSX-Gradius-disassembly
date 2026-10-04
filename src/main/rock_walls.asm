@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - rock_walls.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public check_for_wall,finish_type_0A,finish_type_0B,finish_type_8,finish_type_9,move_type_0A
 	public move_type_0B,move_type_8,move_type_9
 	extrn compare_speed_and_acceleration,L_ABCC,set_horizontal_acceleration,set_negated_acceleration,set_vertical_acceleration
@@ -17,13 +19,13 @@
 ; they come in from.
 ; ----------------------------------------------------------------------
 check_for_wall:		; Compares the distance travelled with the stage's list and, on a match, sets up a wall of rocks
-	ld a,(0e978h)		; 0xE978: with a wall under way, go and release it
+	ld a,(WALL_ON)		; With a wall under way, go and release it
 	or a
 	jp nz,release_wall
-	ld a,(0e100h)		; Only on steps with a new column
+	ld a,(NEW_COLUMN)	; Only on steps with a new column
 	or a
 	ret z
-	ld a,(0e061h)		; The second stage has its list...
+	ld a,(STAGE)		; The second stage has its list...
 	cp 002h
 	jp z,L_AC13
 	cp 008h			; ...and the eighth its own; the others have none
@@ -35,13 +37,13 @@ L_AC13:
 	ld hl,0ac81h		; Six distances, and walls of five
 	ld bc,00600h
 L_AC19:
-	ld (0ec00h),hl		; The list and the count, parked at 0xEC00
-	ld (0ec02h),bc
+	ld (WALL_LIST),hl	; The list and the count are parked
+	ld (WALL_OF_THREE),bc
 walk_distances:		; One by one, against the distance travelled
 	push bc
-	ld a,(0ec03h)		; From the count comes the index
+	ld a,(WALL_LIST_LEN)	; From the count comes the index
 	sub b
-	ld hl,(0ec00h)
+	ld hl,(WALL_LIST)
 	call 047aeh		; The word that is due from the list
 	ld a,d
 	exx			; The high byte is saved whole...
@@ -49,7 +51,7 @@ walk_distances:		; One by one, against the distance travelled
 	exx
 	and 07fh		; ...and compared without its bit 7
 	ld d,a
-	ld hl,(0e063h)		; DCOMPR against the distance travelled
+	ld hl,(DISTANCE)	; DCOMPR against the distance travelled
 	rst 20h
 	pop bc
 	jp z,set_up_wall	; Exactly this one: wall
@@ -62,14 +64,14 @@ set_up_wall:		; Bit 7 of the distance picks the column, and the stage how many r
 	jp nc,L_AC47
 	ld a,040h		; ...or 0x40
 L_AC47:
-	ld (0e97ah),a		; 0xE97A: they all fall through there
+	ld (WALL_COLUMN),a	; They all fall through there
 	ld hl,00501h		; Five rocks, one per frame...
-	ld a,(0ec02h)
+	ld a,(WALL_OF_THREE)
 	or a
 	jp z,L_AC57
 	ld hl,00302h		; ...or three, one every two frames
 L_AC57:
-	ld (0e978h),hl
+	ld (WALL_ON),hl
 	ret
 release_wall:		; One rock per frame, each one on its row, until the count runs out
 	ld hl,0AC7Bh		; The table base lands on the `ret` right next to it: it is never read, because the index is never zero
@@ -77,17 +79,17 @@ release_wall:		; One rock per frame, each one on its row, until the count runs o
 	jp z,L_AC63
 	inc hl
 L_AC63:
-	ld a,(0e979h)		; 0xE979: which one is due
+	ld a,(WALL_ROCK)	; Which one is due
 	add a,l
 	ld l,a
 	jr nc,L_AC6B
 	inc h
 L_AC6B:
 	ld e,(hl)
-	ld a,(0e97ah)		; All through the same column
+	ld a,(WALL_COLUMN)	; All through the same column
 	ld d,a
 	call L_ABCC		; Type 8: the rock
-	ld hl,0e979h
+	ld hl,WALL_ROCK
 	dec (hl)		; One fewer
 	ret nz
 	dec l
@@ -156,21 +158,21 @@ L_ACDA:
 	call its_shot_speed	; And the speed of its shots
 	jp 06c61h
 rock_fires:		; Once grown, it releases a shot every eight frames
-	ld a,(0e06ah)		; 0xE06A: on the first loop it does not fire
+	ld a,(LOOP_NUMBER)	; On the first loop it does not fire
 	dec a
 	ret m
 	jr nz,L_ACFC
-	ld a,(0e200h)		; With the ship halfway through exploding, not either
+	ld a,(SHIP)		; With the ship halfway through exploding, not either
 	cp 003h
 	ret c
-	ld a,(0e20eh)
+	ld a,(SHIP_LASER)
 	or a
 	ret z
 L_ACFC:
-	ld a,(0e008h)		; Bit 4 of 0xE008
+	ld a,(CONTROLLER_NEW)	; Bit 4
 	and 010h
 	ret z
-	ld a,(0e003h)		; One frame in every eight
+	ld a,(FRAME_COUNT)	; One frame in every eight
 	and 007h
 	ret nz
 	jp 09239h
@@ -189,9 +191,9 @@ table_AD16_AD18:
 	defb 07h,0C4h
 	defb 0Fh,0C8h
 its_shot_speed:		; 0x40 plus the difficulty
-	ld a,(0e111h)
+	ld a,(DIFFICULTY)
 	add a,040h
-	ld (0e110h),a
+	ld (ENEMY_SHOT_SPEED),a
 	ret
 finish_type_9:		; No vertical speed and three points to the left
 	ld de,00000h
@@ -206,7 +208,7 @@ move_type_9:		; Crosses in a straight line and, past the middle of the screen, g
 	ld a,(ix+006h)		; Up to column 0x80 it goes straight
 	cp 080h
 	ret nc
-	ld a,(0e204h)		; The ship's row minus its own
+	ld a,(SHIP_ROW)		; The ship's row minus its own
 	sub (ix+004h)
 	push af
 	add a,003h
@@ -232,7 +234,7 @@ table_AD68:
 finish_type_0A:		; The ones in the wave curve alternately: one upwards and the next one downwards
 	ld de,00080h
 	ld bc,0fc00h
-	ld a,(0e162h)		; 0xE162: how many are left of the wave
+	ld a,(FILE_WAVE_LEFT)	; How many are left of the wave
 	bit 0,a			; Its bit 0 decides which way this one curves
 	jr nz,L_AD81
 	ld de,0ff80h
@@ -266,7 +268,7 @@ animate_type_0A:		; Six drawings there and back, one every four frames
 table_ADB3:
 	defb 0BCh,0C0h,0C4h,0C8h,0C4h,0C0h
 finish_type_0B:		; The speeds come from a table indexed by 0xE15A, and on the second loop they are faster
-	ld a,(0e06ah)		; 0xE06A: from the second loop onwards, another table
+	ld a,(LOOP_NUMBER)	; From the second loop onwards, another table
 	or a
 	ld bc,0fe00h		; Two points to the left...
 	ld hl,0add7h
@@ -274,7 +276,7 @@ finish_type_0B:		; The speeds come from a table indexed by 0xE15A, and on the se
 	ld bc,0fd00h		; ...or three on the second loop
 	ld hl,0adddh
 L_ADCB:
-	ld a,(0e15ah)		; 0xE15A says which of the pairs it gets
+	ld a,(SHOT_BURST)	; Says which of the pairs it gets
 	call 047aeh
 	call 06cbfh
 	ld d,b
@@ -297,13 +299,13 @@ move_type_0B:		; Four drawings, and from the third loop onwards it fires every 0
 	ld bc,00304h		; Four drawings, one every four frames
 	ld hl,0ae03h
 	call 095d1h
-	ld a,(0e06ah)		; 0xE06A: it does not fire until the third loop
+	ld a,(LOOP_NUMBER)	; It does not fire until the third loop
 	cp 002h
 	ret c
-	ld a,(0e003h)		; One frame in every 0x20
+	ld a,(FRAME_COUNT)	; One frame in every 0x20
 	and 01fh
 	ret nz
-	ld a,(0e008h)		; Bit 4 of 0xE008
+	ld a,(CONTROLLER_NEW)	; Bit 4
 	and 010h
 	ret z
 	jp 09239h

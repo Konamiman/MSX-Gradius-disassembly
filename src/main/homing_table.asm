@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - homing_table.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public aim_acceleration
 
 ; ----------------------------------------------------------------------
@@ -16,7 +18,7 @@
 ; ----------------------------------------------------------------------
 aim_acceleration:		; The two differences to the ship, in absolute value, give the index into the table at 0x9657: the two accelerations come from there
 	ld b,000h
-	ld a,(0e206h)		; 0xE206: the ship's column
+	ld a,(SHIP_COLUMN)	; The ship's column
 	ld d,a
 	ld a,(ix+006h)
 	sub d
@@ -26,7 +28,7 @@ aim_acceleration:		; The two differences to the ship, in absolute value, give th
 L_95FA:
 	ld h,a
 	ld c,000h
-	ld a,(0e204h)		; And 0xE204: its row
+	ld a,(SHIP_ROW)		; And its row
 	ld d,a
 	ld a,(ix+004h)
 	sub d

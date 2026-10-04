@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - turning_enemy.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public finish_type_5,finish_type_6,move_type_2,move_type_6
 	extrn collides_with_map_3,finish_type_2,how_far_it_walks,L_9535,set_horiz_speed_from_acceleration,time_to_move
 
@@ -15,7 +17,7 @@
 ; These are four steps counted in byte 1.
 ; ----------------------------------------------------------------------
 move_type_2:		; The four steps of the turn: to 0x81, back to 0x9F, to 0x51, and straight on once level with the ship
-	ld a,(0e111h)		; From difficulty 8 onwards, it also fires
+	ld a,(DIFFICULTY)	; From difficulty 8 onwards, it also fires
 	cp 008h
 	call nc,09235h
 	call animate_type_2	; Four drawings, one every four frames
@@ -61,7 +63,7 @@ again_to_51:		; The same step, with the limit at 0x51
 	ld bc,0514fh
 	jp L_A8CE
 level_with_ship:		; Within nine of its row it stops climbing and descending and carries straight on
-	ld a,(0e204h)		; The ship's row minus its own
+	ld a,(SHIP_ROW)		; The ship's row minus its own
 	sub (ix+004h)
 	add a,004h
 	cp 009h
@@ -110,7 +112,7 @@ L_A973:
 	call has_ground_below
 	jp nc,0953ch
 	ld de,00200h		; Two points towards the ship's column
-	ld a,(0e206h)		; 0xE206: the ship's column
+	ld a,(SHIP_COLUMN)	; The ship's column
 	sub (ix+006h)
 	jr nc,L_A987
 	ld de,0fe00h

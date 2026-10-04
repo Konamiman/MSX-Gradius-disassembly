@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public switch_off_screen
 
@@ -19,7 +20,7 @@
 ; 0xE1A3.
 ; ----------------------------------------------------------------------
 switch_off_screen:		; The four steps of the fade: eat the colours, eat the patterns, clear 0xED00 and report back
-	ld hl,0e1a0h		; 0xE1A0: which step the fade is on
+	ld hl,FADE_STEP		; Which step the fade is on
 	ld a,(hl)
 	dec a
 	jr z,eat_patterns
@@ -27,18 +28,18 @@ switch_off_screen:		; The four steps of the fade: eat the colours, eat the patte
 	jr z,clear_buffer
 	dec a
 	jp z,report_done
-	ld a,(0e1d0h)		; If nothing else is already playing, sound 0x3E
+	ld a,(ENDING)		; If nothing else is already playing, sound 0x3E
 	and a
 	ld a,03eh
 	call z,049deh
 	xor a			; 0xE1A3 to zero: not finished yet
-	ld (0e1a3h),a
+	ld (FADE_DONE),a
 	inc l			; 0xE1A1 to zero: starting from the first row
 	ld (hl),a
 	inc l
 	ld (hl),0f0h		; 0xE1A2: the mask starts at 0xF0
 eat_background_colours:		; A whole pass over the colour table, 0x40 rows at a time
-	ld a,(0e1a1h)		; 0xE1A1: which row it is on
+	ld a,(FADE_ROW)		; Which row it is on
 	cp 040h			; The first third does not reach 0x1000
 	jr c,L_A6F3
 	cp 080h
@@ -52,7 +53,7 @@ L_A6F3:
 	call chunk_with_current_mask
 	ld de,00000h		; ...and the first
 	call chunk_with_current_mask
-	ld hl,0e1a1h
+	ld hl,FADE_ROW
 	ld a,(hl)
 	add a,040h		; 0x40 more rows
 	ld (hl),a
@@ -64,7 +65,7 @@ L_A6F3:
 	ld (hl),0feh		; And the pattern mask starts at 0xFE
 	ret
 eat_patterns:		; The same pass, but over the pattern table and removing one more bit each round
-	ld a,(0e1a1h)
+	ld a,(FADE_ROW)
 	cp 040h			; Below row 0x40, only two thirds
 	jr c,L_A722
 	cp 080h			; And row 0x44 takes fewer bytes
@@ -78,7 +79,7 @@ L_A722:
 	call chunk_with_current_mask
 	ld de,02000h		; ...and the first
 	call chunk_with_current_mask
-	ld hl,0e1a1h
+	ld hl,FADE_ROW
 	ld a,(hl)
 	add a,040h
 	ld (hl),a
@@ -91,26 +92,26 @@ L_A722:
 	ret
 L_A73E:
 	ld a,002h		; With the mask at zero everything is black: step 2
-	ld (0e1a0h),a
+	ld (FADE_STEP),a
 	ret
 clear_buffer:		; The 0x2C0 bytes of 0xED00 to zero, and on to step 3
-	ld hl,0ed00h		; 0xED00 onwards...
-	ld de,0ed01h
+	ld hl,MAP		; From here onwards...
+	ld de,MAP+1
 	ld bc,002bfh		; ...0x2C0 bytes to zero
 	ld (hl),000h
 	ldir
 	ld a,003h		; And step 3
-	ld (0e1a0h),a
+	ld (FADE_STEP),a
 	ret
 report_done:		; When the sound stops, 0xE1A3 is set and bank 2 takes the boss as dead
-	ld a,(0e012h)		; 0xE012: not until the sound stops
+	ld a,(SND_CARD_A+CARD_MODE)	; Not until the sound stops
 	and a
 	ret nz
 	ld a,001h		; 0xE1A3 to one: bank 2 can now carry on
-	ld (0e1a3h),a
+	ld (FADE_DONE),a
 	ret
 chunk_with_current_mask:		; Comes in with the current row in 0xE1A1
-	ld a,(0e1a1h)
+	ld a,(FADE_ROW)
 eat_chunk:		; Brings 0x200 bytes down from VRAM to 0xEA00, applies the mask to them and sends them back up
 	ld bc,00200h		; Half a kilobyte at a time
 	cp 044h			; Two rows take fewer: 0x44...
@@ -128,21 +129,21 @@ L_A776:
 	add hl,hl
 	add hl,de
 	push hl
-	ld de,0ea00h		; 0xEA00: the block comes down here
+	ld de,FADE_BUFFER	; The block comes down here
 	push bc
 	call LDIRMV
 	pop bc
 	push bc
-	ld hl,0ea00h
-	ld a,(0e1a2h)		; 0xE1A2: this round's mask
+	ld hl,FADE_BUFFER
+	ld a,(FADE_MASK)	; This round's mask
 	ld e,a
 	call apply_mask
 	pop bc
 	pop hl
-	ld de,0ea00h
+	ld de,FADE_BUFFER
 	jp 04960h		; And the block, bitten, goes back to VRAM
 apply_mask:		; In the first step the mask is the same for every byte; in the rest it rotates three bits per byte
-	ld a,(0e1a0h)
+	ld a,(FADE_STEP)
 	and a
 	jr nz,rotating_mask
 fixed_mask:		; AND with the same mask byte by byte

@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - spawn_object.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public spawn_object
 	extrn finish_type_0A,finish_type_0B,finish_type_0C,finish_type_0D,finish_type_0F,finish_type_1
 	extrn finish_type_11,finish_type_16,finish_type_17,finish_type_18,finish_type_19,finish_type_1B
@@ -23,24 +25,24 @@
 ; slots.
 ; ----------------------------------------------------------------------
 spawn_object:		; Looks for a free slot and sets up there an object of type A, at position DE
-	ld (0ec19h),de		; Where it goes, noted in 0xEC19
-	ld (0e120h),a		; And the type, in 0xE120
+	ld (SPAWN_POS),de	; Where it goes is noted
+	ld (SPAWN_TYPE),a	; And the type
 	xor a
-	ld (0e124h),a
+	ld (SPAWNED_TYPE),a
 	ld a,c
-	ld (0e121h),a
-	ld a,(0e120h)
+	ld (SPAWN_ADJUST),a
+	ld a,(SPAWN_TYPE)
 	cp 01eh			; Type 0x1E takes three slots
 	jp z,find_three_consecutive_slots
 	sub 00eh		; And 0x0E goes to the other table
 	jr z,search_other_table
-	ld hl,0e300h		; The twelve slots at 0xE300, 0x20 apart
+	ld hl,OBJECTS		; The twelve slots, 0x20 apart
 	ld b,00ch
 	ld de,00020h
 	xor a
 	jr find_free_slot
 find_three_consecutive_slots:		; The big object needs three consecutive free slots; if there are none, it does not come out
-	ld hl,0e300h
+	ld hl,OBJECTS
 	ld c,00ch
 	ld de,00020h
 	xor a
@@ -63,7 +65,7 @@ L_6AB2:
 	ld de,0ffa0h		; Go back to the first of the three
 	add hl,de
 	exx
-	ld hl,0e126h		; And two more in the live count: it is three slots
+	ld hl,LIVE_OBJECTS	; And two more in the live count: it is three slots
 	inc (hl)
 	inc (hl)
 	exx
@@ -71,7 +73,7 @@ L_6AB2:
 search_other_table:		; Type 0x0E lives at 0xE460, eight slots counted backwards
 	ld de,0ffe0h		; Type 0x0E goes to the table at 0xE460
 	ld b,008h
-	ld hl,0e460h		; Eight slots counting backwards
+	ld hl,OBJECTS+(OBJECT_COUNT-1)*OBJECT_SIZE	; Eight slots counting backwards
 find_free_slot:		; The first one with its first byte at zero
 	cp (hl)
 	jr z,set_up_object
@@ -79,15 +81,15 @@ find_free_slot:		; The first one with its first byte at zero
 	djnz find_free_slot
 	ret
 set_up_object:		; Fills the slot: type, counters to zero, the position, and the four bytes from the table at 0x6BA3
-	ld de,(0ec19h)		; The position, which was parked in 0xEC19
+	ld de,(SPAWN_POS)	; The position, which was parked
 	exx
-	ld hl,0e126h		; One more in the count of live objects
+	ld hl,LIVE_OBJECTS	; One more in the count of live objects
 	inc (hl)
 	exx
 	push hl
 	pop ix
-	ld a,(0e120h)
-	ld (0e124h),a
+	ld a,(SPAWN_TYPE)
+	ld (SPAWNED_TYPE),a
 	ld (ix+01bh),003h	; Byte 27 to three
 	ld (hl),a
 	inc l
@@ -104,7 +106,7 @@ set_up_object:		; Fills the slot: type, counters to zero, the position, and the 
 	ld de,00005h
 	add hl,de
 	ld de,06ba3h		; The table at 0x6BA3: four bytes per type
-	ld a,(0e120h)
+	ld a,(SPAWN_TYPE)
 	add a,a			; Times four
 	add a,a
 	add a,e
@@ -116,12 +118,12 @@ L_6B02:
 	ldi
 	ldi
 	ldi
-	ld a,(0e121h)		; With the adjustment set, byte 13 carries 8; type 0x0D, 6
+	ld a,(SPAWN_ADJUST)	; With the adjustment set, byte 13 carries 8; type 0x0D, 6
 	ld (de),a		; Byte 13: eight, or six if it is type 0x0D
 	and a			; Type 0x0D carries six
 	jr z,L_6B1E
 	ld b,008h
-	ld a,(0e120h)
+	ld a,(SPAWN_TYPE)
 	cp 00dh
 	jr nz,L_6B1B
 	ld b,006h
@@ -135,7 +137,7 @@ L_6B1E:
 	inc de
 	xor a
 	ld (de),a
-	ld a,(0e120h)		; Types 2, 0x0A and 0x0C carry two more bytes
+	ld a,(SPAWN_TYPE)	; Types 2, 0x0A and 0x0C carry two more bytes
 	cp 002h			; The type, again
 	jr z,L_6B37
 	cp 00ah
@@ -146,10 +148,10 @@ L_6B37:
 	ld a,001h
 	ld (de),a
 	inc de
-	ld a,(0e166h)		; 0xE166
+	ld a,(FILE_WAVE_NUMBER)
 	ld (de),a
 L_6B3F:
-	ld a,(0e120h)		; And each type finishes its record on its own: thirty-one exits
+	ld a,(SPAWN_TYPE)	; And each type finishes its record on its own: thirty-one exits
 	dec a
 	call 04067h
 

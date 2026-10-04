@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - stage7_script.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public advance_script,check_script,finish_type_0D,move_type_0D
 	extrn aim_from_where_it_is,animate_type_0D
 
@@ -15,24 +17,24 @@
 ; list is walked with a cursor at 0xE968 and ends at 0xFFFF.
 ; ----------------------------------------------------------------------
 advance_script:		; Skips in one go all the appearances that are already behind the distance travelled
-	ld a,(0e061h)		; Only stage 7 has a script
+	ld a,(STAGE)		; Only stage 7 has a script
 	cp 007h
 	ret nz
 	call spawn_this_appearance
 	jp z,advance_script	; As long as they keep falling due, they keep being taken out
 	ret c			; Once past the distance of the one that is due, it stops
-	ld hl,0e968h
+	ld hl,STAGE7_SCRIPT_POS
 	inc (hl)		; And the ones left behind are skipped
 	jp advance_script
 check_script:		; On every step with a new column, releases all the appearances that fall at this distance
-	ld a,(0e061h)		; Only stage 7
+	ld a,(STAGE)		; Only stage 7
 	cp 007h
 	ret nz
-	ld a,(0e100h)		; And only on steps with a new column
+	ld a,(NEW_COLUMN)	; And only on steps with a new column
 	and a
 	ret z
 	ld a,0f8h		; 0xEC04 to 0xF8: they all come in from the right
-	ld (0ec04h),a
+	ld (ENTRY_X),a
 spawn_due_ones:		; One after another as long as they match
 	call spawn_this_appearance
 	jp z,spawn_due_ones
@@ -40,12 +42,12 @@ spawn_due_ones:		; One after another as long as they match
 spawn_this_appearance:		; If the list's distance is the current one, moves the cursor on and releases the enemy
 	call is_this_the_distance	; Without a match, there is nothing to do
 	ret nz
-	ld hl,0e968h
+	ld hl,STAGE7_SCRIPT_POS
 	inc (hl)		; One appearance fewer in the list
 	ld a,c			; The top five bits: the row
 	and 0f8h
 	ld e,a
-	ld a,(0ec04h)		; With the column below 0x80 nothing is released
+	ld a,(ENTRY_X)		; With the column below 0x80 nothing is released
 	cp 080h
 	jr nc,spawn_type_0D
 	xor a
@@ -62,13 +64,13 @@ spawn_type_0D:		; The column, the row and the variant already unpacked
 	ret
 is_this_the_distance:		; Unpacks the script word and compares its nine bits of distance with the distance travelled
 	ld hl,0af3fh		; The word that is due from the list
-	ld a,(0e968h)
+	ld a,(STAGE7_SCRIPT_POS)
 	call 047aeh
 	ld c,d			; The high byte is saved whole...
 	ld a,d
 	and 001h		; ...and of it only bit 0 is distance
 	ld d,a
-	ld hl,(0e063h)		; DCOMPR against the distance travelled
+	ld hl,(DISTANCE)	; DCOMPR against the distance travelled
 	rst 20h
 	ret
 
@@ -156,7 +158,7 @@ type_0D_rests:		; Another ten frames still and then back to firing
 	ld (ix+002h),00ah
 	jp 09510h
 speed_by_difficulty:		; From the ramp at 0xB000: 0x1A and two more for each notch of difficulty
-	ld a,(0e111h)		; 0xE111, the difficulty, indexes the ramp at 0xB000
+	ld a,(DIFFICULTY)	; The difficulty indexes the ramp at 0xB000
 	ld hl,0b000h
 	add a,l
 	ld l,a
@@ -164,7 +166,7 @@ speed_by_difficulty:		; From the ramp at 0xB000: 0x1A and two more for each notc
 	inc h
 L_AFFB:
 	ld a,(hl)
-	ld (0e110h),a		; 0xE110: the speed of the shots
+	ld (ENEMY_SHOT_SPEED),a	; The speed of the shots
 	ret
 
 ; ----------------------------------------------------------------------

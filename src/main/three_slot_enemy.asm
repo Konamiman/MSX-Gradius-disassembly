@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - three_slot_enemy.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public finish_type_1E,move_type_1E,move_type_1F,type_1E_splits_in_three
 	extrn add_horizontal_acceleration,add_vertical_acceleration,aim_acceleration,blow_up_enemy,collides_with_map,L_9239
 	extrn negate_horizontal_speed,set_horizontal_speed,set_vertical_speed,zero_speed
@@ -18,10 +20,10 @@
 ; all three turn into type 0x1F and fly off, each in its own direction.
 ; ----------------------------------------------------------------------
 finish_type_1E:		; Sets up the three slots, places them in a triangle and gives them the speed of their door
-	ld a,(0e996h)		; 0xE996: which door it came in through
+	ld a,(BIGFLOCK_DOOR)	; Which door it came in through
 	or a
 	jr nz,L_BC05
-	ld a,(0e204h)		; With the ship below row 0x50 it comes in at the top, and otherwise at the bottom
+	ld a,(SHIP_ROW)		; With the ship below row 0x50 it comes in at the top, and otherwise at the bottom
 	cp 050h
 	ld a,018h
 	jr nc,L_BC02
@@ -40,7 +42,7 @@ L_BC05:
 	ld (ix+013h),000h	; Byte 19 says which of the three each one is
 	ld (ix+033h),001h
 	ld (ix+053h),002h
-	ld a,(0e996h)		; The table at 0xBC43: two speeds per door
+	ld a,(BIGFLOCK_DOOR)	; The table at 0xBC43: two speeds per door
 	add a,a
 	add a,a
 	ld e,a
@@ -136,16 +138,16 @@ place_three_in_triangle:		; The second 0x10 lower and eight to the left; the thi
 	ld (ix+046h),a
 	ret
 type_1E_fires:		; From the second loop onwards and with the shield on, every 0x20 frames
-	ld a,(0e06ah)		; 0xE06A: on the first loop it does not fire
+	ld a,(LOOP_NUMBER)	; On the first loop it does not fire
 	or a
 	ret z
-	ld a,(0e20bh)		; 0xE20B: nor without the shield
+	ld a,(OPTION_COUNT)	; Nor without the shield
 	cp 002h
 	ret c
-	ld a,(0e003h)		; One frame in every 0x20
+	ld a,(FRAME_COUNT)	; One frame in every 0x20
 	and 01fh
 	ret nz
-	ld a,(0e008h)
+	ld a,(CONTROLLER_NEW)
 	and 010h
 	ret z
 	jp L_9239
@@ -160,7 +162,7 @@ move_type_1E:		; Only the first slot moves: it closes in on the ship's row betwe
 	call c,set_colour_of_three
 	call blink_type_1E	; The drawing, which goes its own way
 	call type_1E_fires
-	ld a,(0e204h)		; The ship's row minus its own
+	ld a,(SHIP_ROW)		; The ship's row minus its own
 	sub (ix+004h)
 	ld de,00020h		; A third of a point towards it
 	jr nc,L_BD09
@@ -230,7 +232,7 @@ move_type_1F:		; Blows up when it touches the map, blinks, and chases the ship o
 	call type_1F_touches_map
 	jp c,blow_up_enemy	; Touching the map, it blows up
 	call blink_type_1F	; The blinking
-	ld a,(0e990h)		; 0xE990: with the big ones' flock under way, it chases
+	ld a,(BIGFLOCK_ON)	; With the big ones' flock under way, it chases
 	or a
 	jr z,L_BD95
 	call aim_acceleration	; The acceleration towards the ship, and the two sums

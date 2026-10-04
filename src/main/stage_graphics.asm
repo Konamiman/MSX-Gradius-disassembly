@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public build_mirror,load_entries,load_stage_graphics
 	extrn add_a_to_de,add_a_to_hl,decompress,dump_to_vram,get_word,load_stage_font
@@ -21,7 +22,7 @@ load_stage_graphics:		; Maps banks 4, 5 and 6, decompresses what is due for the 
 	call load_stage_font
 	di			; Banks 4, 5 and 6, which are the graphics ones
 	push hl			; Banks 4, 5 and 6, which are the graphics ones
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,004h
 	ld (06000h),a
 	ld (hl),a
@@ -39,7 +40,7 @@ load_stage_graphics:		; Maps banks 4, 5 and 6, decompresses what is due for the 
 	ld hl,01800h		; The block at 0x86BB to VRAM 0x1800: the sprite patterns
 	ld de,086bbh
 	call decompress
-	ld a,(0e061h)		; The stage times six: two groups of three bytes in the table at 0x42AD
+	ld a,(STAGE)		; The stage times six: two groups of three bytes in the table at 0x42AD
 	add a,a
 	ld b,a
 	add a,a
@@ -67,14 +68,14 @@ decompress_both_blocks:		; For each group: the source in DE and, in C, the chara
 	pop hl
 	pop bc
 	djnz decompress_both_blocks
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 005h			; Stage 5 also gets the block at 0x8FCB at VRAM 0x1D00
 	jr nz,L_428A
 	ld hl,01d00h
 	ld de,08fcbh
 	call decompress
 L_428A:
-	ld a,(0f0f4h)		; And with 0xF0F4 set, one more at 0x1800
+	ld a,(TWINBEE_FOUND)	; And with it set, one more at 0x1800
 	or a
 	jr z,restore_usual_layout
 	ld hl,01800h
@@ -83,7 +84,7 @@ L_428A:
 restore_usual_layout:		; Banks 1, 2 and 3 in their three slots, and the RAM copy up to date
 	di			; The usual layout is restored: banks 1, 2 and 3
 	push hl
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,001h
 	ld (06000h),a		; Bank 1 at 0x6000...
 	ld (hl),a
@@ -127,32 +128,32 @@ empty_block:
 load_stage_characters:		; The entries at 0x932D and the ones due for the stage, plus the two batches of mirrors
 	ld ix,0932dh		; The entries at 0x932D: the ones every stage gets
 	call load_entries
-	ld a,(0e061h)
+	ld a,(STAGE)
 	ld hl,092e3h		; And the table at 0x92E3, indexed by the stage
 	call get_word
 	push de
 	pop ix
 	call load_entries
 	xor a
-	ld (0e100h),a		; 0xE100 to zero: the batch that is flipped by bits
+	ld (MIRROR_KIND),a	; To zero: the batch that is flipped by bits
 	ld hl,092fbh
 	call walk_entries
-	ld hl,0e100h
+	ld hl,MIRROR_KIND
 	inc (hl)		; And to one: the one that is flipped by bytes
 	ld hl,09313h
 	call walk_entries
-	ld a,(0f0f4h)		; The 0xF0F4 part is only loaded if it is set
+	ld a,(TWINBEE_FOUND)	; That part is only loaded if this is set
 	or a
 	ret z
 	ld ix,0938eh
 	call load_entries
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 009h			; From the ninth stage onwards, one more set
 	ld ix,0939bh
 	call nc,load_entries
 	ret
 walk_entries:		; Takes from the table in HL the list due for the stage and walks it
-	ld a,(0e061h)
+	ld a,(STAGE)
 	call get_word
 	push de
 	pop ix
@@ -165,9 +166,9 @@ build_mirror:		; For each four-byte entry: unpacks it, flips it and uploads it t
 	add hl,hl
 	add hl,hl
 	add hl,hl
-	ld (0e101h),hl
+	ld (MIRROR_BYTES),hl
 	call download_character_to_ram
-	ld a,(0e100h)		; 0xE100 says which mirror it is
+	ld a,(MIRROR_KIND)	; Says which mirror it is
 	and a
 	push af
 	call z,flip_bits	; At zero, the bit mirror: horizontal
@@ -218,11 +219,11 @@ decompress_patterns_and_colours:		; The character times eight plus the third: th
 	pop ix
 	ret
 flip_bytes:		; VERTICAL mirror: reverses the order of the character's eight bytes, in the two buffers at 0xE300 and 0xE700
-	ld hl,0e300h		; The pattern buffer...
-	ld de,0e307h
+	ld hl,MIRROR_PATTERNS	; The pattern buffer...
+	ld de,MIRROR_PATTERNS+7
 	call L_43D5
-	ld hl,0e700h		; ...and the colour one
-	ld de,0e707h
+	ld hl,MIRROR_COLOURS	; ...and the colour one
+	ld de,MIRROR_COLOURS+7
 L_43D5:
 	exx
 	ld b,(ix+003h)		; As many characters as the entry says
@@ -248,8 +249,8 @@ swap_eight_bytes:		; The character's eight bytes, swapped in pairs working inwar
 	djnz L_43D9
 	ret
 flip_bits:		; HORIZONTAL mirror: reverses the eight bits of each byte with `rr (hl)` and `adc a,a`
-	ld hl,0e300h
-	ld de,(0e101h)
+	ld hl,MIRROR_PATTERNS
+	ld de,(MIRROR_BYTES)
 L_43F9:
 	ld b,008h		; Eight bits per byte
 L_43FB:
@@ -284,19 +285,19 @@ upload_mirror_to_vram:		; The flipped character goes back to VRAM: the patterns 
 	push hl
 	ld de,02000h		; The patterns, 0x2000 higher
 	add hl,de
-	ld de,0e300h
-	ld bc,(0e101h)		; And as many bytes as 0xE101 says
+	ld de,MIRROR_PATTERNS
+	ld bc,(MIRROR_BYTES)	; And as many bytes as it says
 	call dump_to_vram
 	pop hl
 	ld de,00000h		; The colours go as they are, without the 0x2000
 	add hl,de
-	ld de,0e700h
-	ld bc,(0e101h)
+	ld de,MIRROR_COLOURS
+	ld bc,(MIRROR_BYTES)
 	call dump_to_vram
 	pop ix
 	ret
 download_character_to_ram:		; The character to be flipped is brought from VRAM to 0xE300 and 0xE700: to make the mirror you have to read what was already uploaded
-	ld bc,(0e101h)
+	ld bc,(MIRROR_BYTES)
 	ld l,(ix+000h)		; The first byte of the entry: the source character
 	ld h,000h
 	add hl,hl
@@ -312,7 +313,7 @@ download_character_to_ram:		; The character to be flipped is brought from VRAM t
 	ld d,030h		; And if not, the third one, at 0x3000
 L_4470:
 	add hl,de
-	ld de,0e300h
+	ld de,MIRROR_PATTERNS
 	push ix
 	call LDIRMV		; LDIRMV: from VRAM to RAM, the reverse of LDIRVM
 	pop ix
@@ -326,8 +327,8 @@ L_4470:
 	ld d,010h
 L_448F:
 	add hl,de
-	ld de,0e700h
-	ld bc,(0e101h)
+	ld de,MIRROR_COLOURS
+	ld bc,(MIRROR_BYTES)
 	push ix
 	call LDIRMV
 	pop ix

@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public check_pause_key,start_scroll
 	extrn animate_options,blink_two_characters,check_boss_collisions,check_fire,check_stretch_target,check_typed_keys
@@ -18,17 +19,17 @@
 ; THE PAUSE
 ; ----------------------------------------------------------------------
 check_pause_key:		; With the game running, looks at bit 5 of keyboard row 6 and, when it is pressed, toggles between pause and play
-	ld a,(0e002h)		; Bit 6 of 0xE002: only with the game running
+	ld a,(GAME_FLAGS)	; Bit 6: only with the game running
 	and 040h
 	jr z,game_frame
-	ld a,(0e1d0h)		; And with 0xE1D0 at zero
+	ld a,(ENDING)		; And at zero
 	and a
 	jr nz,game_frame
 	ld a,006h
 	call SNSMAT		; SNSMAT of row 6; bit 5 is the GRAPH key
 	cpl			; A cpl: on the keyboard a pressed key is a zero
 	and 020h
-	ld hl,0e10ch		; 0xE10C keeps the previous state, to catch the new press
+	ld hl,PAUSE_KEY_PREV	; Keeps the previous state, to catch the new press
 	ld c,(hl)
 	ld (hl),a
 	xor c			; What has changed and is set: it has just gone down
@@ -42,12 +43,12 @@ check_pause_key:		; With the game running, looks at bit 5 of keyboard row 6 and,
 	ld de,00101h		; And in pause, 0x0101
 	call clear_typing_state
 L_4514:
-	ld (0e047h),de
+	ld (NOISE_FX_ON),de
 L_4518:
 	bit 0,(hl)		; Only with the game paused are the keyboard cheats read
 	jr z,game_frame
 	call check_typed_keys
-	ld a,(0e200h)		; 0xE200 negative: the pause is handled elsewhere
+	ld a,(SHIP)		; Negative: the pause is handled elsewhere
 	and a
 	jp m,upload_sprites_rotating
 	call L_998C		; Three routines from banks 2 and 3, with the game stopped
@@ -65,39 +66,39 @@ L_4518:
 ; restored.
 ; ----------------------------------------------------------------------
 game_frame:		; The strip of calls that makes a whole frame: the scroll, the enemies, the shots, the collisions and the score
-	ld a,(0e009h)		; 0xE009 is copied to 0xE10D: the joystick, as it was left
-	ld (0e10dh),a
+	ld a,(CONTROLLER)	; Copied to 0xE10D: the joystick, as it was left
+	ld (PAUSE_JOYSTICK),a
 	call upload_sprites_rotating
 	call dispatch_by_stage
-	ld a,(0e1d0h)		; With 0xE1D0 set there is an explosion in progress
+	ld a,(ENDING)		; Set: there is an explosion in progress
 	and a
 	call nz,dispatch_ship_end
-	ld a,(0e1d1h)		; And with 0xE1D1 set, the frame is cut short here
+	ld a,(ENDING_STEP)	; And with this one set, the frame is cut short here
 	and a
 	ret nz
 	call check_stretch_target
 	xor a
-	ld (0e112h),a		; 0xE112 to zero
+	ld (NEW_SHOT),a		; To zero
 	di			; Banks 11 and 12: the pieces and the stage scripts
 	ld a,00bh
 	ld (08000h),a
-	ld (0f0f2h),a		; The RAM copy of the mapper is updated at the same time
+	ld (BANK_8000),a	; The RAM copy of the mapper is updated at the same time
 	ei
 	di
 	ld a,00ch
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call scroll_map_one_column	; And with them in place, the piece of screen that is due is built
 	di			; 2 and 3 restored, which are the usual ones
 	ld a,002h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call run_piece_at_e9a0
 	call draw_piece_at_e9a0
@@ -136,20 +137,20 @@ game_frame:		; The strip of calls that makes a whole frame: the scroll, the enem
 	call blink_two_characters
 	call upload_screen
 	call paint_whole_frame
-	ld a,(0e003h)		; One frame in eight
+	ld a,(FRAME_COUNT)	; One frame in eight
 	and 007h
 	dec a
 	ret nz
 	jp draw_scores		; ...it is time to refresh the score
 start_scroll:		; Moves the distance counter back 0x20 and leaves the screen pointer at 0xED00, with 0x20 steps to take
 	xor a
-	ld (0ec04h),a		; 0xEC04 to zero
-	ld hl,(0e063h)		; 0x20 less on the distance covered
+	ld (ENTRY_X),a		; To zero
+	ld hl,(DISTANCE)	; 0x20 less on the distance covered
 	ld de,00020h
 	sbc hl,de
-	ld (0e063h),hl
-	ld hl,0ed00h		; 0xED00: where it starts reading the screen
-	ld (0ec00h),hl
+	ld (DISTANCE),hl
+	ld hl,MAP		; Where it starts reading the screen
+	ld (MAP_COLUMN_PTR),hl
 	ld b,020h		; Thirty-two steps
 
 ; (Falls through into scroll_and_sprites.asm, which the link places right after.)

@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - boss.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public blow_up_core,core_enters,core_waits,draw_boss,end_boss,erase_boss
 	public mark_boss_dead,next_core_step,stage_5_boss_step,wait_until_nobody_left
 	extrn aim_at_ship,aim_both_turrets,load_explosion_graphics,run_five_at_e7a0,run_six_pieces,set_up_background_explosion
@@ -15,10 +17,10 @@
 ; wait for it to be killed, and the two exits.
 ; ----------------------------------------------------------------------
 wait_until_nobody_left:		; Until the twenty-two slots are empty, the boss does not come in; then it loads its graphics and sets up the first piece
-	ld hl,0e153h
+	ld hl,BOSS_TIMER
 	dec (hl)
 	ret nz
-	ld hl,0e300h		; The twelve slots at 0xE300...
+	ld hl,OBJECTS		; The twelve slots...
 	ld de,00020h
 	ld b,00ch
 L_7CAA:
@@ -27,7 +29,7 @@ L_7CAA:
 	jr nz,wait_one_more_frame
 	add hl,de
 	djnz L_7CAA
-	ld hl,0e500h		; ...and the ten at 0xE500
+	ld hl,ENEMY_SHOTS	; ...and the ten
 	ld b,00ah
 L_7CB6:
 	ld a,(hl)
@@ -37,57 +39,57 @@ L_7CB6:
 	djnz L_7CB6
 	call load_explosion_graphics	; The explosion graphics
 	xor a
-	ld (0e155h),a		; 0xE155 to zero: the core is still alive
-	ld de,0e780h		; The thirteen bytes from 0x7ED9 to 0xE780: the first piece
+	ld (CORE_DEAD),a	; To zero: the core is still alive
+	ld de,BOSS_PIECES	; The thirteen bytes from 0x7ED9: the first piece
 	ld hl,07ed9h
 	ld bc,0000dh
 	ldir
 	ld a,03ch		; 0x3C frames
-	ld (0e153h),a
+	ld (BOSS_TIMER),a
 next_core_step:		; 0xE190 + 1
-	ld hl,0e190h
+	ld hl,BOSS_PHASE
 	inc (hl)
 	ret
 wait_one_more_frame:		; Something is still alive: look again on the next frame
 	ld a,001h
-	ld (0e153h),a
+	ld (BOSS_TIMER),a
 	ret
 core_enters:		; Every eight frames moves it eight points to the left until column 0x98, and there it stays 0x2D0 frames
-	ld a,(0e003h)		; One frame in eight
+	ld a,(FRAME_COUNT)	; One frame in eight
 	and 007h
 	ret nz
-	ld hl,0e785h
+	ld hl,BOSS_PIECES+5
 	ld a,(hl)
 	sub 008h		; Eight points to the left
 	ld (hl),a
 	cp 098h			; Until column 0x98
 	ret nz
 	ld hl,002d0h		; 0x2D0 frames standing still
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld a,001h
-	ld (0e786h),a
+	ld (BOSS_PIECES+6),a
 	jr next_core_step
 core_waits:		; While it lives, it shoots and changes face according to the frames it has left: at 0x258 one, at 0x78 another
-	ld a,(0e155h)		; 0xE155 set: the core is already dead
+	ld a,(CORE_DEAD)	; Set: the core is already dead
 	and a
 	jr nz,core_leaves
 	call move_boss
 	call core_shoots
-	ld hl,(0e153h)
+	ld hl,(BOSS_TIMER)
 	dec hl
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld de,00258h		; With 0x258 frames to go, the first face
 	rst 20h
 	jr nz,L_7D1A
 	xor a
-	ld (0e786h),a
+	ld (BOSS_PIECES+6),a
 	ret
 L_7D1A:
 	ld de,00078h		; And with 0x78 to go, the second
 	rst 20h
 	jr nz,L_7D26
 	ld a,001h
-	ld (0e786h),a
+	ld (BOSS_PIECES+6),a
 	ret
 L_7D26:
 	ld a,l			; With the count used up, the core leaves
@@ -95,16 +97,16 @@ L_7D26:
 	ret nz
 core_leaves:		; Face 2, 0x28 frames and on to the next step
 	ld a,002h
-	ld (0e786h),a
+	ld (BOSS_PIECES+6),a
 	ld a,028h		; 0x28 frames
-	ld (0e153h),a
+	ld (BOSS_TIMER),a
 	jr next_core_step
 blow_up_core:		; Erases it, sets up the explosion, plays sound 0x3B and, if it was alive, collects 0x100
-	ld hl,0e153h
+	ld hl,BOSS_TIMER
 	dec (hl)		; 0xE153: the frames left
 	ret nz
 	xor a
-	ld (0e780h),a		; 0xE780 to zero: the piece goes
+	ld (BOSS_PIECES),a	; To zero: the piece goes
 	ld de,01808h
 	call boss_cell
 	ex de,hl
@@ -112,47 +114,47 @@ blow_up_core:		; Erases it, sets up the explosion, plays sound 0x3B and, if it w
 	ld a,03bh		; Sound 0x3B
 	call 049deh
 	ld de,00100h		; A hundred points, and only if the core was still alive
-	ld a,(0e155h)
+	ld a,(CORE_DEAD)
 	and a
 	call nz,055b4h
 	ld a,078h		; 0x78 frames
-	ld (0e153h),a		; 0x78 frames
+	ld (BOSS_TIMER),a	; 0x78 frames
 	jp next_core_step
 end_boss:		; When the count runs out, 0xE150 to one: the stage can go on
-	ld hl,0e153h
+	ld hl,BOSS_TIMER
 	dec (hl)
 	ret nz
 mark_boss_dead:		; 0xE150 to one
 	ld a,001h
-	ld (0e150h),a
+	ld (BOSS_DONE),a
 	ret
 core_shoots:		; From the second loop onwards: every six of the player's shots it releases an aimed one, with speed 0x60
-	ld a,(0e06ah)		; Only from the second loop onwards
+	ld a,(LOOP_NUMBER)	; Only from the second loop onwards
 	and a
 	ret z
-	ld hl,0e78ch		; 0xE78C: the ones it still has to release
+	ld hl,BOSS_PIECES+0Ch	; The ones it still has to release
 	ld a,(hl)
 	and a
 	jr nz,L_7D7F
-	ld a,(0e008h)		; Bit 4 of what was just pressed: the player's fire
+	ld a,(CONTROLLER_NEW)	; Bit 4 of what was just pressed: the player's fire
 	and 010h
 	ret z
 	ld (hl),006h		; Six in one go
 	ret
 L_7D7F:
 	dec (hl)
-	ld a,(0e783h)		; Comes out 0x1C below the core and eight to its right
+	ld a,(BOSS_PIECES+3)	; Comes out 0x1C below the core and eight to its right
 	add a,01ch
 	ld e,a
-	ld a,(0e785h)
+	ld a,(BOSS_PIECES+5)
 	add a,008h
 	ld d,a
 	ld a,060h		; Speed 0x60
-	ld (0e110h),a
+	ld (ENEMY_SHOT_SPEED),a
 	push de
 	call aim_at_ship
 	pop de
-	ld hl,0e580h		; The six slots at 0xE580
+	ld hl,ENEMY_SHOTS+4*OBJECT_SIZE	; The six slots
 	ld b,006h
 L_7D9B:
 	ld a,(hl)
@@ -163,14 +165,14 @@ L_7D9B:
 	djnz L_7D9B
 	ret
 release_four_shots:		; Sets up the four slots at 0xE500 with the four shots, each with its offset from the table at 0x7E03
-	ld a,(0e783h)
+	ld a,(BOSS_PIECES+3)
 	ld e,a
-	ld a,(0e785h)
+	ld a,(BOSS_PIECES+5)
 	ld d,a
 	exx
 	ld hl,07e03h		; The table at 0x7E03: where each one comes out
 	exx
-	ld hl,0e500h
+	ld hl,ENEMY_SHOTS
 	ld b,004h		; Four shots
 set_up_one_of_four:		; Fills the slot and gives it the speed, which comes from the difficulty: the higher, the faster
 	push de
@@ -201,7 +203,7 @@ set_up_one_of_four:		; Fills the slot and gives it the speed, which comes from t
 	ld (hl),a
 	inc l
 	push hl
-	ld a,(0e111h)		; The difficulty, negated
+	ld a,(DIFFICULTY)	; The difficulty, negated
 	inc a
 	neg
 	ld l,a
@@ -240,30 +242,30 @@ table_7E03:
 	defb 28h,0F0h
 	defb 38h,10h
 move_boss:		; Chooses a drawing with the R register, decides which way to go depending on where the ship is, and keeps taking steps
-	ld hl,0e781h		; 0xE781: whether it is already moving
+	ld hl,BOSS_PIECES+1	; Whether it is already moving
 	ld a,(hl)
 	and a
 	jr nz,boss_takes_step
 	inc (hl)
 	ld a,r			; The R register: one of four drawings
 	and 003h
-	ld (0e78bh),a
-	ld a,(0e783h)		; 0x18 to the right of the boss
+	ld (BOSS_PIECES+0Bh),a
+	ld a,(BOSS_PIECES+3)	; 0x18 to the right of the boss
 	add a,018h
 	ld c,a
-	ld a,(0e204h)		; The ship's row: that is the way it goes
+	ld a,(SHIP_ROW)		; The ship's row: that is the way it goes
 	cp c
 	ld a,000h
 	jr c,L_7E29
 	inc a
 L_7E29:
-	ld (0e787h),a
+	ld (BOSS_PIECES+7),a
 	jp release_four_shots
 boss_takes_step:		; Every so many frames (fewer the harder it is) it moves eight points, and after eleven steps it stops
-	ld hl,0e78ah		; 0xE78A: the frames left until the next step
+	ld hl,BOSS_PIECES+0Ah	; The frames left until the next step
 	dec (hl)
 	ret nz
-	ld a,(0e111h)		; The difficulty: five, four or three frames per step
+	ld a,(DIFFICULTY)	; The difficulty: five, four or three frames per step
 	ld c,005h		; The difficulty sets the frames per step
 	cp 004h
 	jr c,L_7E43
@@ -279,17 +281,17 @@ L_7E43:
 	cp 00bh			; Eleven steps and it stops
 	jr nz,L_7E50
 	xor a
-	ld (0e781h),a
+	ld (BOSS_PIECES+1),a
 	ret
 L_7E50:
-	ld a,(0e787h)		; 0xE787 says which way
+	ld a,(BOSS_PIECES+7)	; 0xE787 says which way
 	ld b,a
 	ld c,0f8h		; Eight to the left or to the right
 	and a			; Eight to one side or the other
 	jr z,L_7E5B
 	ld c,008h
 L_7E5B:
-	ld hl,0e783h
+	ld hl,BOSS_PIECES+3
 	ld a,(hl)
 	add a,c
 	ld (hl),a
@@ -301,10 +303,10 @@ L_7E5B:
 	ret c			; It notes which way it is going
 L_7E6B:
 	ld a,c			; And the side is saved
-	ld (0e787h),a
+	ld (BOSS_PIECES+7),a
 	ret
 draw_boss:		; Paints the three parts: the body of 0x0B by 8 characters, the eye and the mouth, each with its own table
-	ld a,(0e780h)
+	ld a,(BOSS_PIECES)
 	dec a
 	ret nz
 	ld de,00000h
@@ -318,7 +320,7 @@ L_7E86:
 	call boss_cell
 	jr c,L_7EA3
 	ld de,07f3eh
-	ld a,(0e789h)		; 0xE789 chooses one of the eye drawings
+	ld a,(BOSS_PIECES+9)	; 0xE789 chooses one of the eye drawings
 	rra
 	and 00eh
 	ld c,a
@@ -332,7 +334,7 @@ L_7EA3:
 	call boss_cell
 	ret c
 	ld de,07f62h
-	ld a,(0e786h)		; 0xE786: the face that is due
+	ld a,(BOSS_PIECES+6)	; The face that is due
 	add a,a
 	ld c,a
 	add a,a
@@ -341,15 +343,15 @@ L_7EA3:
 	ld bc,00302h
 	jp 0490ch
 boss_cell:		; The boss's position plus the offset that DE brings
-	ld a,(0e783h)		; The boss's row (0xE783) and its column (0xE785), plus whatever DE brings
+	ld a,(BOSS_PIECES+3)	; The boss's row (0xE783) and its column (0xE785), plus whatever DE brings
 	add a,e
 	ld l,a
-	ld a,(0e785h)
+	ld a,(BOSS_PIECES+5)
 	add a,d
 	ld h,a
 	ret
 erase_boss:		; Erases the 0x0B by 8 rectangle of the body
-	ld a,(0e780h)		; Only with 0xE780 at one
+	ld a,(BOSS_PIECES)	; Only at one
 	dec a
 	ret nz
 	ld de,00000h
@@ -392,12 +394,12 @@ table_7F62:
 	defb 0B3h,0CFh,0D0h,0D1h,0BBh,0BCh,0BDh,0D9h
 	defb 0DAh,0DBh
 stage_5_boss_step:		; Waits for the twelve slots to be empty, leaves 0x40 frames and starts that stage's boss
-	ld a,(0e190h)
+	ld a,(BOSS_PHASE)
 	dec a
 	jr z,run_stage_5_boss
 	dec a
 	jr z,end_stage_5_boss
-	ld hl,0e300h		; The twelve slots at 0xE300
+	ld hl,OBJECTS		; The twelve slots
 	ld de,00020h
 	ld b,00ch
 L_7F85:
@@ -407,24 +409,24 @@ L_7F85:
 	add hl,de
 	djnz L_7F85
 	ld a,040h		; 0x40 frames
-	ld (0e153h),a
+	ld (BOSS_TIMER),a
 	ld hl,00000h
-	ld (0e116h),hl
-	ld hl,(0e063h)		; Past distance 0xFF, it starts at step 2
+	ld (BOSS5_SCRIPT),hl
+	ld hl,(DISTANCE)	; Past distance 0xFF, it starts at step 2
 	ld de,000ffh		; Distance 0xFF
 	rst 20h
 	jr c,L_7FA4
 	ld a,002h
-	ld (0e116h),a
+	ld (BOSS5_SCRIPT),a
 L_7FA4:
-	ld hl,0e190h
+	ld hl,BOSS_PHASE
 	inc (hl)
 	ret
 run_stage_5_boss:		; With bank 10 in place, four of its routines; when 0xE790 and 0xE7C0 switch off, it is over
 	di			; Bank 10 at 0xA000
 	ld a,00ah		; Bank 10 at 0xA000
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call start_or_advance
 	call aim_both_turrets
@@ -433,34 +435,34 @@ run_stage_5_boss:		; With bank 10 in place, four of its routines; when 0xE790 an
 	di			; Bank 3 put back
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
-	ld a,(0e117h)		; 0xE117: the boss is already moving
+	ld a,(BOSS5_MOVING)	; The boss is already moving
 	and a
 	ret z
-	ld a,(0e790h)		; Until both cells are zero, it carries on
-	ld hl,0e7c0h		; And 0xE7C0
+	ld a,(BOSS_PIECES+BOSS_PIECE_SIZE)	; Until both cells are zero, it carries on
+	ld hl,BOSS_PIECES+4*BOSS_PIECE_SIZE	; And the other
 	or (hl)
 	ret nz
 	jr L_7FA4
 end_stage_5_boss:		; 0xE150 to one
 	ld a,001h
-	ld (0e150h),a
+	ld (BOSS_DONE),a
 	ret
 start_or_advance:		; Past distance 0x1A0 it switches on 0xE117; if not, every 0xC0 frames it advances the script in 0xE116
-	ld hl,(0e063h)
+	ld hl,(DISTANCE)
 	ld de,001a0h		; Distance 0x1A0
 	rst 20h
 	jr c,L_7FED
 	ld a,001h
-	ld (0e117h),a
+	ld (BOSS5_MOVING),a
 	ret
 L_7FED:
-	ld hl,0e153h		; 0xE153: the frames left
+	ld hl,BOSS_TIMER	; The frames left
 	dec (hl)
 	ret nz
 	ld (hl),0c0h		; Another 0xC0
-	ld hl,0e116h
+	ld hl,BOSS5_SCRIPT
 	ld a,(hl)
 	inc (hl)
 	and 00fh		; Sixteen steps round and round

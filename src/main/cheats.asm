@@ -4,6 +4,7 @@
 
 	include "bios.inc"
 	include "screens_symbols.inc"
+	include "variables.inc"
 
 	public add_to_score,cell_to_ram_address,check_typed_keys,draw_scores,remove_sprites_from_screen,start_machine
 	public state_machine,write_captions
@@ -43,13 +44,13 @@
 ; 0xE060 go from 02 to 00 and the 0xE05F flag goes off.
 ; ----------------------------------------------------------------------
 check_typed_keys:		; Reads the keyboard and, on RETURN, compares what was typed against the cheats; each one jumps to its own routine in bank 3
-	ld a,(0e200h)		; With 0xE200 negative there is no ship, and no cheats
+	ld a,(SHIP)		; Negative: there is no ship, and no cheats
 	and a
 	ret m
 	call which_key_is_pressed	; Which key is being pressed
 	and a
 	ret z
-	ld hl,0e1e1h		; 0xE1E1 keeps the previous one: only a new key counts
+	ld hl,TYPED_LAST_KEY	; Keeps the previous one: only a new key counts
 	cp (hl)
 	ret z
 	ld (hl),a
@@ -64,12 +65,12 @@ check_typed_keys:		; Reads the keyboard and, on RETURN, compares what was typed 
 	jr nc,punish_insult
 	call compare_aho	; ...and AHO: both of them punish
 	jr nc,punish_insult
-	ld a,(0e071h)		; With 0xE071 already set no other prize is accepted
+	ld a,(CHEAT_PRIZE_TAKEN)	; Already set: no other prize is accepted
 	and a
 	ret nz
 	call compare_stage_name	; The woman's name that belongs to this stage
 	jp nc,cheat_stage_name
-	ld a,(0e200h)
+	ld a,(SHIP)
 	and a
 	ret m
 	call compare_missile	; MISSILE
@@ -87,13 +88,13 @@ check_typed_keys:		; Reads the keyboard and, on RETURN, compares what was typed 
 	ret
 punish_insult:		; BAKA and AHO end up here: lives, flag and joystick flags to zero
 	xor a			; Lives, flag and the two joystick flags
-	ld (0e060h),a
-	ld (0e05fh),a
-	ld (0e044h),a
-	ld (0e047h),a
+	ld (LIVES),a
+	ld (IN_PLAY),a
+	ld (SND_MUTE),a
+	ld (NOISE_FX_ON),a
 	ret
 cheat_hyper:		; HYPER only works once per game, and 0xE06E keeps track of it
-	ld hl,0e06eh		; 0xE06E: HYPER only works once per game
+	ld hl,HYPER_USED	; HYPER only works once per game
 	ld a,(hl)
 	and a
 	ret nz
@@ -101,21 +102,21 @@ cheat_hyper:		; HYPER only works once per game, and 0xE06E keeps track of it
 	jp 0a0d8h
 cheat_stage_name:		; The stage's name guessed right: 0xE071 to one and off to bank 3
 	ld a,001h
-	ld (0e071h),a
+	ld (CHEAT_PRIZE_TAKEN),a
 	jp cheat_everything
 record_key:		; Stores the new keys in 0xE1E8, up to eight
-	ld hl,0e1e0h
+	ld hl,TYPED_COUNT
 	ld a,(hl)
 	cp 008h			; Eight letters at most
 	ret nc
 	inc (hl)
-	ld hl,0e1e8h
+	ld hl,TYPED_KEYS
 	call add_a_to_hl
 	ld (hl),c
 	ret
 compare_stage_name:		; Takes from the table at 0x5163 the name that belongs to this stage and compares it
 	ld hl,05163h
-	ld a,(0e061h)
+	ld a,(STAGE)
 	dec a
 	call get_word
 	jr compare_word
@@ -158,13 +159,13 @@ compare_missile:
 prize_hit:		; If the word matches, raises 0xE071 so that another prize cannot be chained
 	call compare_word
 	ret c
-	ld hl,0e071h		; 0xE071 goes up: no other prize is accepted on this stage
+	ld hl,CHEAT_PRIZE_TAKEN	; Goes up: no other prize is accepted on this stage
 	inc (hl)
 	ret
 compare_hyper:
 	ld de,051bfh		; HYPER
 compare_word:		; Compares what was typed in 0xE1E8 with the word at DE; 0x0D ends it, and it exits without carry if it matches
-	ld hl,0e1e8h
+	ld hl,TYPED_KEYS
 L_51B4:
 	ld a,(de)
 	cp 00dh			; The 0x0D separates one word from the next
@@ -203,7 +204,7 @@ L_5247:
 	inc e
 	djnz L_5247		; Eight rows
 	xor a
-	ld (0e1e1h),a		; With nothing pressed, 0xE1E1 to zero
+	ld (TYPED_LAST_KEY),a	; With nothing pressed, to zero
 	ret
 L_5257:
 	ld b,a
@@ -235,10 +236,10 @@ alphabet:
 	defb 00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h
 	defb 00h,00h,00h,0Dh,00h,00h,00h,00h,00h,00h,00h,00h
 state_machine:		; Eight states, dispatched by the table at 0x52C7.
-	ld hl,0e003h		; 0xE003 counts the runs of the interrupt.
+	ld hl,FRAME_COUNT	; Counts the runs of the interrupt.
 	inc (hl)
 	ld hl,05506h		; This is the address the state is going to return to...
-	ld bc,(0e000h)
+	ld bc,(GAME_STATE)
 	ld a,c
 	cp 003h
 	jr nc,L_52C4
@@ -261,7 +262,7 @@ state_table:
 	defw state_7		; 7
 state_0:		; Three substates: the message at 0x57BD, the 0xE004 wait and building the title screen
 	djnz L_52EC		; To substate 1 if it is not 0
-	ld a,(0e003h)
+	ld a,(FRAME_COUNT)
 	rra
 	ret nc
 	call raise_logo
@@ -272,7 +273,7 @@ state_0:		; Three substates: the message at 0x57BD, the 0xE004 wait and building
 	jp L_5375
 L_52EC:
 	djnz L_52FA		; To substate 2 if it is not 1
-	ld hl,0e004h		; 0xE004: the frames of waiting left
+	ld hl,STATE_TIMER	; The frames of waiting left
 	dec (hl)
 	ret nz
 	call write_title_panel	; And the title screen is built
@@ -285,7 +286,7 @@ L_52FA:
 	call start_logo_curtain
 	jr next_substate
 state_1:		; Runs 0xE004 down and goes to the intro
-	ld hl,0e004h
+	ld hl,STATE_TIMER
 	dec (hl)
 	jp nz,blink_selection
 	jp wait_thirty_two_then_state
@@ -294,27 +295,27 @@ state_2:		; Maps banks 9 and 10 for one call, and splits into four substates
 	di			; Banks 9 and 10, which are the intro ones
 	ld a,009h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ah
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call run_screen
 	di			; And 2 and 3 restored
 	ld a,002h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call upload_sprites_rotating
 	call animate_three_characters
-	ld a,(0e012h)		; While the 0xE012 channel is sounding, it waits
+	ld a,(SND_CARD_A+CARD_MODE)	; While the 0xE012 channel is sounding, it waits
 	and a
 	ret nz
 	jr wait_thirty_two
@@ -327,15 +328,15 @@ state_2_sub1:		; Waits for the joystick and starts the thing at 0x5C88
 state_2_sub2:		; Waits for the joystick and, if there is no flag in 0xE05F, goes back to state 0
 	djnz state_2_sub3
 	call run_demo		; One step of the demo
-	ld a,(0e05fh)
+	ld a,(IN_PLAY)
 	or a
 	ret nz
 back_to_state_0:		; State 0, substate 0 and 0x20 frames of waiting
 	xor a
 L_5362:
-	ld (0e000h),a
+	ld (GAME_STATE),a
 	ld a,020h
-	ld (0e004h),a
+	ld (STATE_TIMER),a
 	jr L_53A8
 state_2_sub3:		; Waits for the joystick and starts the thing at 0x5BF8
 	call lower_curtain	; The joystick again
@@ -344,17 +345,17 @@ state_2_sub3:		; Waits for the joystick and starts the thing at 0x5BF8
 wait_thirty_two:		; 0x20 frames in 0xE004 and on to the next substate
 	ld a,020h
 L_5375:
-	ld (0e004h),a		; The frames of waiting that A brings
+	ld (STATE_TIMER),a	; The frames of waiting that A brings
 next_substate:		; 0xE001 + 1
-	ld hl,0e001h
+	ld hl,GAME_SUBSTATE
 	inc (hl)
 	ret
 state_3:		; Makes the message at 0x5808 or the one at 0x5812 blink (depending on bit 5 of 0xE002) by writing it and erasing it
 	djnz state_3_sub1
-	ld hl,0e004h
+	ld hl,STATE_TIMER
 	dec (hl)
 	jr z,next_substate
-	ld a,(0e002h)		; Bit 5 of 0xE002 picks between the two messages
+	ld a,(GAME_FLAGS)	; Bit 5 picks between the two messages
 	bit 5,a
 	ld de,05808h
 	jr z,L_5392
@@ -369,32 +370,32 @@ state_3_sub1:		; Calls 0x5558 and goes to the next state
 wait_thirty_two_then_state:		; 0x20 frames and on to the next state
 	ld a,020h
 L_53A1:
-	ld (0e004h),a
+	ld (STATE_TIMER),a
 next_state:		; 0xE000 + 1 and the substate to zero
-	ld hl,0e000h
+	ld hl,GAME_STATE
 	inc (hl)
 L_53A8:
 	xor a
-	ld (0e001h),a
+	ld (GAME_SUBSTATE),a
 	ret
 state_3_sub2:		; 0x50 frames of waiting
 	ld a,050h
 	jr L_5375
 state_4:		; Erases the message at 0x5820, moves on to the next stage and turns on the 0xE05F flag
 	djnz state_4_sub1	; To substate 1 if it is not 0
-	ld hl,0e004h
+	ld hl,STATE_TIMER
 	dec (hl)
 	ret nz
 	ld de,05820h
 	call erase_characters
 	call set_up_due_stage
 	ld a,001h
-	ld (0e05fh),a
+	ld (IN_PLAY),a
 	jr next_state
 state_4_sub1:		; Takes away a life in BCD, maps banks 4/5/6 and decompresses the six blocks of the stage screen
 	call lower_curtain
 	ret p
-	ld hl,0e060h		; 0xE060 is the lives, in BCD
+	ld hl,LIVES		; The lives, in BCD
 	ld a,(hl)
 	sub 001h
 	daa
@@ -402,7 +403,7 @@ state_4_sub1:		; Takes away a life in BCD, maps banks 4/5/6 and decompresses the
 	call load_stage_font
 	di			; Banks 4, 5 and 6
 	push hl			; Banks 4, 5 and 6 to read the stage graphics
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,004h
 	ld (06000h),a
 	ld (hl),a
@@ -436,7 +437,7 @@ state_4_sub1:		; Takes away a life in BCD, maps banks 4/5/6 and decompresses the
 	call decompress
 	di			; 1, 2 and 3 restored
 	push hl			; The usual layout again
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,001h
 	ld (06000h),a
 	ld (hl),a
@@ -451,7 +452,7 @@ state_4_sub1:		; Takes away a life in BCD, maps banks 4/5/6 and decompresses the
 	pop hl
 	ei
 	ld b,006h		; Six bytes at 0xE131, to zero
-	ld hl,0e131h
+	ld hl,METER_HELD
 L_5444:
 	ld (hl),000h
 	inc hl
@@ -459,7 +460,7 @@ L_5444:
 	call flag_if_two_players
 	call write_captions
 	call load_scoreboard_two_thirds
-	ld a,(0e002h)		; Bit 5 of 0xE002 says whether there are two players
+	ld a,(GAME_FLAGS)	; Bit 5 says whether there are two players
 	and 020h
 	ld a,010h		; With one player, 0x10 frames
 	jp z,L_5375
@@ -468,23 +469,23 @@ L_5444:
 	jp L_5375
 state_5:		; The game frame with the pause; while the 0xE05F flag is set, it does not leave
 	call check_pause_key
-	ld a,(0e05fh)
+	ld a,(IN_PLAY)
 	or a
 	ret nz
 	jp wait_thirty_two_then_state
 state_6:		; With no lives left sound 0xCA is requested; if the other player still has some, the turn changes
-	ld a,(0e060h)		; 0xE060 is the lives of the one playing
+	ld a,(LIVES)		; The lives of the one playing
 	or a
 	jr z,L_5492
-	ld a,(0e090h)		; And 0xE090 the other one's
+	ld a,(OTHER_PLAYER)	; And the other one's
 	or a
 	jr z,L_548D
 switch_player:		; Swaps the 0x30 bytes at 0xE060 with those at 0xE090 and flips the turn bit
-	ld hl,0e060h		; The 0x30 state bytes of the two players are swapped
-	ld de,0e090h
+	ld hl,LIVES		; The 0x30 state bytes of the two players are swapped
+	ld de,OTHER_PLAYER
 	ld b,030h
 	call swap_b_bytes
-	ld hl,0e002h
+	ld hl,GAME_FLAGS
 	ld a,(hl)
 	xor 080h		; And bit 7 of 0xE002 is inverted: the turn changes
 	ld (hl),a
@@ -498,14 +499,14 @@ L_5492:
 state_7:		; The end: waits for the sound and, if continue has been requested, gives three lives back and carries on
 	djnz state_7_sub1
 	call check_continue_request
-	ld a,(0e012h)		; Until 0xE012 goes quiet, it does not go on
+	ld a,(SND_CARD_A+CARD_MODE)	; Until 0xE012 goes quiet, it does not go on
 	or a
 	ret nz
-	ld a,(0e06fh)		; 0xE06F: continue has been requested
+	ld a,(CONTINUE_ASKED)	; Continue has been requested
 	and a
 	jr z,L_54C3
-	ld hl,0e05bh
-	ld a,(0e002h)		; Bit 7 of 0xE002 says which player the score belongs to
+	ld hl,SCORE_P1
+	ld a,(GAME_FLAGS)	; Bit 7 says which player the score belongs to
 	and 080h
 	jr z,L_54B6
 	ld l,057h
@@ -519,15 +520,15 @@ L_54B6:
 	inc l
 	ld (hl),a
 	ld a,003h		; And three lives again
-	ld (0e060h),a
+	ld (LIVES),a
 L_54C3:
-	ld a,(0e090h)		; If the other player has some left, the turn changes
+	ld a,(OTHER_PLAYER)	; If the other player has some left, the turn changes
 	or a
 	jr nz,switch_player
-	ld a,(0e06fh)
+	ld a,(CONTINUE_ASKED)
 	and a
 	jr nz,L_548D
-	ld hl,0e002h		; And if not, bit 6 of 0xE002 is turned off and on to the intro
+	ld hl,GAME_FLAGS	; And if not, bit 6 is turned off and on to the intro
 	ld a,(hl)
 	and 0bfh
 	ld (hl),a
@@ -541,7 +542,7 @@ state_7_sub1:		; Writes the message at 0x5836 and waits for continue to be reque
 	call write_turn
 	call write_captions
 	xor a
-	ld (0e06fh),a
+	ld (CONTINUE_ASKED),a
 	jp L_5375
 check_continue_request:		; Bit 1 of keyboard row 7: when it is pressed, 0xE06F to one and the message at 0x5843 is erased
 	ld a,007h
@@ -549,19 +550,19 @@ check_continue_request:		; Bit 1 of keyboard row 7: when it is pressed, 0xE06F t
 	bit 1,a			; Not pressed, the bit is at one
 	ret nz
 	ld a,001h
-	ld (0e06fh),a
+	ld (CONTINUE_ASKED),a
 	ld de,05843h
 	jp erase_characters
 states_return:		; The states return here: 0x52B7 pushes this address onto the stack before dispatching.
 	call read_controller_no_save
-	ld hl,0e051h		; 0xE051 and 0xE052: what was pressed in the intro
+	ld hl,INTRO_CONTROLLER	; This and 0xE052: what was pressed in the intro
 	call just_pressed
 	or a
 	ret z
-	ld hl,0e004h
+	ld hl,STATE_TIMER
 	ld (hl),000h
 	ld l,(hl)
-	ld de,0e052h
+	ld de,INTRO_CHOICE
 	ld b,(hl)
 	djnz L_5536
 	and 030h		; Bits 4 and 5: one or two players
@@ -572,7 +573,7 @@ states_return:		; The states return here: 0x52B7 pushes this address onto the st
 	jr z,L_5529
 	ld a,060h
 L_5529:
-	ld (0e002h),a
+	ld (GAME_FLAGS),a
 	ld (hl),003h		; State 3
 	inc hl
 	ld c,000h
@@ -590,7 +591,7 @@ L_5540:
 	ld (de),a
 	ret
 write_turn:		; With two players, the message at 0x5820 or the one at 0x582B depending on whose turn it is
-	ld a,(0e002h)
+	ld a,(GAME_FLAGS)
 	bit 5,a			; Bit 5 of 0xE002: only with two players
 	ret z
 	ld de,05820h
@@ -600,7 +601,7 @@ write_turn:		; With two players, the message at 0x5820 or the one at 0x582B depe
 L_5555:
 	jp write_characters
 start_whole_game:		; Clears the 0xFA9 bytes at 0xE057, leaves three lives and a flag, the prize at 0x0010, and with two players copies everything to the second one
-	ld hl,0e057h		; The 0xFA9 bytes from 0xE057, to zero
+	ld hl,SCORE_P2		; The 0xFA9 bytes from here, to zero
 	ld bc,00fa9h
 	ld d,h
 	ld e,l
@@ -608,16 +609,16 @@ start_whole_game:		; Clears the 0xFA9 bytes at 0xE057, leaves three lives and a 
 	ld (hl),000h
 	ldir
 	ld hl,05588h		; Three lives and the flag, from 0x5588
-	ld de,0e060h
+	ld de,LIVES
 	ld bc,00002h
 	ldir
 	ld hl,00010h		; 0x0010 in 0xE067: the first extra-life prize
-	ld (0e067h),hl
-	ld a,(0e002h)		; With two players...
+	ld (NEXT_EXTRA_LIFE),hl
+	ld a,(GAME_FLAGS)	; With two players...
 	and 020h
 	ret z
-	ld hl,0e060h		; ...the 0x30 state bytes are also copied to the second one
-	ld de,0e090h
+	ld hl,LIVES		; ...the 0x30 state bytes are also copied to the second one
+	ld de,OTHER_PLAYER
 	ld bc,00030h
 	ldir
 	ret
@@ -628,7 +629,7 @@ start_whole_game:		; Clears the 0xFA9 bytes at 0xE057, leaves three lives and a 
 two_bytes_to_e060:
 	defb 03h,01h
 lower_curtain:		; Lowers 0xE004 and, each frame, clears one row of the screen from bottom to top; exits with the sign set when it is over
-	ld hl,0e004h
+	ld hl,STATE_TIMER
 	dec (hl)		; On going below zero, the wipe is over
 	ret m
 	ld a,(hl)
@@ -636,7 +637,7 @@ lower_curtain:		; Lowers 0xE004 and, each frame, clears one row of the screen fr
 	xor 01fh
 	ld l,a
 	ld b,016h		; Twenty-two rows high
-	ld a,(0e000h)		; In state 2 it is twenty-four
+	ld a,(GAME_STATE)	; In state 2 it is twenty-four
 	cp 002h
 	jr nz,L_55A0
 	ld b,018h
@@ -654,10 +655,10 @@ remove_sprites_from_screen:		; Writes 0xD0 at VRAM 0x3B00: the attribute that te
 	xor a
 	ret
 add_to_score:		; Adds in BCD (it uses `daa`) onto the score of the player 0xE002 says.
-	ld a,(0e002h)		; Bit 6 of 0xE002 says whether there is a game
+	ld a,(GAME_FLAGS)	; Bit 6 says whether there is a game
 	add a,a
 	ret p
-	ld hl,0e05ch		; 0xE05C is player 1's score and 0xE058 player 2's
+	ld hl,SCORE_P1+1	; Player 1's score, and 0xE058 player 2's
 	jr nc,L_55C0
 	ld l,058h
 L_55C0:
@@ -677,14 +678,14 @@ L_55C0:
 	ld (hl),a
 	jr nc,L_55DB
 	ld hl,09999h		; Past six nines, it sticks at 999999
-	ld (0e054h),hl
-	ld (0e055h),hl
+	ld (HISCORE+1),hl
+	ld (HISCORE+2),hl
 	ret
 L_55DB:
 	ld d,(hl)
 	dec l
 	ld e,(hl)
-	ld hl,(0e067h)		; 0xE067 is the next extra-life prize
+	ld hl,(NEXT_EXTRA_LIFE)	; The next extra-life prize
 	ex de,hl
 	rst 20h			; DCOMPR: compares the score with the prize
 	jr c,L_55F8
@@ -697,17 +698,17 @@ L_55DB:
 	daa
 	ld d,a
 	jr c,$+5		; Into the last byte of the next instruction: E0h is `ret po`
-	ld (0e067h),de
+	ld (NEXT_EXTRA_LIFE),de
 	call award_ship
 L_55F8:
-	ld a,(0e002h)		; And from here down, the high score
+	ld a,(GAME_FLAGS)	; And from here down, the high score
 	add a,a
-	ld hl,0e05eh
+	ld hl,SCORE_P1+3
 	jr nc,L_5603
 	ld l,05ah
 L_5603:
 	ld b,003h		; Three bytes, from highest to lowest
-	ld de,0e056h
+	ld de,HISCORE+3
 	ld c,l
 L_5609:
 	ld a,(de)		; If the score goes past the high score...
@@ -725,13 +726,13 @@ L_5613:
 	lddr
 	ret
 award_ship:		; Adds a life in BCD, and if there is no explosion in progress the alert sounds
-	ld hl,0e060h
+	ld hl,LIVES
 	ld a,(hl)		; One more, in BCD
 	add a,001h
 	daa
 	ret c			; Past ninety-nine nothing is given away
 	ld (hl),a
-	ld a,(0e1d0h)		; With an explosion in progress, it does not sound
+	ld a,(ENDING)		; With an explosion in progress, it does not sound
 	and a
 	ret nz
 	ld a,015h		; Sound 0x15
@@ -740,7 +741,7 @@ award_ship:		; Adds a life in BCD, and if there is no explosion in progress the 
 write_captions:		; Writes with 0x4998 the messages at 0x57CE, 0x57E1 and 0x57E6.
 	ld de,057ceh
 	call write_characters
-	ld a,(0e002h)		; Bit 7 of 0xE002 picks between the 1P and the 2P label
+	ld a,(GAME_FLAGS)	; Bit 7 picks between the 1P and the 2P label
 	ld de,057e1h
 	add a,a
 	jr nc,L_5644
@@ -750,12 +751,12 @@ L_5644:
 	call draw_ships
 	call draw_power_up_meter
 draw_scores:		; The high score on row 23 and the score of the player that is due, three BCD bytes each
-	ld de,0e056h		; 0xE056: the high score
+	ld de,HISCORE+3		; The high score
 	ld hl,03af6h		; Row 23, column 22
 	call L_5664
-	ld a,(0e002h)		; And the score of the player whose turn it is
+	ld a,(GAME_FLAGS)	; And the score of the player whose turn it is
 	ld hl,03aeah
-	ld de,0e05eh
+	ld de,SCORE_P1+3
 	add a,a
 	jr nc,L_5664
 	ld e,05ah		; 0xE05A if it is the second one
@@ -764,7 +765,7 @@ L_5664:
 	jr write_digits
 draw_ships:		; The lives digit; with fewer than ten the tens digit is turned off
 	ld hl,03ae3h		; Row 23, column 3
-	ld de,0e060h
+	ld de,LIVES
 	ld a,(de)
 	ld b,001h
 	and 0f0h		; With the high nibble at zero only one digit is painted
@@ -804,7 +805,7 @@ L_5693:
 draw_power_up_meter:		; The six cells of the meter on row 22, each with its four characters
 	ld hl,03ac4h		; Row 22, column 4
 	call set_vram_write
-	ld hl,0e131h		; Six cells from 0xE131
+	ld hl,METER_HELD	; Six cells
 	ld bc,00601h
 L_56A9:
 	push bc			; Six meter cells
@@ -826,7 +827,7 @@ draw_meter_cell:		; The four characters of that cell, off or on, and from anothe
 	jr z,L_56C4
 	ld de,05709h
 L_56C4:
-	ld a,(0e130h)		; And 0xE130 says which one is selected: that one gets the other four
+	ld a,(METER_SLOT)	; And this says which one is selected: that one gets the other four
 	cp c
 	jr nz,L_56CE
 	inc de
@@ -889,7 +890,7 @@ cell_to_ram_address:		; From the screen cell in HL works out the address in the 
 	ret
 start_machine:		; Silences the PSG, requests sound 0xCD, clears the 16 KB of VRAM and programs the eight registers
 	ld a,0b8h		; 0xB8 in PSG register 7: the three channels silenced
-	ld (0e043h),a
+	ld (SND_MIX),a
 	ld e,a
 	ld a,007h
 	call WRTPSG

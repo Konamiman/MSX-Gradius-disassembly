@@ -9,7 +9,7 @@
 ; volume and the mix.
 
 	include "bios.inc"
-	include "sound_ram.inc"
+	include "variables.inc"
 
 	public run_channel,silence_this_channel,write_volume_and_mix
 	extrn write_period,read_melody_command,repeat_stream,save_pointer,set_mix

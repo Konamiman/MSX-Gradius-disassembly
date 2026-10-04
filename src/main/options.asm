@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - options.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public animate_options,check_fire,draw_shots,erase_shots,run_nine_shots,run_options
 	public set_up_one_option
 	extrn check_if_sound,collides_at_this_cell,collides_with_map,collides_with_map_2,is_special_cell
@@ -17,13 +19,13 @@
 ; nobody uses the stack in the meantime.
 ; ----------------------------------------------------------------------
 set_up_one_option:		; Copies the ship's position into the option's card and fills its position queue with `push`
-	ld a,(0e20bh)		; 0xE20B: how many options there are
+	ld a,(OPTION_COUNT)	; How many options there are
 	dec a
-	ld hl,0e204h		; With one, the position comes from the ship; with two, from the first option
-	ld de,0e220h
+	ld hl,SHIP_ROW		; With one, the position comes from the ship; with two, from the first option
+	ld de,OPTIONS
 	jr z,L_9C0D
-	ld hl,0e224h
-	ld de,0e240h
+	ld hl,OPTIONS+4
+	ld de,OPTIONS+OPTION_SIZE
 L_9C0D:
 	ld a,001h
 	ld (de),a
@@ -65,13 +67,13 @@ L_9C39:
 	ei
 	ret
 run_options:		; Every two frames pushes the ship's position into the queue, and the options come out at the other end
-	ld a,(0e1c0h)		; Not with the screen stopped
+	ld a,(SCROLL_MODE)	; Not with the screen stopped
 	and a
 	ret nz
-	ld a,(0e200h)
+	ld a,(SHIP)
 	dec a
 	ret m
-	ld a,(0e20bh)		; Nor without options
+	ld a,(OPTION_COUNT)	; Nor without options
 	or a			; Not without options
 	ret z
 	exx
@@ -79,7 +81,7 @@ run_options:		; Every two frames pushes the ship's position into the queue, and 
 	exx
 	call animate_options
 	exx
-	ld a,(0e009h)		; With the joystick still or on an exact diagonal, the queue does not advance
+	ld a,(CONTROLLER)	; With the joystick still or on an exact diagonal, the queue does not advance
 	and 00fh		; The four direction bits
 	ret z			; With the joystick still, the queue does not advance
 	cp 003h
@@ -91,12 +93,12 @@ run_options:		; Every two frames pushes the ship's position into the queue, and 
 	dec b			; With two options, both
 	jr z,shift_one_queue	; Nor on an exact diagonal
 	call shift_one_queue
-	ld hl,0e250h
-	ld de,0e244h
+	ld hl,OPTIONS+OPTION_SIZE+10h
+	ld de,OPTIONS+OPTION_SIZE+4
 	jr L_9C7A
 shift_one_queue:		; Pushes the new position in at the front and shifts the sixteen bytes of the queue
-	ld hl,0e230h
-	ld de,0e224h
+	ld hl,OPTIONS+10h
+	ld de,OPTIONS+4
 L_9C7A:
 	push hl			; The new position, at the front
 	ldi
@@ -114,7 +116,7 @@ L_9C7A:
 	ret
 animate_options:		; Every two frames advances the options' drawing, four round and round, from the table at 0x9CBA
 	ld b,a
-	ld hl,0e182h		; 0xE182: one in every two frames
+	ld hl,OPTION_ANIM_DELAY	; One in every two frames
 	inc (hl)
 	ld a,(hl)
 	cp 002h
@@ -124,13 +126,13 @@ animate_options:		; Every two frames advances the options' drawing, four round a
 	inc (hl)		; 0xE183: which drawing they are on
 	dec b			; With two options, both
 	jr z,L_9CA6
-	ld de,0e24ch
+	ld de,OPTIONS+OPTION_SIZE+0Ch
 	call L_9CA9
 L_9CA6:
-	ld de,0e22ch
+	ld de,OPTIONS+0Ch
 L_9CA9:
 	ld hl,09cbah
-	ld a,(0e183h)
+	ld a,(OPTION_FRAME)
 	and 003h		; Four drawings round and round
 	add a,a
 	call 0405dh
@@ -150,17 +152,17 @@ release_fire_button:		; 0xE180 to zero: the button has been released
 	ld (hl),000h
 	ret
 check_fire:		; With the button just pressed, or held for fifteen frames, the ship and its two options fire
-	ld a,(0e1c0h)		; Not with the screen stopped
+	ld a,(SCROLL_MODE)	; Not with the screen stopped
 	and a
 	ret nz
-	ld a,(0e200h)		; Nor with the ship dead
+	ld a,(SHIP)		; Nor with the ship dead
 	dec a
 	ret m
-	ld hl,0e180h
-	ld a,(0e008h)		; Bit 4 of what was just pressed: fire
+	ld hl,FIRE_HELD
+	ld a,(CONTROLLER_NEW)	; Bit 4 of what was just pressed: fire
 	and 010h
 	jr nz,all_three_fire
-	ld a,(0e009h)		; And bit 4 of the joystick: held
+	ld a,(CONTROLLER)	; And bit 4 of the joystick: held
 	and 010h
 	jr z,release_fire_button
 	inc (hl)
@@ -169,7 +171,7 @@ check_fire:		; With the button just pressed, or held for fifteen frames, the shi
 	ret c
 all_three_fire:		; The ship and its two options, 0x20 bytes apart
 	call release_fire_button
-	ld iy,0e200h		; 0xE200: the ship
+	ld iy,SHIP		; The ship
 	ld de,00300h		; Three cards
 L_9CEF:
 	exx			; The card in turn
@@ -186,7 +188,7 @@ L_9CEF:
 	jr nz,L_9CEF
 	ret
 fire_this_card:		; Four weapons, one per byte: the usual shot, the double, the laser and the missile
-	ld ix,0e200h
+	ld ix,SHIP
 	ld a,(ix+00ch)		; Byte 12: the normal shot
 	or a
 	call nz,L_9D26
@@ -203,10 +205,10 @@ fire_this_card:		; Four weapons, one per byte: the usual shot, the double, the l
 L_9D26:
 	dec a
 	jr z,fire_normal
-	ld hl,0e260h		; The nine shot slots at 0xE260
+	ld hl,SHOTS		; The nine shot slots
 	call free_slot_in_this_table	; The nine slots
 	jr z,L_9D59		; Not without a free slot
-	ld hl,0e270h
+	ld hl,SHOTS+SHOT_SIZE
 	call free_slot_in_this_table
 	jr z,L_9D59
 	ret
@@ -216,10 +218,10 @@ flag_no_room:		; 0xE184 to one: there is no free slot left for the double shot
 flag_room:		; 0xE184 to zero
 	ld a,000h
 L_9D40:
-	ld (0e184h),a
+	ld (DOUBLE_NO_ROOM),a
 	ret
 fire_normal:		; Looks for a free slot among the nine and sets up the usual shot, eight to the right and 0x10 below
-	ld hl,0e260h		; The nine slots
+	ld hl,SHOTS		; The nine slots
 	call free_slot_in_this_table
 	jr nz,flag_no_room
 	push hl
@@ -242,10 +244,10 @@ L_9D59:
 	ld a,001h		; Sound 1
 	jp 049deh
 fire_double:		; The double shot, which goes upwards with speed 0x18
-	ld a,(0e184h)		; Not without a free slot for it
+	ld a,(DOUBLE_NO_ROOM)	; Not without a free slot for it
 	or a			; With no free slot, there is no shot
 	ret nz			; Not without a free slot
-	ld hl,0e270h
+	ld hl,SHOTS+SHOT_SIZE
 	call free_slot_in_this_table
 	ret nz
 	ld (hl),002h
@@ -259,7 +261,7 @@ fire_double:		; The double shot, which goes upwards with speed 0x18
 	ld a,002h		; Sound 2
 	jp 049deh
 fire_laser:		; Sets up the laser, which stays attached to the ship: stores in its card the pointer to whoever fires it
-	ld hl,0e260h
+	ld hl,SHOTS
 	call free_slot_in_this_table
 	ret nz
 	ld (hl),003h		; Type 3: the laser
@@ -303,7 +305,7 @@ fire_laser:		; Sets up the laser, which stays attached to the ship: stores in it
 table_9DCD_9DCE:
 	defb 08h,0Fh
 fire_missile:		; The missile goes to the table at 0x2C0, with one slot for every two cards
-	ld hl,0e2c0h		; The missile table at 0xE2C0
+	ld hl,MISSILES		; The missile table
 	exx
 	ld a,e
 	exx
@@ -358,7 +360,7 @@ set_aligned_x:		; The shooter's X, aligned to four, plus D
 	ld (hl),a
 	ret
 run_nine_shots:		; The nine slots at 0xE260, each through its type: four exits
-	ld ix,0e260h
+	ld ix,SHOTS
 	exx
 	ld b,009h		; Nine slots
 L_9E1B:
@@ -522,7 +524,7 @@ raise_missile:		; The ground rises: the missile climbs the step
 	call L_9F24
 	jr walk_missile
 lower_missile:		; There is no ground ahead: the missile falls, faster if it has the double upgrade
-	ld a,(0e20fh)		; 0xE20F at two: the upgraded missile falls faster
+	ld a,(SHIP_MISSILE)	; At two: the upgraded missile falls faster
 	cp 002h
 	ld de,00100h
 	jr c,L_9F21
@@ -531,7 +533,7 @@ L_9F21:
 	call advance_missile
 L_9F24:
 	ld (ix+006h),020h	; Drawing 0x20: the missile falling
-	ld a,(0e20fh)
+	ld a,(SHIP_MISSILE)
 	cp 002h
 	ld de,00400h
 	jr c,L_9F35
@@ -548,7 +550,7 @@ L_9F35:
 	ret
 walk_missile:		; Hugs the ground, with drawing 0x1C
 	ld (ix+006h),01ch	; Drawing 0x1C: the missile rolling
-	ld a,(0e20fh)
+	ld a,(SHIP_MISSILE)
 	cp 002h
 	ld de,00400h
 	jr c,advance_missile
@@ -567,7 +569,7 @@ missile_position:		; The missile's X and Y, in HL
 	ld l,(ix+003h)
 	ret
 blink_missile:		; The colour alternates between 0x0A and 0x0B every two frames
-	ld hl,0e003h		; A bit of the counter
+	ld hl,FRAME_COUNT	; A bit of the counter
 	ld a,00ah		; 0x0A or 0x0B depending on the frame
 	bit 1,(hl)		; A bit of the counter
 	jr z,L_9F7D
@@ -581,8 +583,8 @@ draw_shots:		; 0xEC1A to one: the shots are painted
 erase_shots:		; 0xEC1A to zero: they are erased
 	xor a
 L_9F86:
-	ld (0ec1ah),a
-	ld ix,0e260h
+	ld (SHOTS_PAINT_PASS),a
+	ld ix,SHOTS
 	ld b,009h		; Nine slots
 	push bc
 	ld bc,09fa4h		; 0x9FA4 is pushed: on return, execution carries on there
@@ -607,7 +609,7 @@ table_9FA4:
 missile_skips_collision:		; The missile is not checked against the map: it is already stuck to it
 	ret
 check_shot_collision:		; Only when erasing: if the shot has hit the map, it switches off; and if the cell was one of the special ones, it breaks
-	ld a,(0ec1ah)		; 0xEC1A: this is only done in the erase pass
+	ld a,(SHOTS_PAINT_PASS)	; This is only done in the erase pass
 	and a
 	ret nz
 	ld h,(ix+005h)
@@ -620,7 +622,7 @@ check_shot_collision:		; Only when erasing: if the shot has hit the map, it swit
 	call is_special_cell
 	jr c,break_cell
 L_9FC8:
-	ld hl,(0e151h)		; With the boss on screen, the shot is swallowed without a sound
+	ld hl,(BOSS_STATE)	; With the boss on screen, the shot is swallowed without a sound
 	ld a,l
 	and a
 	jp z,switch_off_shot
@@ -637,7 +639,7 @@ break_cell:		; The special cell is erased from the map and plays whatever sound 
 	call 049deh
 	jp switch_off_shot
 check_laser_against_map:		; Only when painting: walks the cells the laser occupies and cuts it off where it finds a wall
-	ld a,(0ec1ah)		; Only in the paint pass
+	ld a,(SHOTS_PAINT_PASS)	; Only in the paint pass
 	and a
 	ret z
 	ld h,(ix+005h)

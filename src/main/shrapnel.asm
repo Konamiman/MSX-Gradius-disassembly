@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public animate_shrapnel,move_shrapnel,pick_border_colour,release_shrapnel,start_slow_message,upload_shrapnel_to_buffer
 	public write_one_letter
@@ -21,23 +22,23 @@
 ; slots of sixteen bytes.
 ; ----------------------------------------------------------------------
 release_shrapnel:		; Every three frames releases a piece of shrapnel in the first free slot, with drawing, direction and push taken from the R register
-	ld hl,0e1d7h		; 0xE1D7: one piece every three frames
+	ld hl,SHRAPNEL_DELAY	; One piece every three frames
 	dec (hl)
 	ret nz
 	ld (hl),003h
-	ld hl,(0e1d5h)		; 0xE1D5 is what is left of the explosion
+	ld hl,(SHRAPNEL_LEFT)	; What is left of the explosion
 	ld a,l
 	or h
 	ret z
 	dec hl
-	ld (0e1d5h),hl
+	ld (SHRAPNEL_LEFT),hl
 	ld a,r			; The R register: one bit to pick between the two drawings
 	rra
 	ld c,001h
 	jr nc,L_4CE2
 	inc c
 L_4CE2:
-	ld hl,0e300h		; The thirty-two shrapnel slots
+	ld hl,SHRAPNEL		; The thirty-two shrapnel slots
 	ld b,020h
 	xor a
 	ld de,00010h		; Sixteen bytes per slot
@@ -98,7 +99,7 @@ L_4D20:
 	ld (hl),02ch		; 0x2C and 0x07: the pattern and the colour
 	inc l
 	ld (hl),007h
-	ld hl,0e1d8h		; 0xE1D8 keeps count of the live pieces
+	ld hl,SHRAPNEL_LIVE	; Keeps count of the live pieces
 	inc (hl)
 	ret
 
@@ -125,7 +126,7 @@ shrapnel_directions:
 	defw 0FE96h,016Ah
 	defw 0FF3Ch,01D9h
 move_shrapnel:		; Walks the thirty-two sixteen-byte slots and adds its speed to each piece; any that goes off the screen is turned off
-	ld ix,0e300h
+	ld ix,SHRAPNEL
 	ld b,020h
 L_4D84:
 	ld a,(ix+000h)		; The slot at zero is free
@@ -149,7 +150,7 @@ L_4D84:
 	jr c,L_4DBE
 L_4DB6:
 	ld (ix+000h),000h	; The slot is freed...
-	ld hl,0e1d8h		; ...and the count of live pieces goes down
+	ld hl,SHRAPNEL_LIVE	; ...and the count of live pieces goes down
 	dec (hl)
 L_4DBE:
 	ld de,00010h		; Sixteen bytes: the next slot
@@ -157,8 +158,8 @@ L_4DBE:
 	djnz L_4D84
 	ret
 upload_shrapnel_to_buffer:		; The thirty-two slots to the attribute buffer: the Y, the X, the pattern and the colour; a free slot goes to 0xE0
-	ld ix,0e300h
-	ld hl,0ec80h
+	ld ix,SHRAPNEL
+	ld hl,SPRITE_BUFFER
 	ld b,020h
 L_4DCF:
 	ld c,(ix+003h)		; Byte 3 is the Y
@@ -184,7 +185,7 @@ L_4DDA:
 	ret
 animate_shrapnel:		; Raises each piece's counter and changes its pattern depending on how many frames it has been in the air
 	ld b,020h
-	ld ix,0e300h
+	ld ix,SHRAPNEL
 L_4DF9:
 	ld a,(ix+000h)
 	and a
@@ -237,7 +238,7 @@ unreachable_code:
 	defb 70h,1Ch,05h,0E0h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h
 	defb 00h,00h,00h
 pick_border_colour:		; A bit of 0xE1D2 picks between colour 3 and colour 9 for the border
-	ld a,(0e1d2h)		; A bit of 0xE1D2
+	ld a,(ENDING_TIMER)	; One of its bits
 	rra
 	rra
 	ld b,003h
@@ -250,18 +251,18 @@ start_slow_message:		; Stores the VRAM cell in 0xE1DB and the text in 0xE1DD: th
 	inc hl
 	ld d,(hl)
 	inc hl
-	ld (0e1dbh),de		; The cell in 0xE1DB and the text in 0xE1DD
-	ld (0e1ddh),hl
+	ld (SLOW_MSG_VRAM),de	; The cell, and the text in 0xE1DD
+	ld (SLOW_MSG_TEXT),hl
 	ld a,001h		; 0xE1DA to one: the first letter goes in straight away
-	ld (0e1dah),a
+	ld (SLOW_MSG_DELAY),a
 	ret
 write_one_letter:		; Every six frames writes ONE letter of the message; 0xFF ends it and 0xFE continues it at another cell
-	ld hl,0e1dah		; 0xE1DA: one letter every six frames
+	ld hl,SLOW_MSG_DELAY	; One letter every six frames
 	dec (hl)
 	ret nz
 	ld (hl),006h
-	ld hl,(0e1dbh)		; How far the cell has got and how far the text has got
-	ld de,(0e1ddh)
+	ld hl,(SLOW_MSG_VRAM)	; How far the cell has got and how far the text has got
+	ld de,(SLOW_MSG_TEXT)
 	ld a,(de)
 	cp 0ffh			; 0xFF: the message is complete
 	ret z
@@ -277,10 +278,10 @@ write_one_letter:		; Every six frames writes ONE letter of the message; 0xFF end
 	ld a,(de)
 L_4ECB:
 	inc de
-	ld (0e1ddh),de
+	ld (SLOW_MSG_TEXT),de
 	call WRTVRM		; The letter, to VRAM
 	inc hl
-	ld (0e1dbh),hl
+	ld (SLOW_MSG_VRAM),hl
 	or 0ffh			; Exits with 0xFF: there is still message left
 	ret
 

@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - cheat_effects.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public cheat_double,cheat_down,cheat_everything,cheat_laser,cheat_missile,cheat_option
 	public cheat_shield,upload_ship_cards
 	extrn note_upgrades_held,set_up_one_option
@@ -32,7 +34,7 @@ cheat_shield:		; Only the shield
 dead_code_A0EE:		; Code that nothing reaches.
 	defb 21h,02h,0E2h,7Eh,0FEh,07h,0D0h,0CDh,1Eh,0A1h,18h,59h
 cheat_down:		; 0xE202 to zero: takes away from the ship what 0xA123 raises
-	ld hl,0e202h
+	ld hl,SHIP_SPEED
 	ld (hl),000h
 	jr refresh_meter
 cheat_laser:		; Only the laser
@@ -48,7 +50,7 @@ cheat_option:		; Only the options, up to the two that fit
 	call add_option
 	jr refresh_meter
 set_shield:		; 0xE200 to 3 and 0xE201 to 0x0A: the shield is on
-	ld hl,0e200h
+	ld hl,SHIP
 	ld (hl),003h
 	inc l
 	ld (hl),00ah
@@ -60,11 +62,11 @@ set_shield:		; 0xE200 to 3 and 0xE201 to 0x0A: the shield is on
 dead_code_A11E:
 	defb 21h,02h,0E2h,34h,0C9h
 raise_speed:		; 0xE202 to one
-	ld hl,0e202h
+	ld hl,SHIP_SPEED
 	ld (hl),001h
 	ret
 set_laser:		; 0xE20C and 0xE20D to zero and 0xE20E to two: the shot becomes the laser
-	ld hl,0e20ch		; 0xE20C and 0xE20D to zero...
+	ld hl,SHIP_SHOT		; This and 0xE20D to zero...
 	xor a
 	ld (hl),a
 	inc l
@@ -73,11 +75,11 @@ set_laser:		; 0xE20C and 0xE20D to zero and 0xE20E to two: the shot becomes the 
 	ld (hl),002h		; ...and 0xE20E to two: the laser
 	ret
 set_missile:		; 0xE20F to two
-	ld hl,0e20fh
+	ld hl,SHIP_MISSILE
 	ld (hl),002h
 	ret
 set_double_shot:		; 0xE20C and 0xE20D to one, and 0xE20E to zero
-	ld hl,0e20ch		; 0xE20C and 0xE20D to one...
+	ld hl,SHIP_SHOT		; This and 0xE20D to one...
 	ld a,001h
 	ld (hl),a
 	inc l
@@ -87,7 +89,7 @@ set_double_shot:		; 0xE20C and 0xE20D to one, and 0xE20E to zero
 	ld (hl),a		; ...and 0xE20E to zero: the double
 	ret
 add_option:		; Raises 0xE20B up to two and, for each one, calls 0x9BFB
-	ld hl,0e20bh
+	ld hl,OPTION_COUNT
 	ld a,(hl)
 	cp 002h			; Two options at most
 	ret nc
@@ -113,7 +115,7 @@ upload_explosion_card:		; With the ship dead, the cards come from somewhere else
 	ldi
 	ldi
 	ldi
-	ld hl,0e204h		; ...and the rest of the card, from the ship
+	ld hl,SHIP_ROW		; ...and the rest of the card, from the ship
 	ldi
 	inc l
 	ldi
@@ -123,20 +125,20 @@ upload_explosion_card:		; With the ship dead, the cards come from somewhere else
 	ldi
 	jr L_A1B7
 upload_ship_cards:		; Copies to the sprite buffer the cards of the ship, its two options and its shots
-	ld de,0ec80h		; 0xEC80: the sprite attribute buffer
-	ld hl,0e200h
+	ld de,SPRITE_BUFFER	; The sprite attribute buffer
+	ld hl,SHIP
 	ld a,(hl)		; With 0xE200 at zero there is no ship, and with bit 7 it is blown up
 	or a
 	jr z,upload_four_empty_cards
 	jp m,upload_explosion_card
-	ld hl,0e204h
+	ld hl,SHIP_ROW
 	ldi
 	inc l
 	ldi
 	ldi
 	ldi
-	ld hl,0e204h
-	ld a,(0e200h)
+	ld hl,SHIP_ROW
+	ld a,(SHIP)
 	dec a			; With the ship in state 1, the card goes as it is
 	jr z,L_A1AC
 	ldi
@@ -157,18 +159,18 @@ L_A1B1:
 	ldi
 	ldi
 L_A1B7:
-	ld hl,0e220h		; The two options, 0xE220 and 0xE240
+	ld hl,OPTIONS		; The two options, this one and 0xE240
 	call upload_option_card
-	ld hl,0e240h
+	ld hl,OPTIONS+OPTION_SIZE
 	call upload_option_card
 L_A1C3:
-	ld hl,0e270h		; And the shot tables: 0xE270, 0xE290, 0xE2B0...
+	ld hl,SHOTS+SHOT_SIZE	; And the shot tables: this, 0xE290, 0xE2B0...
 	call upload_shot_card
-	ld hl,0e290h
+	ld hl,SHOTS+3*SHOT_SIZE
 	call upload_shot_card
-	ld hl,0e2b0h
+	ld hl,SHOTS+5*SHOT_SIZE
 	call upload_shot_card
-	ld hl,0e2c0h
+	ld hl,MISSILES
 	ld b,003h		; Three missiles
 upload_three_missiles:		; The three missiles at 0xE2C0; an empty slot is switched off
 	ld a,(hl)		; Three missiles, eight bytes apart

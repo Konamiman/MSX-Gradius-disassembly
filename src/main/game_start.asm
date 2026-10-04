@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - game_start.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public flag_if_two_players,set_up_due_stage,start_game
 	extrn add_a_to_de,add_a_to_hl,get_word,load_stage_graphics,start_scroll,write_captions
 
@@ -12,20 +14,20 @@ start_game:		; Sets the score to zero, clears the 0x900 bytes of objects at 0xE3
 	call load_stage_graphics	; The score labels
 	call write_captions
 	xor a
-	ld (0e071h),a		; 0xE071 to zero: the power-up count
+	ld (CHEAT_PRIZE_TAKEN),a	; To zero: the power-up count
 	ld hl,00000h		; 0xE108, 0xE063 and 0xE127 to zero, two bytes at a time
-	ld (0e108h),hl
-	ld (0e063h),hl
-	ld (0e127h),hl
-	ld hl,0e300h		; The 0x900 bytes of the object table, to zero
-	ld de,0e301h
+	ld (ENEMY_SCRIPT_ROW),hl
+	ld (DISTANCE),hl
+	ld (STAGE_SCRIPT_ROW),hl
+	ld hl,OBJECTS		; The 0x900 bytes of the object table, to zero
+	ld de,OBJECTS+1
 	ld bc,008ffh
 	ld (hl),000h
 	ldir
 	call load_stage_data	; And the data of whichever stage is due
 	jp start_scroll
 set_up_due_stage:		; Does NOT advance the stage: with 0xE061 at zero it sets it to one, and from the ninth onwards it replaces it with the one the table at 0x418F says; then it sets it up
-	ld hl,0e061h
+	ld hl,STAGE
 	ld a,(hl)		; With the stage at zero, start with the first one
 	and a
 	jr nz,L_4132
@@ -37,40 +39,40 @@ L_4132:
 	ld de,0418fh		; The table at 0x418F, indexed by the stage minus nine: it only has four entries
 	call add_a_to_de
 	ld a,(de)
-	ld (0e061h),a
+	ld (STAGE),a
 	xor a			; And the power-up count and the stage counter, to zero
-	ld (0e071h),a
+	ld (CHEAT_PRIZE_TAKEN),a
 	ld hl,00000h
-	ld (0e063h),hl
+	ld (DISTANCE),hl
 start_stage:		; Clears the 0xE00 bytes at 0xE100, turns off the 128 sprites, loads the stage data and waits 0x3C frames
 	call load_stage_graphics
-	ld hl,0e100h		; The 0xE00 bytes from 0xE100 onwards, to zero
-	ld de,0e101h
+	ld hl,NEW_COLUMN	; The 0xE00 bytes from here onwards, to zero
+	ld de,NEW_COLUMN+1
 	ld bc,00dffh
 	ld (hl),000h
 	ldir
-	ld hl,0ec80h		; 0xE0 in the 128 Ys of the sprite buffer: none is drawn
-	ld de,0ec81h
+	ld hl,SPRITE_BUFFER	; 0xE0 in the 128 Ys of the sprite buffer: none is drawn
+	ld de,SPRITE_BUFFER+1
 	ld (hl),0e0h
 	ld c,07fh
 	ldir
 	call load_stage_data
 	call stage_difficulty
 	ld bc,00010h		; Sixteen bytes from 0x4193 to 0xE200
-	ld de,0e200h
+	ld de,SHIP
 	ld hl,04193h
 	ldir
 	call flag_if_two_players
 	ld a,03ch		; 0x3C frames of waiting before starting
-	ld (0e10fh),a
+	ld (START_DELAY),a
 	jp start_scroll
 flag_if_two_players:		; 0xE130 to one if 0xE06B is not zero
-	ld a,(0e06bh)
+	ld a,(METER_AT_DEATH)
 	or a
 	jr z,L_418B
 	ld a,001h
 L_418B:
-	ld (0e130h),a
+	ld (METER_SLOT),a
 	ret
 
 ; ----------------------------------------------------------------------
@@ -87,12 +89,12 @@ stages_per_round:
 	defb 08h,00h,08h,00h
 	defb 02h,00h,00h,00h
 stage_difficulty:		; 0xE111 comes from the round times four plus the stage, capped at 0x0F; past the ninth, from 0xE066
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 009h			; From the ninth onwards, the difficulty is set by 0xE066
 	jr nc,L_41BC
 	dec a
 	ld b,a
-	ld a,(0e06ah)		; The round times four
+	ld a,(LOOP_NUMBER)	; The round times four
 	add a,a
 	add a,a
 	add a,b
@@ -100,46 +102,46 @@ stage_difficulty:		; 0xE111 comes from the round times four plus the stage, capp
 	jr c,L_41B8
 	ld a,00fh
 L_41B8:
-	ld (0e111h),a
+	ld (DIFFICULTY),a
 	ret
 L_41BC:
-	ld a,(0e066h)
-	ld (0e111h),a
+	ld a,(STAGES_PLAYED)
+	ld (DIFFICULTY),a
 	ret
 load_stage_data:		; Six bytes from the table at 0x4499 to 0xE101 (where the map script starts and ends), and from the one at 0x4212 the checkpoint the counter is compared with
-	ld a,(0e061h)
+	ld a,(STAGE)
 	add a,a			; Times six: six bytes per stage
 	ld c,a
 	add a,a
 	add a,c
 	ld hl,04499h
 	call add_a_to_hl
-	ld de,0e101h		; To 0xE101
+	ld de,MAP_RANGE_START
 	ld bc,00006h
 	ldir
-	ld a,(0e061h)
+	ld a,(STAGE)
 	ld hl,04212h		; The other table, the checkpoints one
 	call get_word
-	ld hl,(0e063h)
+	ld hl,(DISTANCE)
 	rst 20h			; DCOMPR: if you had already passed the checkpoint, it starts there; and if not, at 0x20
 	jr nc,set_stage_counters
 	ld de,00020h
 set_stage_counters:		; Sets the stage's dozen counters to zero, 0xE062 to one and 0xE129 to 0x40
-	ld (0e063h),de		; The distance the stage starts with
+	ld (DISTANCE),de	; The distance the stage starts with
 	xor a
-	ld (0e150h),a
-	ld (0e151h),a
-	ld (0e065h),a
-	ld (0e155h),a
-	ld (0e113h),a
-	ld (0e10ah),a
-	ld (0e044h),a
-	ld (0e114h),a
-	ld (0e126h),a
+	ld (BOSS_DONE),a
+	ld (BOSS_STATE),a
+	ld (STAGE_END_STEP),a
+	ld (CORE_DEAD),a
+	ld (PENDING_MUSIC),a
+	ld (BIG_PIECE_BLOWN),a
+	ld (SND_MUTE),a
+	ld (MUSIC_HOLD),a
+	ld (LIVE_OBJECTS),a
 	inc a			; 0xE062 to one
-	ld (0e062h),a
+	ld (SCROLL_BIT),a
 	ld a,040h		; 0xE129 starts at 0x40
-	ld (0e129h),a
+	ld (WAVE_TIMER),a
 	ret
 
 ; ----------------------------------------------------------------------

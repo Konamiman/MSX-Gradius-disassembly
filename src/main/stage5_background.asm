@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - stage5_background.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public run_stage_5_background
 
 ; ----------------------------------------------------------------------
@@ -13,7 +15,7 @@
 ; and types 5 to 8 set up the sliding turrets at 0xE880.
 ; ----------------------------------------------------------------------
 run_stage_5_background:		; The eight eight-byte cards at 0xE700, one by one
-	ld ix,0e700h
+	ld ix,BG_OBJECTS
 	ld b,008h		; Eight cards
 L_B2B0:
 	push bc
@@ -28,7 +30,7 @@ stage_5_background_step:		; Gives it its step and then moves it with the scroll
 	and a
 	ret z
 	call dispatch_by_background_type
-	ld a,(0e100h)		; Only on steps with a new column
+	ld a,(NEW_COLUMN)	; Only on steps with a new column
 	and a
 	ret z
 	ld a,(ix+003h)		; Eight points to the left
@@ -81,7 +83,7 @@ ship_left_range:		; Goes back one step
 	ret
 ship_in_range:		; Compares the ship's column with its own, with a different margin depending on the type
 	ld d,(ix+003h)		; Its column
-	ld a,(0e206h)		; 0xE206: the ship's column
+	ld a,(SHIP_COLUMN)	; The ship's column
 	ld h,a
 	ld a,(ix+000h)		; Types 1 and 3 measure on one side...
 	dec a
@@ -135,7 +137,7 @@ set_up_turret:		; Types 5 to 8 look for a free card at 0xE880 and set up a slidi
 	ret z
 	dec (ix+004h)
 	ret nz
-	ld hl,0e880h		; The four cards at 0xE880, eight bytes apart
+	ld hl,TURRETS		; The four cards, eight bytes apart
 	ld b,004h
 	ld de,00008h
 	xor a

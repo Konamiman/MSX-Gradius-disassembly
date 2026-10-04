@@ -12,7 +12,7 @@
 ; frame.
 
 	include "bios.inc"
-	include "sound_ram.inc"
+	include "variables.inc"
 
 	public play
 	extrn restore_registers,set_volume,silence_channels

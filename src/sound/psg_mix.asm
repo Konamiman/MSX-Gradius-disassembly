@@ -7,7 +7,7 @@
 ; uses it to put back the mix after the noise effect.
 
 	include "bios.inc"
-	include "sound_ram.inc"
+	include "variables.inc"
 
 	public write_mix,set_mix
 

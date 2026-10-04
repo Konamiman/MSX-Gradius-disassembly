@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - stage5_characters.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public advance_background_script,check_falling_pieces_script,erase_stage_5_background,erase_turrets,paint_stage_5_background,paint_turrets
 
 ; ----------------------------------------------------------------------
@@ -16,9 +18,9 @@
 ; ----------------------------------------------------------------------
 paint_stage_5_background:		; The eight cards at 0xE700, painted as rectangles of characters
 	ld a,0ffh		; 0xEC00 to 0xFF: paint
-	ld ix,0e700h
+	ld ix,BG_OBJECTS
 	ld b,008h		; Eight cards
-	ld (0ec00h),a
+	ld (PAINT_FLAG),a
 L_B3DD:
 	push bc
 	call paint_background_piece
@@ -41,16 +43,16 @@ five_by_five:		; Types 1 to 4 measure five cells by five
 paint_or_erase:		; With 0xEC00 at zero it erases, and otherwise it copies
 	ld l,(ix+002h)		; Its row and its column
 	ld h,(ix+003h)
-	ld a,(0ec00h)		; 0xEC00 says whether to paint or to erase
+	ld a,(PAINT_FLAG)	; Says whether to paint or to erase
 	and a
 	jp z,048f7h
 	jp 0490ch
 erase_stage_5_background:		; 0xEC00 to zero and walk the same eight cards
 	xor a
-	ld (0ec00h),a
+	ld (PAINT_FLAG),a
 	jr five_by_five
 paint_big_piece:		; Types 5 to 8 carry their size in front of the characters
-	ld a,(0ec00h)		; These are not erased, only painted
+	ld a,(PAINT_FLAG)	; These are not erased, only painted
 	and a
 	ret z
 	ld a,(ix+000h)
@@ -68,13 +70,13 @@ erase_turrets:		; 0xEC00 to zero
 	xor a
 	jr L_B439
 paint_turrets:		; Only in stage 5, and with 0xEC00 at 0xFF
-	ld a,(0e061h)		; Only stage 5 has turrets
+	ld a,(STAGE)		; Only stage 5 has turrets
 	cp 005h
 	ret nz
 	ld a,0ffh
 L_B439:
-	ld (0ec00h),a
-	ld ix,0e880h
+	ld (PAINT_FLAG),a
+	ld ix,TURRETS
 	ld b,004h		; Four cards
 L_B442:
 	push bc
@@ -100,7 +102,7 @@ L_B465:
 paint_or_erase_turret:		; Same as the background: 0xEC00 decides
 	ld l,(ix+002h)		; Its row and its column
 	ld h,(ix+003h)
-	ld a,(0ec00h)		; 0xEC00 says whether to paint or to erase
+	ld a,(PAINT_FLAG)	; Says whether to paint or to erase
 	and a
 	jp z,048f7h
 	jp 0490ch
@@ -129,21 +131,21 @@ advance_background_script:		; Skips in one go the lines that are already behind 
 	call set_up_this_background_piece
 	jr z,advance_background_script
 	ret c
-	ld hl,0e109h		; 0xE109: which line the background script is on
+	ld hl,BG_SCRIPT_ROW	; Which line the background script is on
 	inc (hl)
 	jr advance_background_script
 check_falling_pieces_script:		; On every step with a new column, sets up the background pieces that fall at this distance
-	ld a,(0e100h)		; Only on steps with a new column
+	ld a,(NEW_COLUMN)	; Only on steps with a new column
 	and a
 	ret z
 	ld a,0f8h		; 0xEC04 to 0xF8: they come in from the right
-	ld (0ec04h),a
+	ld (ENTRY_X),a
 set_up_due_ones:		; One after another as long as they match
 	call set_up_this_background_piece
 	jr z,set_up_due_ones
 	ret
 set_up_this_background_piece:		; Four bytes per line: the distance, the row and the type; on a match, a card at 0xE700 is taken
-	ld a,(0e109h)		; The table at 0xB7BF: four bytes per line
+	ld a,(BG_SCRIPT_ROW)	; The table at 0xB7BF: four bytes per line
 	add a,a
 	add a,a
 	ld hl,0b7bfh
@@ -155,12 +157,12 @@ set_up_this_background_piece:		; Four bytes per line: the distance, the row and 
 	ld c,(hl)
 	inc hl
 	ld b,(hl)
-	ld hl,(0e063h)		; DCOMPR against the distance travelled
+	ld hl,(DISTANCE)	; DCOMPR against the distance travelled
 	rst 20h
 	ret nz
-	ld hl,0e109h
+	ld hl,BG_SCRIPT_ROW
 	inc (hl)		; One line fewer
-	ld hl,0e700h		; The eight cards at 0xE700
+	ld hl,BG_OBJECTS	; The eight cards
 	ld e,008h
 	xor a
 L_B4DB:
@@ -181,7 +183,7 @@ L_B4E8:
 	ld (hl),a
 	cp 005h			; From type 5 onwards, another card
 	jr nc,set_up_big_one
-	ld a,(0ec04h)		; The small ones only come in from the right
+	ld a,(ENTRY_X)		; The small ones only come in from the right
 	cp 0f8h
 	jr z,set_up_small_one
 	ld (hl),000h
@@ -216,7 +218,7 @@ set_up_big_one:		; Row from the table and column 0xEC04, with the type's high ni
 	inc l
 	ld (hl),c		; The row the line brought
 	inc l
-	ld a,(0ec04h)		; The column they all come in at
+	ld a,(ENTRY_X)		; The column they all come in at
 	ld (hl),a
 	inc l
 	ld (hl),030h		; 0x30 frames and byte 5 to 0x0C

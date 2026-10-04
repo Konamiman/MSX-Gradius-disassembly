@@ -8,7 +8,7 @@
 ; channel's period. save_pointer stores where the stream has got to.
 
 	include "bios.inc"
-	include "sound_ram.inc"
+	include "variables.inc"
 
 	public write_period,read_melody_command,save_pointer
 	extrn write_volume_and_mix

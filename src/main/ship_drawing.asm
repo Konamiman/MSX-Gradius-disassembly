@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - ship_drawing.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public L_998C,place_ship
 	extrn controller_speed,get_word,next_ship_state,times_speed_steps
 
@@ -15,24 +17,24 @@
 ; machine.
 ; ----------------------------------------------------------------------
 place_ship:		; Sets the ship's sprite card: the position, and the drawing that goes with whatever is being pressed
-	ld a,(0e1c0h)		; Not with the screen stopped
+	ld a,(SCROLL_MODE)	; Not with the screen stopped
 	and a
 	ret nz
-	ld a,(0e200h)		; 0xE200 at zero or negative: there is no ship
+	ld a,(SHIP)		; At zero or negative: there is no ship
 	or a
 	ret z
 	jp m,next_ship_state
-	ld a,(0e1d0h)		; With an explosion under way, the position comes from 0xE1D3
+	ld a,(ENDING)		; With an explosion under way, the position comes from 0xE1D3
 	and a
 	jr z,L_9974
-	ld de,(0e1d3h)
-	ld hl,0e205h
+	ld de,(ENDING_SHIP_Y)
+	ld hl,SHIP+5
 	call add_de_to_word
 	jr L_998C
 L_9974:
 	call controller_speed	; The joystick speed, the steps and the new position
 	call times_speed_steps
-	ld hl,0e203h		; The screen limits
+	ld hl,SHIP+3		; The screen limits
 	call add_de_to_word	; The new position
 	call clamp_ship_y
 	inc l
@@ -41,25 +43,25 @@ L_9974:
 	call add_de_to_word
 	call clamp_ship_x
 L_998C:
-	ld a,(0f0f4h)		; 0xF0F4: with the other cartridge inserted, other tables
+	ld a,(TWINBEE_FOUND)	; With the other cartridge inserted, other tables
 	or a
 	ld hl,099e3h
 	jr z,L_99A1
-	ld a,(0e002h)		; And bit 7 of 0xE002 chooses between the two
+	ld a,(GAME_FLAGS)	; And bit 7 chooses between the two
 	add a,a
 	ld hl,09a25h
 	jr nc,L_99A1
 	ld hl,09a67h
 L_99A1:
-	ld a,(0e200h)		; 0xE200: the ship's state
+	ld a,(SHIP)		; The ship's state
 	call get_word
 	ex de,hl
-	ld de,0e207h
-	ld bc,0e009h		; 0xE009 is the joystick; when paused, 0xE10D
-	ld a,(0e10bh)
+	ld de,SHIP+7
+	ld bc,CONTROLLER	; The joystick; when paused, 0xE10D
+	ld a,(PAUSE_COUNT)
 	rra
 	jr nc,L_99B7
-	ld bc,0e10dh
+	ld bc,PAUSE_JOYSTICK
 L_99B7:
 	ld a,(bc)
 	and 003h		; The two low bits: up and down
@@ -70,10 +72,10 @@ L_99C0:
 	add a,a			; Times four: four bytes per card
 	add a,a
 	ex af,af'
-	ld a,(0e200h)
+	ld a,(SHIP)
 	dec a
 	jp z,L_99D6
-	ld a,(0e003h)		; With the ship just out, it blinks every four frames
+	ld a,(FRAME_COUNT)	; With the ship just out, it blinks every four frames
 	and 004h		; A bit of the counter: it blinks
 	jp z,L_99D6		; One in every four frames
 	ex af,af'
@@ -131,7 +133,7 @@ L_9AB9:
 clamp_ship_y:		; Y stays between 0x13 and 0xB5, except on stages 2, 6 and from 9 onwards, which start at 0x10
 	add a,010h
 	ex af,af'
-	ld a,(0e061h)		; Stages 2, 6 and from 9 onwards have another ceiling
+	ld a,(STAGE)		; Stages 2, 6 and from 9 onwards have another ceiling
 	cp 002h			; Stages 2, 6 and from 9 onwards
 	jp z,L_9AE3
 	cp 006h

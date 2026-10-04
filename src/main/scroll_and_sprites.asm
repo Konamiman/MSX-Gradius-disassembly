@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public blink_two_characters,check_if_sound,clear_rectangle,clear_screen,copy_rectangle,decompress
 	public decompress_three_thirds,decompress_with_destination,dispatch_ship_end,dump_three_thirds,dump_to_vram,erase_characters
@@ -28,62 +29,62 @@ take_scroll_steps:		; B scroll steps; on each one it maps banks 11 and 12 to rea
 	di
 	ld a,00bh		; Banks 11 and 12: the pieces and the scripts
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ch
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call read_new_column	; With them in place the new column is read
 	di
 	ld a,002h		; And 2 and 3 are restored
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call release_enemies
 	call release_background_objects
 	call advance_script
 	call advance_1B_script
-	ld hl,(0ec00h)		; 0xEC00 moves forward one cell
+	ld hl,(MAP_COLUMN_PTR)	; Moves forward one cell
 	inc hl
-	ld (0ec00h),hl
-	ld hl,0ec04h		; 0xEC04, eight points per step
+	ld (MAP_COLUMN_PTR),hl
+	ld hl,ENTRY_X		; Eight points per step
 	ld a,(hl)
 	add a,008h
 	ld (hl),a
-	ld hl,(0e063h)		; And the distance covered, one unit
+	ld hl,(DISTANCE)	; And the distance covered, one unit
 	inc hl
-	ld (0e063h),hl
+	ld (DISTANCE),hl
 	pop bc
 	djnz take_scroll_steps
-	ld hl,(0e063h)		; On the way out the last step is given back: the loop overshoots by one
+	ld hl,(DISTANCE)	; On the way out the last step is given back: the loop overshoots by one
 	dec hl
-	ld (0e063h),hl
+	ld (DISTANCE),hl
 	ret
 flag_not_due:		; 0xE107 to one: no new column comes in on this step
 	ld a,001h
-	ld (0e107h),a
+	ld (SCROLL_AT_LIMIT),a
 	ret
 scroll_map_one_column:		; If it is time to scroll, raises the distance and shifts the twenty-two rows at 0xED00 one cell to the left
 	xor a
-	ld (0e100h),a
-	ld (0e107h),a
-	ld de,(0e105h)		; 0xE105 is how far the stage's scroll goes
-	ld hl,(0e063h)
+	ld (NEW_COLUMN),a
+	ld (SCROLL_AT_LIMIT),a
+	ld de,(SCROLL_LIMIT)	; How far the stage's scroll goes
+	ld hl,(DISTANCE)
 	rst 20h			; DCOMPR: compares the distance with the limit
 	jr nc,flag_not_due
-	ld a,(0e1c0h)		; 0xE1C0 sets the speed: at one, standing still
+	ld a,(SCROLL_MODE)	; Sets the speed: at one, standing still
 	dec a
 	ret z
 	dec a			; At two, it shifts on every step
 	jr z,L_468C
-	ld de,0e062h		; And otherwise, every other step, with the bit that rotates in 0xE062
+	ld de,SCROLL_BIT	; And otherwise, every other step, with the bit that rotates
 	ld a,(de)
 	rlca
 	ld (de),a
@@ -91,11 +92,11 @@ scroll_map_one_column:		; If it is time to scroll, raises the distance and shift
 	ret z
 L_468C:
 	inc hl			; The distance goes up
-	ld (0e063h),hl
+	ld (DISTANCE),hl
 	ld a,001h		; 0xE100 to one: there is a new column on this step
-	ld (0e100h),a
-	ld hl,0ed01h		; From 0xED01 to 0xED00: the whole map, one cell to the left
-	ld de,0ed00h
+	ld (NEW_COLUMN),a
+	ld hl,MAP+1		; To 0xED00: the whole map, one cell to the left
+	ld de,MAP
 	ld b,016h		; Twenty-two rows
 L_469D:
 	push bc
@@ -105,21 +106,21 @@ L_469D:
 	inc hl			; And the leftover cell when jumping to the next row
 	inc de
 	djnz L_469D
-	ld hl,0ed1fh		; 0xEC00 points to the right-hand column, the one to be filled
-	ld (0ec00h),hl
+	ld hl,MAP+MAP_WIDTH-1	; 0xEC00 points to the right-hand column, the one to be filled
+	ld (MAP_COLUMN_PTR),hl
 read_new_column:		; With the distance inside the range, takes from the stage script the piece that is due and leaves its address in 0xEC02
-	ld hl,(0e063h)		; The distance covered...
-	ld de,(0e103h)		; ...against the end of the range
+	ld hl,(DISTANCE)	; The distance covered...
+	ld de,(MAP_RANGE_END)	; ...against the end of the range
 	rst 20h
 	ccf
 	jr c,draw_star_column
-	ld de,(0e101h)		; And against where it starts
+	ld de,(MAP_RANGE_START)	; And against where it starts
 	and a
 	sbc hl,de
 	jr c,draw_star_column
 	push hl
 	ld hl,097deh		; The script table at 0x97DE, indexed by the stage
-	ld a,(0e061h)
+	ld a,(STAGE)
 	call get_word
 	pop hl
 	ld a,l
@@ -132,16 +133,16 @@ read_new_column:		; With the distance inside the range, takes from the stage scr
 	add hl,hl		; Times three and added: times six, which is what a row of the script takes up
 	add hl,bc
 	add hl,de
-	ld (0ec02h),hl		; 0xEC02 keeps where the piece is
-	ld hl,(0ec00h)
+	ld (PIECE_PTR),hl	; Keeps where the piece is
+	ld hl,(MAP_COLUMN_PTR)
 	ld b,006h
 insert_new_column:		; Copies into the right-hand column of the map the four cells due from the piece, jumping from row to row
 	push bc
 	push hl
-	ld hl,(0ec02h)		; The script hands out piece numbers
+	ld hl,(PIECE_PTR)	; The script hands out piece numbers
 	ld a,(hl)
 	inc hl
-	ld (0ec02h),hl
+	ld (PIECE_PTR),hl
 	ld l,a
 	ld h,000h
 	add hl,hl		; Times sixteen: each piece is four by four characters
@@ -149,7 +150,7 @@ insert_new_column:		; Copies into the right-hand column of the map the four cell
 	add hl,hl
 	add hl,hl
 	ld de,08ff0h		; Stages 5, 9, 10 and 12 use the other set of pieces, the one at 0x8FF0
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 005h
 	jr z,L_470B
 	cp 009h
@@ -162,7 +163,7 @@ insert_new_column:		; Copies into the right-hand column of the map the four cell
 L_470B:
 	add hl,de
 	ex de,hl
-	ld a,(0e063h)		; The two low bits of the distance: which of the four columns of the piece is due
+	ld a,(DISTANCE)		; The two low bits of the distance: which of the four columns of the piece is due
 	and 003h
 	call add_a_to_de
 	pop hl
@@ -208,14 +209,14 @@ half_piece:		; The other two cells of the piece, when the column coming in is th
 ; is only used so that the stars do not all twinkle the same.
 ; ----------------------------------------------------------------------
 draw_star_column:		; Fills the incoming column with zeros, except for one cell: the star, on the row the table at 0x478E says
-	ld a,(0e063h)		; The five low bits of the distance index the table
+	ld a,(DISTANCE)		; The five low bits of the distance index the table
 	and 01fh
 	ld hl,0478eh
 	call add_a_to_hl
 	ld c,(hl)		; C says which row the star falls on
 	ld b,016h		; Twenty-two rows
 	ld de,00020h
-	ld hl,(0ec00h)
+	ld hl,(MAP_COLUMN_PTR)
 L_474C:
 	xor a
 	dec c
@@ -229,7 +230,7 @@ L_4756:
 	djnz L_474C
 	ret
 blink_two_characters:		; Every two frames turns the patterns at 0x27B0 and 0x27B8 off or on, in the three thirds
-	ld a,(0e003h)		; Two bits of the frame counter: four steps
+	ld a,(FRAME_COUNT)	; Two bits of the frame counter: four steps
 	and 006h
 	ld hl,04786h		; The mask table at 0x4786
 	ld e,a
@@ -243,7 +244,7 @@ blink_two_characters:		; Every two frames turns the patterns at 0x27B0 and 0x27B
 	ld c,b
 	ld hl,027b8h		; ...and the one at 0x27B8
 L_4774:
-	ld a,(0e062h)		; 0xE062, the bit that rotates
+	ld a,(SCROLL_BIT)	; The bit that rotates
 	and c
 	call WRTVRM
 	ld de,00800h		; The three thirds, 0x800 apart
@@ -279,7 +280,7 @@ run_sprites:		; Four passes: two routines from banks 1 and 3, the second group o
 	call build_second_group
 	jp build_sprites
 upload_sprites:		; Sends the 128 bytes at 0xEC80 out of the VDP data port with `outi`: 32 sprites of four bytes, in one go.
-	ld hl,0ec80h
+	ld hl,SPRITE_BUFFER
 	ld b,080h
 L_47C8:
 	outi			; `outi` with B=0x80: the 128 bytes of the attribute table without going through the BIOS.
@@ -301,10 +302,10 @@ upload_sprites_rotating:		; Uploads the buffer to the attribute table starting e
 	ld hl,03b00h		; The sprite attribute table, at VRAM 0x3B00
 	call set_vram_write
 	exx
-	ld a,(0e200h)		; With 0xE200 at 0xFF it is uploaded as it is, without rotating
+	ld a,(SHIP)		; At 0xFF it is uploaded as it is, without rotating
 	inc a
 	jr z,upload_sprites
-	ld hl,0e17fh
+	ld hl,SPRITE_ROTATION
 	ld a,(hl)
 	add a,01ch		; 0x1C more each frame, wrapping at 0x7C
 	and 07ch
@@ -313,7 +314,7 @@ upload_sprites_rotating:		; Uploads the buffer to the attribute table starting e
 	ld d,020h		; Thirty-two entries of four bytes
 L_47E7:
 	ld a,e
-	ld hl,0ec80h
+	ld hl,SPRITE_BUFFER
 	add a,l
 	ld l,a
 	ld b,004h
@@ -331,7 +332,7 @@ upload_screen:		; The 704 bytes of the map at 0xED00 to the name table, with `ou
 	ld hl,03800h		; The name table, at VRAM 0x3800
 	call set_vram_write
 	exx
-	ld hl,0ed00h
+	ld hl,MAP
 	ld b,000h		; B at zero: 256 bytes in one go
 L_480A:
 	outi
@@ -345,8 +346,8 @@ L_4816:
 	jp nz,L_4816
 	ret
 build_second_group:		; The other ten objects, the ones at 0xE500, to the buffer at 0xECD8
-	ld ix,0e500h		; 0xE500: the second group of objects
-	ld de,0ecd8h
+	ld ix,ENEMY_SHOTS	; The second group of objects
+	ld de,SPRITE_BUFFER+22*4
 	ld b,00ah		; Ten objects
 	jr walk_objects
 
@@ -356,7 +357,7 @@ build_second_group:		; The other ten objects, the ones at 0xE500, to the buffer 
 build_sprites:		; With banks 4/5/6 in place, walks twelve objects at 0xE300 (32 bytes each) and builds their sprite attribute in 0xECA8.
 	di
 	push hl
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,004h		; Banks 4/5/6: the sprite engine needs to read the shapes in bank 5.
 	ld (06000h),a
 	ld (hl),a
@@ -370,8 +371,8 @@ build_sprites:		; With banks 4/5/6 in place, walks twelve objects at 0xE300 (32 
 	ld (hl),a
 	pop hl
 	ei
-	ld ix,0e300h		; 0xE300 is the object table, and 0xECA8 the attribute buffer
-	ld de,0eca8h
+	ld ix,OBJECTS		; The object table, and 0xECA8 the attribute buffer
+	ld de,SPRITE_BUFFER+10*4
 	ld b,00ch
 walk_objects:		; For each live slot, sets its attribute entry; and if it is hidden, takes it off the screen
 	push bc
@@ -395,7 +396,7 @@ next_object:		; Moves on to the next object and, once the twelve are done, resto
 	djnz walk_objects	; The twelve
 	di			; Banks 1, 2 and 3 again
 	push hl			; The usual layout: banks 1, 2 and 3
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,001h
 	ld (06000h),a
 	ld (hl),a
@@ -676,7 +677,7 @@ L_49D6:
 check_if_sound:		; Checks bit 6 of 0xE002 before falling into the sound trigger.
 	di			; Bit 6 of 0xE002: with no game, nothing sounds
 	push hl
-	ld hl,0e002h
+	ld hl,GAME_FLAGS
 	bit 6,(hl)
 	jr z,L_4A1F
 	jr build_sound_request
@@ -690,12 +691,12 @@ build_sound_request:		; Maps banks 7 and 8, which are the player's, leaves the r
 	di
 	ld a,007h		; Bank 7 at 0x8000 and bank 8 at 0xA000
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,008h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	di
 	pop af
@@ -704,12 +705,12 @@ build_sound_request:		; Maps banks 7 and 8, which are the player's, leaves the r
 	di
 	ld a,002h		; And 2 and 3 restored
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	pop af
 	pop bc
@@ -722,11 +723,11 @@ queue_sound:		; Writes the request into the queue at 0xE012/0xE034 using the tab
 	ld c,a
 	and 07fh		; The seven low bits are the sound number; bit 7 is separate
 	ld b,002h		; Two queue channels
-	ld hl,0e012h
+	ld hl,SND_CARD_A+CARD_MODE
 	cp 016h			; Below 0x16, the sound goes to the 0xE034 queue
 	jr c,L_4A3C
 	xor a
-	ld (0e044h),a
+	ld (SND_MUTE),a
 	ld a,c
 	and 07fh
 	cp 026h			; From 0x26 onwards, one more channel
@@ -773,7 +774,7 @@ write_request:		; Leaves in the channel's card the marker, the sound number and 
 load_explosion_graphics:		; With banks 4/5/6 in place, the entries at 0x98A3 and the mirror at 0x98B0; then clears the 0x800 bytes of objects
 	di			; Banks 4, 5 and 6, which are the graphics ones
 	push hl			; The three graphics banks
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,004h
 	ld (06000h),a
 	ld (hl),a
@@ -790,12 +791,12 @@ load_explosion_graphics:		; With banks 4/5/6 in place, the entries at 0x98A3 and
 	ld ix,098a3h		; The entries at 0x98A3
 	call load_entries
 	ld a,001h
-	ld (0e100h),a		; 0xE100 to one: the byte mirror
+	ld (MIRROR_KIND),a	; To one: the byte mirror
 	ld ix,098b0h		; And the mirror at 0x98B0
 	call build_mirror
 	di			; 1, 2 and 3 restored
 	push hl			; And 1, 2 and 3 restored
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,001h
 	ld (06000h),a
 	ld (hl),a
@@ -809,14 +810,14 @@ load_explosion_graphics:		; With banks 4/5/6 in place, the entries at 0x98A3 and
 	ld (hl),a
 	pop hl
 	ei
-	ld hl,0e300h		; And the 0x800 bytes of objects, to zero
-	ld de,0e301h
+	ld hl,OBJECTS		; And the 0x800 bytes of objects, to zero
+	ld de,OBJECTS+1
 	ld bc,007ffh		; 0x800 bytes
 	ld (hl),000h
 	ldir
 	ret
 dispatch_ship_end:		; 0xE1D0 holds the explosion step and 0xE1D1 the submode: ten destinations in the table at 0x4ACA
-	ld hl,(0e1d0h)		; 0xE1D0 the step and 0xE1D1 the submode
+	ld hl,(ENDING)		; The step, and 0xE1D1 the submode
 	ld a,l
 	and a
 	ret z			; With the step at zero there is no explosion
@@ -838,30 +839,30 @@ dispatcher_table_4AC7:
 	defw explosion_step_8	; 8
 	defw explosion_step_9	; 9
 explosion_step_0:		; Raises the counter at 0xE1D3 by 0x40 and, past Y 0xF0, clears the screen and turns the sprites off
-	ld hl,(0e1d3h)
+	ld hl,(ENDING_SHIP_Y)
 	ld de,00040h		; 0x40 more each frame
 	add hl,de
-	ld (0e1d3h),hl
+	ld (ENDING_SHIP_Y),hl
 	ld hl,00800h		; 0x0800 in 0xE008
-	ld (0e008h),hl
-	ld a,(0e206h)		; And until 0xE206 goes past 0xF0, nothing is cleared
+	ld (CONTROLLER_NEW),hl
+	ld a,(SHIP_COLUMN)	; And until it goes past 0xF0, nothing is cleared
 	cp 0f0h
 	ret c
 	call clear_screen
 	call turn_off_sprites
 next_submode:		; 0xE1D1 + 1: the next step of the explosion
-	ld hl,0e1d1h
+	ld hl,ENDING_STEP
 	inc (hl)
 	ret
 explosion_step_1:		; Waits for the channel to go quiet, loads the ending graphics from bank 10, turns the sprites off and puts up the 4x4 drawing
-	ld a,(0e012h)		; Until the 0xE012 channel goes quiet, it does not go on
+	ld a,(SND_CARD_A+CARD_MODE)	; Until the 0xE012 channel goes quiet, it does not go on
 	and a
 	ret nz
 	call load_scoreboard
 	di			; Bank 10 at 0xA000: the ending graphics
 	ld a,00ah
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld hl,02418h		; Three thirds of patterns at VRAM 0x2418...
 	ld de,0a0dbh
@@ -875,22 +876,22 @@ explosion_step_1:		; Waits for the channel to go quiet, loads the ending graphic
 	di			; Bank 3 restored
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call turn_off_sprites
 	ld de,04fb2h		; The four-by-four drawing at 0x4FB2
 	call write_characters
 	xor a
-	ld (0e1d2h),a
+	ld (ENDING_TIMER),a
 	ld hl,000c0h		; 0x00C0 in 0xE1D5: the long count
-	ld (0e1d5h),hl
+	ld (SHRAPNEL_LEFT),hl
 	ld a,003h
-	ld (0e1d7h),a
+	ld (SHRAPNEL_DELAY),a
 	ld a,038h		; Sound 0x38
 	call check_if_sound
 	jr next_submode
 turn_off_sprites:		; Sets the 128 bytes at 0xEC80 to 0xE0, which is the Y at which a sprite cannot be seen.
-	ld hl,0ec80h
+	ld hl,SPRITE_BUFFER
 	ld b,080h		; The 128 bytes of the attribute table
 L_4B5A:
 	ld (hl),0e0h
@@ -902,13 +903,13 @@ explosion_step_2:		; Moves the objects until 0xE1D5 reaches zero, and then start
 	call move_shrapnel
 	call animate_shrapnel
 	call upload_shrapnel_to_buffer
-	ld a,(0e1d5h)		; 0xE1D5 goes down elsewhere; until it reaches zero, it does not go on
+	ld a,(SHRAPNEL_LEFT)	; Goes down elsewhere; until it reaches zero, it does not go on
 	or a
 	ret nz
 	ld a,010h		; 0x10 frames per step of the drawing
-	ld (0e1d2h),a
+	ld (ENDING_TIMER),a
 	xor a
-	ld (0e1d9h),a
+	ld (ENDING_DRAWING),a
 	ld a,03bh		; Sound 0x3B
 	call check_if_sound
 	jp next_submode
@@ -916,17 +917,17 @@ explosion_step_3:		; Every 0x10 frames swaps the 4x4 drawing for the next one at
 	call move_shrapnel
 	call animate_shrapnel
 	call upload_shrapnel_to_buffer
-	ld hl,0e1d2h		; 0xE1D2 counts the frames of each drawing
+	ld hl,ENDING_TIMER	; Counts the frames of each drawing
 	dec (hl)
 	jr nz,L_4B9C
 	ld (hl),010h
-	ld hl,0e1d9h		; 0xE1D9 says which drawing it is on
+	ld hl,ENDING_DRAWING	; Says which drawing it is on
 	inc (hl)
 	ld a,(hl)
 	cp 003h			; Three drawings and it is over
 	jr z,L_4BC1
 L_4B9C:
-	ld a,(0e1d9h)
+	ld a,(ENDING_DRAWING)
 	ld de,06340h		; The strip at 0x6340, in bank 1
 	add a,a			; Times sixteen: four by four characters
 	add a,a
@@ -952,9 +953,9 @@ L_4BC1:
 	ld de,04fceh		; And the erasing
 	call write_characters
 	xor a
-	ld (0e1d9h),a
+	ld (ENDING_DRAWING),a
 	ld a,040h		; 0x40 frames of waiting
-	ld (0e1d2h),a
+	ld (ENDING_TIMER),a
 	ld a,044h		; Sound 0x44
 	call check_if_sound
 	jp next_submode
@@ -962,10 +963,10 @@ explosion_step_4:		; Lights up the six cells of the power-up meter one by one, e
 	call move_shrapnel
 	call animate_shrapnel
 	call upload_shrapnel_to_buffer
-	ld hl,0e1d2h		; 0xE1D2 counts the frames of this cell
+	ld hl,ENDING_TIMER	; Counts the frames of this cell
 	dec (hl)
 	jr nz,L_4BFA
-	ld hl,0e1d9h		; 0xE1D9 says which cell it is on
+	ld hl,ENDING_DRAWING	; Says which cell it is on
 	inc (hl)
 	ld a,(hl)
 	cp 006h			; Six cells and it is over
@@ -973,9 +974,9 @@ explosion_step_4:		; Lights up the six cells of the power-up meter one by one, e
 	ld de,04c10h		; 0x4C10 is the speed table, and its first byte falls on top of the code.
 	call add_a_to_de
 	ld a,(de)		; Each cell lasts less: 0x28, 0x28, 0x10, 0x0C, 0x08 and 0x04 frames
-	ld (0e1d2h),a
+	ld (ENDING_TIMER),a
 L_4BFA:
-	ld a,(0e1d9h)
+	ld a,(ENDING_DRAWING)
 draw_meter:		; Takes from 0xE1D9 the lit cell of the power-up meter and writes its drawing with 0x4998.
 	ld hl,04edah		; 0xE1D9 says which cell of the meter is lit.
 	call get_word
@@ -983,7 +984,7 @@ draw_meter:		; Takes from 0xE1D9 the lit cell of the power-up meter and writes i
 finish_meter:		; Turns the sprites off and leaves 0x20 frames for the next step
 	call turn_off_sprites
 	ld a,020h
-	ld (0e1d2h),a
+	ld (ENDING_TIMER),a
 	jp next_submode
 
 ; ----------------------------------------------------------------------
@@ -993,13 +994,13 @@ speeds_4C11:
 	defb 28h,10h,0Ch,08h,04h
 explosion_step_5:		; Waits the frames in 0xE1D2 and then requests screen piece 0
 	call pick_border_colour
-	ld hl,0e1d2h
+	ld hl,ENDING_TIMER
 	dec (hl)
 	ret nz
 	ld b,000h		; Black border
 	call set_border_colour
 	ld a,028h		; And another 0x28 frames
-	ld (0e1d2h),a
+	ld (ENDING_TIMER),a
 	jp next_submode
 
 	end

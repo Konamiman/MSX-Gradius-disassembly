@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - enemy_movers.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public enemy_shoots,erase_background_objects,erase_e800_objects,paint_background_objects,paint_background_or_bank3,paint_e800_objects
 	public release_background_objects,release_background_objects_on_column,run_four_at_e800,run_object,run_ten_at_e500,set_up_shot
 	extrn add_speed,advance_background_script,aim_at_ship,check_falling_pieces_script,clear_rectangle,copy_rectangle
@@ -22,7 +24,7 @@ run_object:		; Called by p00:5FFC once per object: if the slot is alive, it give
 	call mover_step
 	pop ix
 shift_with_scroll:		; On steps with a new column, the object moves eight points to the left; when it goes off the edge, the slot is freed
-	ld a,(0e100h)		; Only on the steps that bring in a column
+	ld a,(NEW_COLUMN)	; Only on the steps that bring in a column
 	and a
 	ret z
 	ld a,(ix+003h)
@@ -34,11 +36,11 @@ L_6024:
 	ld (ix+000h),000h	; And when it goes off, the slot is freed
 	ret
 mover_step:		; With the screen stopped nothing moves; types 1 and 2 shoot, and from 3 upwards it dispatches by (IX+1)
-	ld a,(0e1c0h)		; 0xE1C0 non-zero: the screen is stopped
+	ld a,(SCROLL_MODE)	; Non-zero: the screen is stopped
 	and a
 	ret nz
 	ld a,(ix+000h)		; The type is noted in 0xE123
-	ld (0e123h),a
+	ld (MOVER_TYPE),a
 	cp 003h			; From type 3 upwards, the other dispatch
 	jr nc,L_6061
 	ld a,(ix+007h)
@@ -68,9 +70,9 @@ L_6061:
 	jr z,next_step
 	dec a
 	jp z,die_when_exhausted
-	ld a,(0e206h)		; The ship's X and Y, which the movers need
+	ld a,(SHIP_COLUMN)	; The ship's X and Y, which the movers need
 	ld b,a
-	ld a,(0e204h)
+	ld a,(SHIP_ROW)
 	ld c,a
 	ld a,(ix+000h)
 	sub 003h		; Minus three: types 3, 4, 5 and 6
@@ -109,7 +111,7 @@ waiting_mover:		; Counts down and, every four frames, releases a type 0x0E shot 
 	jp spawn_object
 end_burst:		; The shots have run out: the wait until the next burst comes from the difficulty
 	dec (ix+001h)
-	ld a,(0e111h)		; 0xE111 times two, subtracted from 0x40: the higher the difficulty, the shorter the wait
+	ld a,(DIFFICULTY)	; Times two, subtracted from 0x40: the higher the difficulty, the shorter the wait
 	add a,a
 	neg
 	add a,040h
@@ -206,7 +208,7 @@ check_if_already_passed:		; Starts as soon as the ship is left behind
 	ret c
 	jr start_burst
 run_four_at_e800:		; The four objects at 0xE800, eight bytes each
-	ld ix,0e800h
+	ld ix,EXPLOSIONS
 	ld b,004h		; Four objects
 L_6170:
 	ld a,(ix+000h)
@@ -237,11 +239,11 @@ erase_e800_objects:		; Walks the four objects at 0xE800 erasing their drawing fr
 paint_e800_objects:		; The same, painting them
 	ld a,0ffh
 L_619B:
-	ld ix,0e800h
+	ld ix,EXPLOSIONS
 	ld b,004h
 	jr walk_e700_objects
 paint_background_objects:		; In stages 3 and 5 it does nothing; in the rest, it paints the objects at 0xE700
-	ld a,(0e061h)		; Stages 3 and 5 have their own mover
+	ld a,(STAGE)		; Stages 3 and 5 have their own mover
 	cp 003h
 	ret z
 	cp 005h
@@ -249,14 +251,14 @@ paint_background_objects:		; In stages 3 and 5 it does nothing; in the rest, it 
 	xor a
 	jr L_61B9
 paint_background_or_bank3:		; Stage 5 is handled by bank 3; the rest paint eight objects if it is stage 3, and two if not
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 005h
 	jp z,paint_stage_5_background	; Stage 5, to bank 3
 	ld a,0ffh
 L_61B9:
 	ex af,af'
-	ld ix,0e700h
-	ld a,(0e061h)
+	ld ix,BG_OBJECTS
+	ld a,(STAGE)
 	cp 003h			; Stage 3 carries eight objects; the rest, two
 	ld b,008h
 	jr z,L_61C9
@@ -264,7 +266,7 @@ L_61B9:
 L_61C9:
 	ex af,af'
 walk_e700_objects:		; 0xEC00 says whether to paint or erase, and then it goes through the B objects
-	ld (0ec00h),a		; 0xEC00 at zero erases, and at 0xFF paints
+	ld (PAINT_FLAG),a	; At zero erases, and at 0xFF paints
 L_61CD:
 	push bc
 	call draw_background_object
@@ -274,11 +276,11 @@ L_61CD:
 	djnz L_61CD
 	ret
 erase_background_objects:		; The same but erasing; stage 5 is also handled by bank 3
-	ld a,(0e061h)		; Stage 5 is handled by bank 3
+	ld a,(STAGE)		; Stage 5 is handled by bank 3
 	cp 005h			; Stage 5 is handled by bank 3
 	jp z,erase_stage_5_background
 	xor a
-	ld (0ec00h),a
+	ld (PAINT_FLAG),a
 	jr paint_rectangle
 draw_background_object:		; Takes the object's rectangle of characters from whichever table applies and paints or erases it
 	ld a,(ix+000h)
@@ -289,7 +291,7 @@ draw_background_object:		; Takes the object's rectangle of characters from which
 	ld hl,0633ah
 	jr z,L_6209
 	ld hl,06370h		; The rest, the one at 0x6370
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 002h			; And in stage 2, from drawing 2 upwards it skips twelve
 	jr nz,L_6209
 	ld a,c
@@ -308,7 +310,7 @@ paint_rectangle:		; Four by four characters at the object's cell: 0x48F7 erases 
 	sub 003h		; Types 3, 4, 5 and 6 carry chunks of several sizes
 	cp 004h
 	jr c,paint_in_chunks
-	ld a,(0ec00h)		; 0xEC00 decides: erase or copy
+	ld a,(PAINT_FLAG)	; Decides: erase or copy
 	and a
 	jp z,clear_rectangle
 	jp copy_rectangle
@@ -338,7 +340,7 @@ L_6246:
 	add a,h
 	ld h,a
 	jr c,paint_wide_chunk
-	ld a,(0ec00h)
+	ld a,(PAINT_FLAG)
 	and a
 	jp z,048f7h
 	call 0490ch
@@ -378,36 +380,36 @@ table_6283:
 	defb 10h,02h,08h,10h,02h,06h,10h,02h
 	defb 06h,90h
 release_background_objects:		; Keeps taking out background objects while the script has rows for this distance
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 005h			; Stage 5 is handled by bank 3
 	jp z,advance_background_script
 	call check_background_script
 	jr z,release_background_objects
 	ret c
-	ld hl,0e109h
+	ld hl,BG_SCRIPT_ROW
 	inc (hl)		; 0xE109 moves on to the next row
 	jr release_background_objects
 release_background_objects_on_column:		; The same, but only on the steps that bring in a new column
-	ld a,(0e100h)		; Only on the steps with a column
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	ret z
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 005h
 	jp z,check_falling_pieces_script
 	ld a,0f8h		; 0xF8 in 0xEC04
-	ld (0ec04h),a
+	ld (ENTRY_X),a
 L_62D3:
 	call check_background_script
 	jr z,L_62D3
 	ret
 check_background_script:		; Checks the script at 0x64FA with the bank 2 routine and, when due, sets up the object in the first free slot at 0xE700
-	ld a,(0e109h)
+	ld a,(BG_SCRIPT_ROW)
 	ld hl,064fah
 	call script_entry	; The bank 2 routine that compares the distance
 	ret nz
-	ld hl,0e109h
+	ld hl,BG_SCRIPT_ROW
 	inc (hl)
-	ld hl,0e700h		; The eight slots at 0xE700
+	ld hl,BG_OBJECTS	; The eight slots
 	ld b,008h
 	ld de,00008h		; Eight bytes per slot
 	xor a
@@ -432,7 +434,7 @@ set_up_background_object:		; Fills the slot: type, counter, X times eight, Y, an
 	add a,a
 	ld (hl),a
 	inc l
-	ld a,(0ec04h)		; The row, from 0xEC04
+	ld a,(ENTRY_X)		; The row
 	ld (hl),a
 	inc l
 	cp 0f8h			; With row 0xF8 it sets 0x18, and otherwise 0xFF
@@ -453,7 +455,7 @@ L_6316:
 	xor a
 	ret
 background_object_type:		; In stage 3 the type comes from another calculation; in the rest, bit 7 chooses between 1 and 2
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 003h			; Stage 3 goes another way
 	jr z,L_6332
 	ld a,001h
@@ -538,7 +540,7 @@ table_64FA:
 	defb 86h,00h,0Eh,1Eh,01h,0Eh,0FFh,0FFh,29h,01h,83h,33h,01h,83h,0FFh,0FFh
 	defb 0FFh,0FFh
 run_ten_at_e500:		; The ten objects at 0xE500: adds their speed to them, checks whether they collide and switches off the ones that go off screen
-	ld ix,0e500h
+	ld ix,ENEMY_SHOTS
 	ld b,00ah		; Ten objects
 L_65E2:
 	ld a,(ix+000h)
@@ -566,27 +568,27 @@ L_660B:
 	djnz L_65E2
 	ret
 enemy_shoots:		; Sets up a shot towards the ship: the speed comes from the difficulty, capped at 0x60
-	ld a,(0e1c0h)		; With the screen stopped there is no shooting
+	ld a,(SCROLL_MODE)	; With the screen stopped there is no shooting
 	and a
 	ret nz
 	ld a,e
 	add a,008h
 	ld e,a
-	ld a,(0e111h)		; The difficulty times two plus 0x50...
+	ld a,(DIFFICULTY)	; The difficulty times two plus 0x50...
 	add a,a
 	add a,050h
 	cp 060h			; ...capped at 0x60
 	jr c,L_6628		; Capped at 0x60
 	ld a,060h
 L_6628:
-	ld (0e110h),a
+	ld (ENEMY_SHOT_SPEED),a
 	push de
 	call aim_at_ship
 	pop de
-	ld a,(0e115h)
+	ld a,(AIM_TOO_CLOSE)
 	and a
 	ret nz
-	ld hl,0e500h		; The ten slots at 0xE500
+	ld hl,ENEMY_SHOTS	; The ten slots
 	ld b,00ah
 L_663A:
 	ld a,(hl)
@@ -598,7 +600,7 @@ L_663A:
 	ret
 set_up_shot:		; Fills the shot's slot with its position and the two speeds that 0x6677 left in 0xEC12 and 0xEC14
 	ld a,001h		; 0xE112 to one: there is a new shot
-	ld (0e112h),a		; 0xE112 to one: there is a new shot
+	ld (NEW_SHOT),a		; To one: there is a new shot
 	ld (hl),a
 	inc l
 	inc l
@@ -612,11 +614,11 @@ set_up_shot:		; Fills the shot's slot with its position and the two speeds that 
 	inc l
 	ld (hl),d
 	inc l
-	ld de,(0ec12h)		; The vertical speed...
+	ld de,(AIM_VSPEED)	; The vertical speed...
 	ld (hl),e
 	inc l
 	ld (hl),d
-	ld de,(0ec14h)		; ...and the horizontal one
+	ld de,(AIM_HSPEED)	; ...and the horizontal one
 	inc l
 	ld (hl),e
 	inc l

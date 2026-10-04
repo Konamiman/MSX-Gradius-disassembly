@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - screens image (banks 9-10) - screen_engine.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public run_screen,set_up_screen
 
 ; ----------------------------------------------------------------------
@@ -14,13 +16,13 @@
 ; that its type gives it.
 ; ----------------------------------------------------------------------
 set_up_screen:		; Clears the work RAM, sets up the three spawners and copies a routine for itself to 0xE710
-	ld hl,0e300h		; 0x800 bytes from 0xE300 onwards, to zero
-	ld de,0e301h
+	ld hl,SCREEN_CRITTERS	; 0x800 bytes, to zero
+	ld de,SCREEN_CRITTERS+1
 	ld bc,00800h
 	ld (hl),000h
 	ldir
 	ld hl,0a881h		; The three spawners, from 0xA881 to 0xE500
-	ld de,0e500h
+	ld de,SCREEN_SPAWNERS
 	ld b,003h		; Three slots
 L_A81E:
 	push bc
@@ -35,14 +37,14 @@ L_A81E:
 	pop bc
 	djnz L_A81E
 	ld a,010h		; 0xE700, 0xE702 and 0xE704: where each one starts
-	ld (0e700h),a
+	ld (CHAR_ANIM+1),a
 	ld a,018h
-	ld (0e702h),a
+	ld (CHAR_ANIM+3),a
 	ld a,020h
-	ld (0e704h),a
+	ld (CHAR_ANIM+5),a
 	ld bc,00038h		; And 0x38 bytes of routine, copied to 0xE710 to run them from RAM
 	ld hl,0a849h
-	ld de,0e710h
+	ld de,CHANGING_CELLS
 	ldir
 	ret
 
@@ -68,7 +70,7 @@ run_screen:		; A whole frame: moves the critters, lets the spawners release more
 	call build_sprite_entries
 	ret
 move_the_eight:		; The eight eight-byte slots at 0xE300, one by one
-	ld ix,0e300h
+	ld ix,SCREEN_CRITTERS
 	ld b,008h		; Eight slots
 L_A89D:
 	push bc
@@ -121,7 +123,7 @@ L_A8E4:
 displacements:
 	defb 0F8h,0FCh,0F8h,0F8h,0FCh,0F8h,04h,0F8h,08h,0F8h,08h,0FCh,08h,04h,08h,08h,04h,08h,0FCh,08h,0F8h,08h,0F8h,04h
 run_spawners:		; The three spawners at 0xE500 release a critter every eight frames
-	ld ix,0e500h
+	ld ix,SCREEN_SPAWNERS
 	ld b,003h		; Three spawners
 L_A911:
 	push bc
@@ -153,7 +155,7 @@ L_A93A:
 	ld d,000h
 	add hl,de
 	ld c,(hl)
-	ld hl,0e300h		; The eight slots at 0xE300
+	ld hl,SCREEN_CRITTERS	; The eight slots
 	ld b,008h
 	xor a
 L_A94C:
@@ -219,8 +221,8 @@ table_A9B9:
 	defb 07h,0Bh,07h,07h,07h,0Fh,0Bh,0Fh,0Fh
 build_sprite_entries:		; For each of the eight critters, four sprite entries in the buffer at 0xEC80
 	ld b,008h		; Eight critters
-	ld ix,0e300h
-	ld hl,0ec80h		; 0xEC80: the sprite attribute buffer
+	ld ix,SCREEN_CRITTERS
+	ld hl,SPRITE_BUFFER	; The sprite attribute buffer
 L_A9CB:
 	push bc
 	ld a,(ix+000h)		; Empty or full, each critter takes up its four entries

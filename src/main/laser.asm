@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - laser.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public restore_underneath,save_under_laser,write_laser
 
 ; ----------------------------------------------------------------------
@@ -13,7 +15,7 @@
 ; as it goes by.
 ; ----------------------------------------------------------------------
 save_under_laser:		; Walks the six slots and, for the laser, notes where it starts and how many cells it covers
-	ld hl,0e260h
+	ld hl,SHOTS
 	exx
 	ld b,006h		; Six slots
 L_A233:
@@ -71,7 +73,7 @@ shot_cell:		; From the shot's position comes its cell in the map
 	ex de,hl
 	ret
 write_laser:		; Writes the shot's character into the map, and for the laser its whole strip
-	ld hl,0e260h
+	ld hl,SHOTS
 	exx
 	ld b,006h		; Six slots
 L_A285:
@@ -124,7 +126,7 @@ L_A2C1:
 L_A2C5:
 	jr L_A28F
 restore_underneath:		; Erases the shot from the map by putting back the character it had saved, and for the laser its whole strip
-	ld hl,0e260h
+	ld hl,SHOTS
 	exx
 	ld b,006h		; Six slots
 L_A2CD:

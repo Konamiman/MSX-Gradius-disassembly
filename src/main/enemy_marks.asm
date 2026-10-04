@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - enemy_marks.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public mark_next_or_not,release_bottom_four,release_flock,release_left_ones,release_mixed_eight
 
 ; ----------------------------------------------------------------------
@@ -14,7 +16,7 @@
 ; is 2 instead of 1.
 ; ----------------------------------------------------------------------
 mark_next_or_not:		; A counter going round the table at 0xA5C7: three enemies out of four come out unmarked
-	ld hl,0e125h		; 0xE125: how many enemies have been requested
+	ld hl,MARK_COUNTER	; How many enemies have been requested
 	ld a,(hl)
 	and 00fh		; The four low bits: sixteen entries
 	inc (hl)		; And one more for the next one
@@ -31,7 +33,7 @@ table_A5C7:
 	defb 00h,00h,00h,02h
 	defb 00h,00h,00h,01h
 release_flock:		; Eight type 9 enemies, one every seven frames: the first four along the bottom and the last four along the top
-	ld hl,0e962h		; 0xE962: how many are left of the flock
+	ld hl,FLOCK_COUNT	; How many are left of the flock
 	ld a,(hl)
 	and a
 	jp z,wait_for_flock
@@ -69,14 +71,14 @@ L_A608:
 	ld (hl),008h		; Eight per flock
 	ret
 release_left_ones:		; Eight type 5 enemies that come in through the LEFT edge, taking turns between row 8 and 0x90
-	ld hl,0e966h		; 0xE966: how many are left
+	ld hl,LEFT_ONES_COUNT	; How many are left
 	ld a,(hl)
 	and a
 	jp z,set_up_left_ones
 	inc l			; 0xE967: the frames until the next one
 	dec (hl)
 	ret nz
-	ld a,(0e111h)		; The difficulty times four, subtracted from 0x70: the wait
+	ld a,(DIFFICULTY)	; The difficulty times four, subtracted from 0x70: the wait
 	add a,a
 	add a,a
 	sub 070h
@@ -108,14 +110,14 @@ set_up_left_ones:		; Another eight, and the first one on the next frame
 table_A640:
 	defb 08h,90h,08h,08h,90h,08h,90h,90h
 release_bottom_four:		; Four type 6 enemies along row 0x8F: the first three from the right and the last one from the left
-	ld hl,0e96ah		; 0xE96A: how many are left of the four
+	ld hl,BOTTOM_FOUR_COUNT	; How many are left of the four
 	ld a,(hl)
 	and a
 	jp z,set_up_bottom_four
 	inc l			; 0xE96B: the frames until the next one
 	dec (hl)
 	ret nz
-	ld a,(0e111h)		; The difficulty times four, subtracted from 0x60: the wait
+	ld a,(DIFFICULTY)	; The difficulty times four, subtracted from 0x60: the wait
 	add a,a
 	add a,a
 	sub 060h
@@ -139,14 +141,14 @@ set_up_bottom_four:		; Another four, and the first one on the next frame
 	ld (hl),001h
 	ret
 release_mixed_eight:		; Eight enemies: the first four of type 5 on the side opposite the ship, and the last four of type 6 alternating sides
-	ld hl,0e96ah		; 0xE96A: the same count as 0xA648
+	ld hl,BOTTOM_FOUR_COUNT	; The same count as 0xA648
 	ld a,(hl)
 	and a
 	jp z,set_up_mixed_eight
 	inc l
 	dec (hl)
 	ret nz
-	ld a,(0e111h)		; The difficulty times four, subtracted from 0x50
+	ld a,(DIFFICULTY)	; The difficulty times four, subtracted from 0x50
 	add a,a
 	add a,a
 	sub 050h
@@ -167,7 +169,7 @@ L_A69D:
 	ld a,006h
 	jp 06a72h
 enter_opposite_side:		; Looks at which half the ship is in and releases the enemy through the other one
-	ld a,(0e204h)		; 0xE204: the ship's row
+	ld a,(SHIP_ROW)		; The ship's row
 	cp 058h			; Above the middle of the screen...
 	ld e,090h
 	jr c,L_A6B1

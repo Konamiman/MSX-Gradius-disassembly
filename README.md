@@ -23,14 +23,14 @@ sure the sources do not *lie* about what they assemble.
 | identified data | 105,598 bytes |
 | unexplained | 0 bytes |
 | modules | 72 |
-| source lines | 23,203 |
+| source lines | 23,297 |
 | named routines | 910 |
-| line comments | 2,984 |
+| line comments | 2,981 |
 | explained data ranges | 232 |
 
-**23.0% of the instructions carry a line comment** — 2,983 of 12,959 across
-the three images that hold code — and only **4 routines of the 1,535 are below
-10%**, all of them short loops around a BIOS call. `make density` prints it
+**23.0% of the instructions carry a line comment** — 2,980 of 12,959 across
+the three images that hold code — and only **5 routines of the 1,535 are below
+10%**, four of them short loops around a BIOS call. `make density` prints it
 image by image, and `tests/test_sources.py` keeps a per-bank ceiling of how many
 called routines still lack a name, so the number can only go down.
 
@@ -142,7 +142,7 @@ symbols that main needs.
 
 ```
 src/<image>/*.asm   the modules, one directory per image
-src/inc/            the BIOS entry points and the sound player's RAM
+src/inc/            the BIOS entry points and the game's RAM variables
 src/seeds.txt       the entry points the tracer cannot find on its own
 tools/              the tracer, the checks and the website generators
 build/              everything make produces (not in the repository)

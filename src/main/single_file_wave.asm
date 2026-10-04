@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - single_file_wave.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public run_wave
 
 ; ----------------------------------------------------------------------
@@ -14,7 +16,7 @@
 ; types, one in each half, and they alternate from wave to wave.
 ; ----------------------------------------------------------------------
 run_wave:		; The three steps of the wave: not started, waiting for room, and releasing an enemy every few frames
-	ld hl,0e160h		; 0xE160: which step the wave is on
+	ld hl,FILE_WAVE_STEP	; Which step the wave is on
 	ld a,(hl)
 	and a
 	jr z,set_up_wave
@@ -23,7 +25,7 @@ run_wave:		; The three steps of the wave: not started, waiting for room, and rel
 	inc l			; 0xE161: the frames until the next one
 	dec (hl)
 	ret nz
-	ld a,(0e163h)		; 0xE163, the type, says how often they come out
+	ld a,(FILE_WAVE_TYPE)	; The type says how often they come out
 	ld b,004h
 	cp 002h			; Type 2 goes every four
 	jr z,L_A4E1
@@ -31,7 +33,7 @@ run_wave:		; The three steps of the wave: not started, waiting for room, and rel
 	cp 00ch			; And 0x0C, every sixteen
 	jr z,L_A4E1
 	ld b,004h
-	ld a,(0e162h)		; The rest go in pairs: four and one, four and one
+	ld a,(FILE_WAVE_LEFT)	; The rest go in pairs: four and one, four and one
 	bit 0,a
 	jr nz,L_A4E1
 	ld b,001h
@@ -44,34 +46,34 @@ L_A4E1:
 	dec l
 	ld (hl),000h		; And with the last one out, the wave is over
 L_A4EA:
-	ld a,(0e165h)		; 0xE165: the height at which the whole wave comes in
+	ld a,(FILE_WAVE_HEIGHT)	; The height at which the whole wave comes in
 	ld e,a
 	ld d,0f0h		; X 0xF0: through the right edge
-	ld a,(0e163h)
+	ld a,(FILE_WAVE_TYPE)
 	ld c,000h
 	call 06a72h
-	ld a,(0e124h)		; 0xE124 stays at zero if there was no free slot
+	ld a,(SPAWNED_TYPE)	; Stays at zero if there was no free slot
 	and a
 	ret nz
-	ld hl,0e162h		; No room: the enemy goes back into the count...
+	ld hl,FILE_WAVE_LEFT	; No room: the enemy goes back into the count...
 	inc (hl)
 	dec l
 	dec l
 	ld (hl),001h		; ...and the wave goes back to step 1
 	ret
 wait_for_room:		; With seven live objects or fewer, the wave starts
-	ld a,(0e126h)
+	ld a,(LIVE_OBJECTS)
 	cp 007h
 	ret nc
 	inc (hl)
 	ret
 set_up_wave:		; Every eight steps of the stage sets up a new wave, with its type, its height and its group card
-	ld a,(0e100h)		; Only on the steps that put in a column
+	ld a,(NEW_COLUMN)	; Only on the steps that put in a column
 	and a
 	ret z
-	ld hl,(0e063h)		; The distance travelled
+	ld hl,(DISTANCE)	; The distance travelled
 	ld de,00080h		; Waves only come out before step 0x80...
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 008h
 	jr nz,L_A522
 	ld e,040h		; ...and in the eighth stage, before 0x40
@@ -82,8 +84,8 @@ L_A522:
 	and 007h
 	ret nz
 	ld hl,00101h		; 0xE160 to one and 0xE161 to one: the wave starts
-	ld (0e160h),hl
-	ld a,(0e061h)		; The stage indexes the list at 0xA5AF
+	ld (FILE_WAVE_STEP),hl
+	ld a,(STAGE)		; The stage indexes the list at 0xA5AF
 	ld hl,0A5AFh
 	add a,l
 	ld l,a
@@ -91,7 +93,7 @@ L_A522:
 	inc h
 L_A539:
 	ld c,(hl)
-	ld hl,0e166h		; 0xE166 goes up by one per wave, skipping zero
+	ld hl,FILE_WAVE_NUMBER	; Goes up by one per wave, skipping zero
 	ld a,(hl)
 	inc a
 	jr nz,L_A542
@@ -108,29 +110,29 @@ L_A542:
 	rrca
 L_A54C:
 	and 00fh		; The type of this wave, to 0xE163
-	ld (0e163h),a
+	ld (FILE_WAVE_TYPE),a
 	ld c,a
 	ld a,(hl)		; The two low bits: 0xE164 to zero or to one
 	and 003h
 	jr z,L_A559
 	ld a,001h
 L_A559:
-	ld (0e164h),a
+	ld (FILE_WAVE_ALT),a
 	call wave_height	; The height at which they come in
-	ld (0e165h),a
+	ld (FILE_WAVE_HEIGHT),a
 	ld a,006h		; Six enemies per wave
-	ld (0e162h),a
+	ld (FILE_WAVE_LEFT),a
 	xor a			; A free group card is looked for at 0xE900
 	call 05ebah
 	jr nc,note_group
 	xor a			; No free card, no wave
-	ld (0e160h),a
+	ld (FILE_WAVE_STEP),a
 	ret
 note_group:		; The card at 0xE900 keeps the wave number and, twice, the six it brings
-	ld a,(0e166h)		; The wave number, in the group card
+	ld a,(FILE_WAVE_NUMBER)	; The wave number, in the group card
 	ld (hl),a
 	inc l
-	ld a,(0e162h)		; And the six it brings, twice
+	ld a,(FILE_WAVE_LEFT)	; And the six it brings, twice
 	ld (hl),a
 	inc l
 	ld (hl),a

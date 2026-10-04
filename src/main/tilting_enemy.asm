@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - tilting_enemy.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public finish_type_2,move_type_4
 
 ; ----------------------------------------------------------------------
@@ -15,7 +17,7 @@
 ; ----------------------------------------------------------------------
 move_type_4:		; Gets level with the ship and tilts towards where it is going
 	call 09235h
-	ld a,(0e204h)		; The ship's row minus its own
+	ld a,(SHIP_ROW)		; The ship's row minus its own
 	sub (ix+004h)
 	push af
 	add a,003h
@@ -34,7 +36,7 @@ L_A880:
 	jr L_A89E
 L_A88A:
 	pop af
-	ld a,(0e206h)		; Already on its row: the column is checked
+	ld a,(SHIP_COLUMN)	; Already on its row: the column is checked
 	sub (ix+006h)
 	ld de,0fd00h		; With the ship ahead, three points to the left
 	jr c,L_A899

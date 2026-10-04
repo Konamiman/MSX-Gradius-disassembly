@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - power_up_meter.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public note_upgrades_held,take_upgrade
 	extrn raise_difficulty
 
@@ -15,7 +17,7 @@
 ; there yet.
 ; ----------------------------------------------------------------------
 note_upgrades_held:		; Leaves in 0xE131 to 0xE136 which upgrades the ship already has, to paint the meter
-	ld hl,0e200h
+	ld hl,SHIP
 	xor a
 	ld b,a
 	ld c,a
@@ -24,7 +26,7 @@ note_upgrades_held:		; Leaves in 0xE131 to 0xE136 which upgrades the ship alread
 	or a
 	ret z
 	dec a
-	ld (0e136h),a		; 0xE136: the shield
+	ld (METER_HELD+5),a	; The shield
 	inc l
 	inc l
 	ld a,(hl)
@@ -33,7 +35,7 @@ note_upgrades_held:		; Leaves in 0xE131 to 0xE136 which upgrades the ship alread
 	inc b
 L_A038:
 	ld a,b
-	ld (0e131h),a		; 0xE131: the speed
+	ld (METER_HELD),a	; The speed
 	ld a,009h
 	add a,l
 	ld l,a
@@ -43,11 +45,11 @@ L_A038:
 	inc c
 L_A046:
 	ld a,c
-	ld (0e135h),a		; 0xE135: the missile
+	ld (METER_HELD+4),a	; The missile
 	inc l
 	inc l
 	ld a,(hl)
-	ld (0e133h),a		; 0xE133: the double shot
+	ld (METER_HELD+2),a	; The double shot
 	inc l
 	ld a,(hl)
 	cp 002h			; Byte 13 at two or more: it already has the laser
@@ -55,7 +57,7 @@ L_A046:
 	inc d
 L_A057:
 	ld a,d
-	ld (0e134h),a		; 0xE134: the laser
+	ld (METER_HELD+3),a	; The laser
 	inc l
 	ld a,(hl)
 	cp 002h			; And byte 14: the options
@@ -63,27 +65,27 @@ L_A057:
 	jr c,L_A064
 	inc a
 L_A064:
-	ld (0e132h),a
+	ld (METER_HELD+1),a
 	ret
 take_upgrade:		; With the button, if the selected slot of the meter is not already taken, the ship gets it and sound 0x14 plays
-	ld a,(0e200h)
+	ld a,(SHIP)
 	dec a
 	ret m
-	ld a,(0e008h)		; Bit 5 of what was just pressed: the other button
+	ld a,(CONTROLLER_NEW)	; Bit 5 of what was just pressed: the other button
 	and 020h
 	ret z
-	ld a,(0e130h)		; 0xE130: the selected slot
+	ld a,(METER_SLOT)	; The selected slot
 	or a
 	ret z
 	ld c,a
 	ld b,000h
-	ld hl,0e130h
+	ld hl,METER_SLOT
 	add hl,bc
 	ld a,(hl)		; If that upgrade is already there, nothing is done
 	and a
 	ret nz
 	xor a
-	ld (0e130h),a		; The meter goes back to zero
+	ld (METER_SLOT),a	; The meter goes back to zero
 	ld hl,0a153h
 	push hl
 	ld a,014h		; Sound 0x14
@@ -103,16 +105,16 @@ dispatcher_table_A091:
 	defw upgrade_option	; 4
 	defw upgrade_shield	; 5
 upgrade_speed:		; One more notch of speed
-	ld hl,0e202h
+	ld hl,SHIP_SPEED
 	inc (hl)
 	ret
 upgrade_missile:		; Raises the missile and raises the difficulty
-	ld hl,0e20fh
+	ld hl,SHIP_MISSILE
 	inc (hl)
 	jp 070cah
 upgrade_double:		; Sets the double shot and removes the laser
 	xor a			; 0xE20E to zero: no more laser
-	ld hl,0e20eh
+	ld hl,SHIP_LASER
 	ld (hl),a
 	inc a
 	dec l
@@ -122,7 +124,7 @@ upgrade_double:		; Sets the double shot and removes the laser
 	ret
 upgrade_laser:		; Sets the laser and removes the double
 	xor a			; 0xE20C and 0xE20D to zero: no more double
-	ld hl,0e20ch
+	ld hl,SHIP_SHOT
 	ld (hl),a
 	inc l
 	ld (hl),a
@@ -130,12 +132,12 @@ upgrade_laser:		; Sets the laser and removes the double
 	inc (hl)		; And 0xE20E up: the laser is on
 	ret
 upgrade_option:		; One more option and the difficulty goes up
-	ld hl,0e20bh
+	ld hl,OPTION_COUNT
 	inc (hl)
 	call 09bfbh
 	jp 070cah
 upgrade_shield:		; 0xE200 to 3 and 0xE201 to 0x0A: the shield is on
-	ld hl,0e200h		; 0xE200 to three and 0xE201 to 0x0A
+	ld hl,SHIP		; To three and 0xE201 to 0x0A
 	ld (hl),003h
 	inc l
 	ld (hl),00ah

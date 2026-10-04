@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - spiral_enemy.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public release_big_ones_flock,start_big_ones_flock,turn_one_way
 
 ; ----------------------------------------------------------------------
@@ -93,35 +95,35 @@ table_BB31:
 	defb 00h,04h,0C0h,0FFh
 start_big_ones_flock:		; Another timer like the one at 0xB946, with the cadence at 0x28 minus twice the difficulty
 	ld a,001h		; 0xE990 to one: the flock is under way
-	ld (0e990h),a
-	ld a,(0e111h)		; 0xE111 plus 0x14, times 0x1E: how long it lasts
+	ld (BIGFLOCK_ON),a
+	ld a,(DIFFICULTY)	; Plus 0x14, times 0x1E: how long it lasts
 	add a,014h
 	ld h,a
 	ld e,01eh
 	call 06743h
-	ld (0e991h),hl
-	ld a,(0e111h)		; And 0x28 minus twice the difficulty, between one and the next
+	ld (BIGFLOCK_TIMER),hl
+	ld a,(DIFFICULTY)	; And 0x28 minus twice the difficulty, between one and the next
 	add a,a
 	sub 028h
 	neg
 	ld h,a
 	ld l,a
-	ld (0e993h),hl
+	ld (BIGFLOCK_RELOAD),hl
 	ret
 release_big_ones_flock:		; While the timer lasts, a type 0x1E every few frames, taking turns among the four doors at 0xBBE9
-	ld a,(0e1c0h)		; With the screen stopped, no
+	ld a,(SCROLL_MODE)	; With the screen stopped, no
 	and a
 	ret nz
-	ld a,(0e990h)		; 0xE990: only with the flock under way
+	ld a,(BIGFLOCK_ON)	; Only with the flock under way
 	or a
 	ret z
-	ld hl,(0e991h)		; One frame less
+	ld hl,(BIGFLOCK_TIMER)	; One frame less
 	dec hl
-	ld (0e991h),hl
+	ld (BIGFLOCK_TIMER),hl
 	ld a,l
 	or h
 	jp z,07d64h		; Once the timer has run out, the stage carries on
-	ld hl,0e994h		; 0xE994: the frames until the next one
+	ld hl,BIGFLOCK_COUNTDOWN	; The frames until the next one
 	dec (hl)
 	ret nz
 	dec l

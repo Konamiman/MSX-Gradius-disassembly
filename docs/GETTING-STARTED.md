@@ -49,8 +49,8 @@ header explains every block of data.
 
 `make sanity` checks the code and prints the budget: **25,474 bytes of traced
 code** and **105,598 bytes of data**, 0 unexplained, 131,072 in total. `make
-density` prints the comment density per image: 12,959 instructions, 2,983 line
-comments, **23.0%**, and 4 routines below 10% out of 1,535.
+density` prints the comment density per image: 12,959 instructions, 2,980 line
+comments, **23.0%**, and 5 routines below 10% out of 1,535.
 
 Every figure on this site comes from those two commands, not from an estimate.
 

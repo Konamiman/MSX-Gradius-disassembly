@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - walking_enemy.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public how_far_it_walks,move_type_5
 
 ; ----------------------------------------------------------------------
@@ -47,7 +49,7 @@ type_5_planted:		; Holds out for the 0x5A frames and then sets off walking towar
 L_AA44:
 	dec (ix+001h)		; Back to the walking step
 	call how_far_it_walks
-	ld a,(0e206h)		; 0xE206: the ship's column
+	ld a,(SHIP_COLUMN)	; The ship's column
 	cp (ix+006h)
 	ld de,00200h		; Two points towards that side
 	jr nc,L_AA58
@@ -63,7 +65,7 @@ fit_fully:		; 0xE969 to one: the terrain is searched until it fits within the sa
 one_step_per_frame:		; 0xE969 to zero: only one step of eight points per frame
 	xor a
 L_AA65:
-	ld (0e969h),a
+	ld (WALKER_FIT_FULLY),a
 	bit 0,(ix+013h)		; Bit 0 of byte 19: if it came in at the top it walks on the ground, and otherwise on the ceiling
 	jr z,find_ceiling
 find_floor:		; Checks the map 0x10 below: with no wall it goes down eight, and with wall it goes up until it fits
@@ -83,7 +85,7 @@ climb_until_fit:		; With wall eight points lower, it goes up eight
 	ld a,(ix+004h)
 	sub 008h		; Eight points higher
 	ld (ix+004h),a
-	ld a,(0e969h)		; With 0xE969 at zero, only one step per frame
+	ld a,(WALKER_FIT_FULLY)	; At zero, only one step per frame
 	or a
 	ret z
 	jr climb_until_fit
@@ -93,7 +95,7 @@ descend_to_floor:		; With nothing below, goes down eight at a time as far as row
 	ret nc
 	add a,008h
 	ld (ix+004h),a
-	ld a,(0e969h)
+	ld a,(WALKER_FIT_FULLY)
 	or a
 	ret z
 	jr find_floor
@@ -105,7 +107,7 @@ find_ceiling:		; The same dance, but the other way round: it sticks to the top
 	ld a,(ix+004h)
 	add a,008h		; With no ceiling where it is, it goes down eight
 	ld (ix+004h),a
-	ld a,(0e969h)
+	ld a,(WALKER_FIT_FULLY)
 	or a
 	ret z
 	jr find_ceiling
@@ -122,7 +124,7 @@ climb_to_ceiling:		; As long as there is room eight higher, it goes up, and neve
 	ld a,(ix+004h)
 	sub 008h		; Eight points higher
 	ld (ix+004h),a
-	ld a,(0e969h)
+	ld a,(WALKER_FIT_FULLY)
 	or a
 	ret z
 	jr climb_to_ceiling
@@ -133,7 +135,7 @@ how_far_it_walks:		; Between 0x2D and 0x4C frames walking, drawn by lot with the
 	ld (ix+002h),a
 	ret
 when_to_fire_again:		; 0x3C frames minus twice the difficulty
-	ld a,(0e111h)		; The difficulty times two...
+	ld a,(DIFFICULTY)	; The difficulty times two...
 	add a,a
 	sub 03ch		; ...subtracted from 0x3C
 	neg
@@ -146,19 +148,19 @@ fire_if_ship_in_arc:		; When the wait runs out it measures the angle to the ship
 	call face_ship		; And the drawing, towards wherever the ship is
 	bit 0,(ix+013h)		; Bit 0 of byte 19: if it walks on the ground...
 	jr z,L_AB15
-	ld a,(0e204h)		; ...the ship has to be above it
+	ld a,(SHIP_ROW)		; ...the ship has to be above it
 	cp (ix+004h)
 	ret nc
 	jr L_AB1C
 L_AB15:
-	ld a,(0e204h)		; And if it walks on the ceiling, below it
+	ld a,(SHIP_ROW)		; And if it walks on the ceiling, below it
 	cp (ix+004h)
 	ret c
 L_AB1C:
 	ld e,(ix+004h)
 	ld d,(ix+006h)
 	call 066d5h		; From that comes the angle to the ship, in 0xEC18
-	ld a,(0ec18h)
+	ld a,(SHIP_ANGLE)
 	cp 080h			; Folded to half a turn...
 	jr c,L_AB2E
 	neg
@@ -195,7 +197,7 @@ face_ship:		; The drawing changes depending on which side of it the ship is
 	bit 0,(ix+013h)		; Bit 0 of byte 19: ground or ceiling
 	jr z,L_AB76
 	ld b,0f0h		; Walking on the ground, 0xF0...
-	ld a,(0e206h)
+	ld a,(SHIP_COLUMN)
 	cp (ix+006h)
 	jr nc,L_AB72
 	ld b,0e4h		; ...or 0xE4 if the ship is ahead
@@ -204,7 +206,7 @@ L_AB72:
 	ret
 L_AB76:
 	ld b,0fch		; And on the ceiling, 0xFC...
-	ld a,(0e206h)
+	ld a,(SHIP_COLUMN)
 	cp (ix+006h)
 	jr nc,L_AB82
 	ld b,0d8h		; ...or 0xD8

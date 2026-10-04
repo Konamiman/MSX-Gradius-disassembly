@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - demo.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public add_speed,release_what_is_due,run_background_objects,run_demo,run_twelve_objects,start_demo
 	public turn_off_object
 	extrn add_a_to_hl,aim_cannon,check_map_collision_2,check_pause_key,dispatcher,get_word
@@ -24,13 +26,13 @@
 ; ----------------------------------------------------------------------
 start_demo:		; Picks the stage that is due (0xE006 wraps at eight), sets it up with all the power-ups and leaves it ready to play itself
 	xor a
-	ld (0e009h),a
-	ld (0e007h),a
+	ld (CONTROLLER),a
+	ld (VAR_E007),a
 	inc a
-	ld (0e05fh),a		; 0xE05F to one: the flag that says a demo is running
-	ld hl,0e006h		; 0xE006 holds which stage the demo is on
+	ld (IN_PLAY),a		; To one: the flag that says a demo is running
+	ld hl,DEMO_STAGE	; Holds which stage the demo is on
 	ld a,(hl)
-	ld (0e061h),a
+	ld (STAGE),a
 	inc a
 	cp 009h			; Eight stages and back to the first
 	jr c,L_5CA1
@@ -38,30 +40,30 @@ start_demo:		; Picks the stage that is due (0xE006 wraps at eight), sets it up w
 L_5CA1:
 	ld (hl),a
 	ld hl,00020h		; 0x20 of distance covered
-	ld (0e063h),hl
+	ld (DISTANCE),hl
 	ld hl,00001h		; 0xE00B to one: the first step of the recording goes in straight away
-	ld (0e00bh),hl
+	ld (DEMO_FRAMES),hl
 	xor a
-	ld (0e00dh),a
-	ld (0e06ah),a
+	ld (DEMO_STEP),a
+	ld (LOOP_NUMBER),a
 	call set_up_due_stage
 	call 0a0d8h		; And all the power-ups at once, like the HYPER cheat
 	jp write_captions
 run_demo:		; While it lasts, takes the joystick value from the recording and passes it to the game as if someone had pressed it
-	ld a,(0e064h)		; With 0xE064 set, the demo is cut short
+	ld a,(DISTANCE+1)	; With 0xE064 set, the demo is cut short
 	and a
 	jr z,L_5CC9
 	xor a
-	ld (0e05fh),a
+	ld (IN_PLAY),a
 	ret
 L_5CC9:
-	ld hl,0e00bh		; 0xE00B: the frames left in this step
+	ld hl,DEMO_FRAMES	; The frames left in this step
 	dec (hl)
 	jr z,next_recording_step
 feed_recorded_controller:		; The recorded value goes to 0xE009, with bit 4 (fire) always set
-	ld a,(0e00ch)
+	ld a,(DEMO_INPUT)
 	or 010h			; Bit 4: in the demo it fires non-stop
-	ld (0e009h),a
+	ld (CONTROLLER),a
 	jp check_pause_key
 next_recording_step:		; Maps banks 11 and 12, takes the next pair from the stage's list and leaves it in 0xE00B and 0xE00C
 	inc hl
@@ -71,14 +73,14 @@ next_recording_step:		; Maps banks 11 and 12, takes the next pair from the stage
 	di			; Banks 11 and 12: the recordings are there
 	ld a,00bh
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ch
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
-	ld a,(0e061h)
+	ld a,(STAGE)
 	ld hl,05D1Dh		; The table at 0x5D1D, indexed by the stage
 	call get_word
 	ld l,c
@@ -86,19 +88,19 @@ next_recording_step:		; Maps banks 11 and 12, takes the next pair from the stage
 	add hl,hl		; Times two: each step is two bytes
 	add hl,de
 	ld a,(hl)		; The first, the frames it lasts
-	ld (0e00bh),a
+	ld (DEMO_FRAMES),a
 	inc hl
 	ld a,(hl)		; And the second, what the joystick reads
-	ld (0e00ch),a
+	ld (DEMO_INPUT),a
 	di			; 2 and 3 restored
 	ld a,002h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 L_5D1D:
 	jr feed_recorded_controller
@@ -118,14 +120,14 @@ ends_per_stage_5D1F:
 	defw 2721h,34E1h
 	defw 0EE18h
 release_what_is_due:		; From the ninth stage onwards, and only on the steps with a new column, releases whatever the script says until it runs out
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 009h			; Below the ninth, no
 	ret c
-	ld a,(0e100h)		; And only on the steps that bring in a column
+	ld a,(NEW_COLUMN)	; And only on the steps that bring in a column
 	and a
 	ret z
 	ld a,0f8h		; 0xF8 in 0xEC04
-	ld (0ec04h),a
+	ld (ENTRY_X),a
 L_5D51:
 	call release_one
 	jr z,L_5D51
@@ -133,12 +135,12 @@ L_5D51:
 release_one:		; Checks whether something is due to be released here; if so, takes the position and the type from the script and calls the engine in bank 1
 	call check_stage_script
 	ret nz
-	ld hl,0e127h		; 0xE127 moves on to the next row of the script
+	ld hl,STAGE_SCRIPT_ROW	; Moves on to the next row of the script
 	inc (hl)
 	ld a,c
 	and 0f8h		; The five high bits: the Y
 	ld e,a
-	ld a,(0ec04h)
+	ld a,(ENTRY_X)
 	ld d,a
 	ld a,c
 	and 003h
@@ -160,18 +162,18 @@ check_stage_script:		; With banks 11 and 12, looks in the stage script for the r
 	di
 	ld a,00bh		; Banks 11 and 12: the scripts are there
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ch
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld hl,0b2d2h		; The table at 0xB2D2, indexed by the stage
-	ld a,(0e061h)
+	ld a,(STAGE)
 	call get_word
 	push de
-	ld a,(0e127h)		; 0xE127: which row of the script it is on
+	ld a,(STAGE_SCRIPT_ROW)	; Which row of the script it is on
 	ld h,a
 	ld e,003h		; Three bytes per row
 	call 06743h
@@ -185,18 +187,18 @@ check_stage_script:		; With banks 11 and 12, looks in the stage script for the r
 	di			; 2 and 3 restored
 	ld a,002h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
-	ld hl,(0e063h)		; DCOMPR: the distance covered against the row's
+	ld hl,(DISTANCE)	; DCOMPR: the distance covered against the row's
 	rst 20h
 	ret
 run_twelve_objects:		; The twelve objects at 0xE300, 0x20 bytes apart: each one gets its mover routine and then 0x5F66
-	ld ix,0e300h
+	ld ix,OBJECTS
 	ld b,00ch		; Twelve objects
 L_5DCE:
 	push bc
@@ -209,7 +211,7 @@ L_5DCE:
 	ret
 dispatch_object_mover:		; The first byte says what the object is; with the screen stopped (0xE1C0) there are three cases, and otherwise the table of thirty-one
 	ld c,(ix+000h)
-	ld a,(0e1c0h)		; 0xE1C0 non-zero: the screen is stopped
+	ld a,(SCROLL_MODE)	; Non-zero: the screen is stopped
 	and a
 	jp z,L_5DF6
 	ld a,c
@@ -328,7 +330,7 @@ L_5E95:
 	ld (ix+006h),a
 	jp 09251h
 find_group:		; Walks the four three-byte entries at 0xE900 looking for group A; exits with carry if it is not there
-	ld hl,0e900h
+	ld hl,GROUPS
 	ld b,004h		; Four groups
 L_5EBF:
 	cp (hl)
@@ -359,7 +361,7 @@ animate_four_characters:		; The first sixteen frames, a character from 0x5EE3 ev
 characters_of_5ED6:
 	defb 0F0h,0F4h,0F8h,0FCh
 move_hatch_enemy:		; Every four frames changes drawing, moves with the screen and, when the ship crosses its row, turns
-	ld a,(0e003h)
+	ld a,(FRAME_COUNT)
 	and 003h		; One frame in four
 	jr nz,L_5F00
 	inc (ix+002h)
@@ -373,14 +375,14 @@ L_5F00:
 	ld a,(ix+001h)
 	and a
 	ret nz
-	ld a,(0e100h)		; On the steps with a new column, it moves eight points to the left
+	ld a,(NEW_COLUMN)	; On the steps with a new column, it moves eight points to the left
 	and a
 	jr z,L_5F13
 	ld a,(ix+006h)
 	sub 008h
 	ld (ix+006h),a
 L_5F13:
-	ld a,(0e204h)		; 0xE204 is the ship's row, and bit 7 of byte 8 the sign of its vertical speed
+	ld a,(SHIP_ROW)		; The ship's row, and bit 7 of byte 8 the sign of its vertical speed
 	bit 7,(ix+008h)
 	jr nz,L_5F22
 	cp (ix+004h)
@@ -397,7 +399,7 @@ enemy_turns:		; Stops going up or down (the speed in bytes 7 and 8 to zero) and 
 	ld hl,0fc00h		; 0xFC00 in bytes 9 and 10: four points per frame to the left
 	ld (ix+009h),l
 	ld (ix+00ah),h
-	ld a,(0e066h)		; 0xE066 is the stages played: from the second loop onwards, it fires when it turns
+	ld a,(STAGES_PLAYED)	; The stages played: from the second loop onwards, it fires when it turns
 	and a
 	ret z
 	ld e,(ix+004h)
@@ -471,7 +473,7 @@ turn_off_object:		; Frees the slot and lowers the count of live objects; if it w
 	ld a,(ix+000h)
 	cp 01eh			; Type 0x1E takes up three slots
 	jr z,turn_off_three_slots
-	ld hl,0e126h		; 0xE126 keeps the count of live objects
+	ld hl,LIVE_OBJECTS	; Keeps the count of live objects
 	dec (hl)
 	xor a
 	ld (ix+000h),a
@@ -488,7 +490,7 @@ turn_off_object:		; Frees the slot and lowers the count of live objects; if it w
 	ld (hl),000h		; And on reaching zero, the group is closed
 	ret
 turn_off_three_slots:		; The big type 0x1E object takes up three consecutive slots: all three are turned off and the count drops by three
-	ld hl,0e126h
+	ld hl,LIVE_OBJECTS
 	dec (hl)
 	dec (hl)
 	dec (hl)
@@ -503,11 +505,11 @@ L_5FDA:
 	add iy,de
 	djnz L_5FDA
 run_background_objects:		; Stage 5 has its own engine in bank 3; the others walk eight or two objects at 0xE700
-	ld a,(0e061h)
+	ld a,(STAGE)
 	cp 005h			; Stage 5 goes another way
 	jp z,run_stage_5_background
-	ld ix,0e700h
-	ld a,(0e061h)
+	ld ix,BG_OBJECTS
+	ld a,(STAGE)
 	cp 003h			; Stage 3 has eight; the others, two
 	ld b,008h
 	jr z,L_5FFB

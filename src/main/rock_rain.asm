@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - rock_rain.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public drop_rock,L_ABCC,start_rain
 
 ; ----------------------------------------------------------------------
@@ -13,7 +15,7 @@
 ; out, p01:0x7D64 is called and the stage carries on.
 ; ----------------------------------------------------------------------
 start_rain:		; The timer to 0x384 frames and the cadence to 0x14 minus the difficulty
-	ld hl,0e970h		; 0xE970: the timer, 0x384 frames
+	ld hl,RAIN_TIMER	; The timer, 0x384 frames
 	ld bc,00384h
 	ld (hl),c
 	inc l
@@ -22,29 +24,29 @@ start_rain:		; The timer to 0x384 frames and the cadence to 0x14 minus the diffi
 	inc l
 	ld (hl),a
 	inc l
-	ld a,(0e111h)		; 0x14 minus the difficulty: the frames between one rock and the next
+	ld a,(DIFFICULTY)	; 0x14 minus the difficulty: the frames between one rock and the next
 	sub 014h
 	neg
 	inc l
-	ld hl,0e974h
+	ld hl,RAIN_COUNTDOWN
 	ld (hl),a
 	inc l
 	ld (hl),a
 	ret
 drop_rock:		; Counts the timer down and, every few frames, drops a rock through one of the sixteen doors at 0xABD3
-	ld a,(0e1c0h)		; With the screen stopped, no
+	ld a,(SCROLL_MODE)	; With the screen stopped, no
 	and a
 	ret nz
-	ld a,(0e972h)		; 0xE972: only if the rain is under way
+	ld a,(RAIN_ON)		; Only if the rain is under way
 	or a
 	ret z
-	ld hl,(0e970h)		; One frame less of rain
+	ld hl,(RAIN_TIMER)	; One frame less of rain
 	dec hl
-	ld (0e970h),hl
+	ld (RAIN_TIMER),hl
 	ld a,l
 	or h
 	jp z,07d64h		; Once the timer has run out, the stage carries on
-	ld hl,0e974h		; 0xE974: the frames until the next rock
+	ld hl,RAIN_COUNTDOWN	; The frames until the next rock
 	dec (hl)
 	ret nz
 	inc l

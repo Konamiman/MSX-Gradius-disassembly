@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	extrn find_other_cartridge,interrupt,start_machine
 
@@ -14,7 +15,7 @@ INIT:		; What the BIOS calls at boot (the AB header says so at 0x4002).
 	im 1			; Interrupt mode 1: the BIOS hook at 0x0038 ends up leading to 0xFD9A.
 	di
 	push hl
-	ld hl,0f0f1h		; 0xF0F1, 0xF0F2 and 0xF0F3 are the RAM copy of the three mapper registers.
+	ld hl,BANK_6000		; This, 0xF0F2 and 0xF0F3 are the RAM copy of the three mapper registers.
 	ld a,001h
 	ld (06000h),a		; Bank 1 at 0x6000...
 	ld (hl),a
@@ -32,26 +33,26 @@ INIT:		; What the BIOS calls at boot (the AB header says so at 0x4002).
 	ld h,080h		; H = 0x80: this cartridge is enabled in page 2, which is where 0x8000 and 0xA000 fall.
 	call ENASLT
 	ld a,0c3h		; `jp interrupt` is installed in the H.KEYI hook.
-	ld (0fd9ah),a
+	ld (H_KEYI),a
 	ld hl,interrupt
-	ld (0fd9bh),hl
-	ld sp,0f0f0h		; The stack, right below the mapper copy.
-	ld hl,0e000h		; The 4 KB from 0xE000 to 0xEFFF are cleared, which is all of the game's memory.
-	ld de,0e001h
+	ld (H_KEYI+1),hl
+	ld sp,STACK_TOP		; The stack, right below the mapper copy.
+	ld hl,GAME_RAM		; The 4 KB up to 0xEFFF are cleared, which is all of the game's memory.
+	ld de,GAME_RAM+1
 	ld bc,00fffh
 	ld (hl),000h
 	ldir
 	ld a,001h
-	ld (0e005h),a		; 0xE005 and 0xE006 to 1: the lock is set while booting.
-	ld (0e006h),a
+	ld (INTERRUPT_LOCK),a	; This and 0xE006 to 1: the lock is set while booting.
+	ld (DEMO_STAGE),a
 	call start_machine
 	call find_other_cartridge
 	xor a
-	ld (0e005h),a
+	ld (INTERRUPT_LOCK),a
 	call RDVDP
 	di			; And once again the usual layout, now with the RAM clean
 	push hl
-	ld hl,0f0f1h
+	ld hl,BANK_6000
 	ld a,001h
 	ld (06000h),a
 	ld (hl),a
@@ -75,7 +76,7 @@ find_my_slot:		; Builds for ENASLT the slot number of this cartridge, reading RS
 	and 003h
 	ld c,a
 	ld b,000h
-	ld hl,0fcc1h		; 0xFCC1: the BIOS table that says whether that slot has subslots
+	ld hl,EXPTBL		; The BIOS table that says whether that slot has subslots
 	add hl,bc
 	ld a,(hl)
 	and 080h		; Bit 7 marks that it has them

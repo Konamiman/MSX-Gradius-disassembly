@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - enemy_aim.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public aim_at_ship,change_sign,note_all_cells,paint_whole_frame,run_e780_and_ea00,run_four_at_e800_and_ea80
 	public save_under_e780,save_under_the_eight
 	extrn dispatch_boss_drawing,erase_e800_objects,erase_the_five,erase_turrets,paint_background_objects,restore_underneath
@@ -17,9 +19,9 @@
 ; ----------------------------------------------------------------------
 aim_at_ship:		; Works out which way the shot goes; from difficulty 7 upwards it adds an error from the R register
 	call measure_distance_to_ship
-	ld a,(0ec17h)
+	ld a,(AIM_BASE_ANGLE)
 	ld e,a
-	ld a,(0e111h)		; Below difficulty 7, no error
+	ld a,(DIFFICULTY)	; Below difficulty 7, no error
 	cp 007h
 	jr c,get_both_speeds
 	ld a,r			; The R register: four bits of error
@@ -66,25 +68,25 @@ get_both_speeds:		; Reads the table at 0x6853 from both sides (the index and its
 	ld e,a
 	add hl,de
 	ld a,(hl)
-	ld (0ec16h),a
+	ld (AIM_COMPONENT),a
 	ld e,c
 	call times_speed	; Times the speed
-	ld a,(0ec10h)		; 0xEC10 says whether X goes the other way
+	ld a,(AIM_ROW_SIGN)	; Says whether X goes the other way
 	and a
 	call nz,change_sign
-	ld (0ec12h),de		; 0xEC12: the vertical speed, the one from the difference in rows
-	ld a,(0ec16h)
+	ld (AIM_VSPEED),de	; The vertical speed, the one from the difference in rows
+	ld a,(AIM_COMPONENT)
 	ld e,a
 	call times_speed
-	ld a,(0ec11h)
+	ld a,(AIM_COL_SIGN)
 	and a
 	call nz,change_sign
-	ld (0ec14h),de		; And 0xEC14: the horizontal one
+	ld (AIM_HSPEED),de	; And the horizontal one
 	ret
 measure_distance_to_ship:		; Gets the two differences as absolute values, notes their signs in 0xEC10 and 0xEC11, and from the pair gets the angle
-	ld hl,0ec10h
+	ld hl,AIM_ROW_SIGN
 	ld (hl),000h
-	ld a,(0e204h)		; 0xE204: the ship's row
+	ld a,(SHIP_ROW)		; The ship's row
 	sub e
 	jr nc,L_66E3
 	neg			; When negative, the sign is noted
@@ -94,14 +96,14 @@ L_66E3:
 	ld (hl),000h
 	and 0f0h
 	ld e,a
-	ld a,(0e206h)		; 0xE206: its column
+	ld a,(SHIP_COLUMN)	; Its column
 	sub d
 	jr nc,L_66F2
 	neg
 	inc (hl)
 L_66F2:
 	ld d,a
-	ld hl,0e115h
+	ld hl,AIM_TOO_CLOSE
 	ld (hl),000h
 	add a,e			; With the sum of the two below 0x30, the ship is right on top
 	jr c,L_6700
@@ -119,9 +121,9 @@ L_6700:
 	ld hl,06753h
 	call 0405dh
 	ld a,(hl)
-	ld (0ec17h),a		; 0xEC17 keeps the angle
+	ld (AIM_BASE_ANGLE),a	; Keeps the angle
 	ld c,a
-	ld hl,(0ec10h)
+	ld hl,(AIM_ROW_SIGN)
 	ld a,h
 	ld b,000h
 	and a
@@ -134,7 +136,7 @@ L_671E:
 	neg
 L_6724:
 	add a,b
-	ld (0ec18h),a
+	ld (SHIP_ANGLE),a
 	ret
 change_sign:		; Two's complement of DE
 	ld a,d			; Two's complement: the other direction
@@ -146,7 +148,7 @@ change_sign:		; Two's complement of DE
 	inc de
 	ret
 times_speed:		; Multiplies the component by the speed in 0xE110 and keeps the high part, shifted three bits
-	ld a,(0e110h)		; 0xE110: the shot's speed
+	ld a,(ENEMY_SHOT_SPEED)	; The shot's speed
 	ld h,a
 	call multiply_h_by_e
 	xor a
@@ -218,16 +220,16 @@ note_all_cells:		; Works out for each object the screen cell it lands on, for th
 	call anything_in_e151	; And the ten at 0xE500
 	ret c
 ten_at_e500:		; The ten objects at 0xE500
-	ld ix,0e500h
+	ld ix,ENEMY_SHOTS
 	ld b,00ah
 	jr L_68B5
 e500_objects_if_due:		; Only with 0xE1B0 set
-	ld a,(0e1b0h)
+	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
 	jr ten_at_e500
 twelve_at_e300:		; The twelve objects at 0xE300
-	ld ix,0e300h		; The twelve slots at 0xE300
+	ld ix,OBJECTS		; The twelve slots
 	ld b,00ch
 L_68B5:
 	push bc			; Twelve
@@ -262,7 +264,7 @@ object_cell:		; From the object's X and Y gets the map cell and stores it in byt
 	ldi
 	ret
 anything_in_e151:		; Returns carry if 0xE151 is zero or if 0xE152 is not
-	ld hl,(0e151h)		; With 0xE151 at zero there is no boss
+	ld hl,(BOSS_STATE)	; At zero there is no boss
 	ld a,l			; 0xE152 at zero: no boss
 	and a
 	scf
@@ -273,7 +275,7 @@ anything_in_e151:		; Returns carry if 0xE151 is zero or if 0xE152 is not
 	scf
 	ret
 run_four_at_e800_and_ea80:		; With 0xE151 set and 0xE152 at 1 or at 4-5, walks the four pairs of slots
-	ld hl,0e151h		; Without a boss there is nothing to save
+	ld hl,BOSS_STATE	; Without a boss there is nothing to save
 	ld a,(hl)
 	or a
 	ret z
@@ -285,8 +287,8 @@ run_four_at_e800_and_ea80:		; With 0xE151 set and 0xE152 at 1 or at 4-5, walks t
 	cp 002h
 	ret nc
 L_690C:
-	ld ix,0e800h		; 0xE800 and its partner at 0xEA80
-	ld iy,0ea80h
+	ld ix,EXPLOSIONS	; This and its partner at 0xEA80
+	ld iy,BLAST_MIRROR
 	ld b,004h		; Four
 L_6916:
 	push bc
@@ -306,7 +308,7 @@ L_6928:
 	ld h,(ix+003h)
 	jp L_696F
 run_e780_and_ea00:		; Eight pairs, or just one if 0xE152 is 6
-	ld hl,0e151h
+	ld hl,BOSS_STATE
 	ld a,(hl)
 	or a
 	ret z
@@ -321,8 +323,8 @@ run_e780_and_ea00:		; Eight pairs, or just one if 0xE152 is 6
 	ret nz
 	ld b,001h		; And at 6, just one
 L_694D:
-	ld ix,0e780h
-	ld iy,0ea00h
+	ld ix,BOSS_PIECES
+	ld iy,PIECE_MIRROR
 L_6955:
 	push bc
 	call save_what_was_there
@@ -360,7 +362,7 @@ paint_whole_frame:		; The drawing chain: the objects, the background, the ones a
 	call erase_turrets
 	call dispatch_boss_drawing
 	call draw_e500_objects_if_due
-	ld hl,0e151h		; 0xE151 says whether there is a boss on screen
+	ld hl,BOSS_STATE	; Says whether there is a boss on screen
 	ld a,(hl)
 	or a
 	jp z,erase_e800_objects
@@ -376,16 +378,16 @@ draw_e500_objects_if_due:		; Only if there is something in 0xE151
 	call anything_in_e151
 	ret c
 L_69B6:
-	ld ix,0e500h		; The ten slots at 0xE500
+	ld ix,ENEMY_SHOTS	; The ten slots
 	ld b,00ah
 	jr draw_two_by_two
 draw_e500_objects:		; Only with 0xE1B0 set
-	ld a,(0e1b0h)
+	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
 	jr L_69B6
 draw_e300_objects:		; The twelve objects
-	ld ix,0e300h		; And the twelve at 0xE300
+	ld ix,OBJECTS		; And the twelve
 	ld b,00ch
 draw_two_by_two:		; Writes the object's four characters into the map: two on top and two on the row below
 	ld a,(ix+000h)
@@ -417,8 +419,8 @@ L_69FB:
 	djnz draw_two_by_two
 	ret
 save_under_the_four:		; The four at 0xE800, with their mirror table at 0xEA80
-	ld ix,0e800h
-	ld iy,0ea80h
+	ld ix,EXPLOSIONS
+	ld iy,BLAST_MIRROR
 	ld b,004h
 L_6A0D:
 	push bc			; Four objects
@@ -438,13 +440,13 @@ save_under_one:		; That object's cell, and copy
 	ld h,(ix+003h)
 	jr copy_four_by_four
 save_under_e780:		; A single object at 0xE780
-	ld ix,0e780h
-	ld iy,0ea00h
+	ld ix,BOSS_PIECES
+	ld iy,PIECE_MIRROR
 	jp save_one_at_e780
 save_under_the_eight:		; The eight at 0xE780, with their mirror at 0xEA00
 	ld b,008h
-	ld ix,0e780h
-	ld iy,0ea00h
+	ld ix,BOSS_PIECES
+	ld iy,PIECE_MIRROR
 L_6A41:
 	push bc			; Sixteen bytes each
 	call save_one_at_e780

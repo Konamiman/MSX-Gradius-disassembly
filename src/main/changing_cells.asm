@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public animate_seven_cells
 
@@ -16,7 +17,7 @@
 ; ----------------------------------------------------------------------
 animate_seven_cells:		; Seven eight-byte cards at 0xE710, each one with its map cell
 	ld b,007h		; Seven cards
-	ld hl,0e710h
+	ld hl,CHANGING_CELLS
 L_BE30:
 	push bc
 	push hl

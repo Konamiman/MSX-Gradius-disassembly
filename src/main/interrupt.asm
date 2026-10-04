@@ -4,6 +4,7 @@
 
 	include "bios.inc"
 	include "sound_symbols.inc"
+	include "variables.inc"
 
 	public add_a_to_de,add_a_to_hl,interrupt,L_405A
 	extrn read_controller,state_machine
@@ -20,11 +21,11 @@ interrupt:		; What INIT installs in the H.KEYI hook (0xFD9A). THE WHOLE GAME RUN
 	ld (0a000h),a
 	call play		; The sound runs entirely inside the interrupt.
 	di
-	ld a,(0f0f2h)		; Whatever bank layout was there before is restored, reading it from the RAM copy.
+	ld a,(BANK_8000)	; Whatever bank layout was there before is restored, reading it from the RAM copy.
 	ld (08000h),a
-	ld a,(0f0f3h)
+	ld a,(BANK_A000)
 	ld (0a000h),a
-	ld hl,0e005h		; Lock: if the game loop is already inside, this interrupt does not enter again.
+	ld hl,INTERRUPT_LOCK	; Lock: if the game loop is already inside, this interrupt does not enter again.
 	bit 0,(hl)
 	jr nz,L_4058
 	inc (hl)
@@ -32,7 +33,7 @@ interrupt:		; What INIT installs in the H.KEYI hook (0xFD9A). THE WHOLE GAME RUN
 	call read_controller
 	call state_machine	; And here the real game starts.
 	xor a
-	ld (0e005h),a		; The lock is released.
+	ld (INTERRUPT_LOCK),a	; The lock is released.
 L_4058:
 	ei
 	ret

@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public clear_typing_state,find_other_cartridge
 
@@ -25,7 +26,7 @@
 ; ----------------------------------------------------------------------
 find_other_cartridge:		; Walks slots 0, 0x80, 0x84, 0x88 and 0x8C looking for Konami's RC-740 mark
 	xor a
-	ld (0f0f4h),a		; 0xF0F4 to zero: no companion for now
+	ld (TWINBEE_FOUND),a	; To zero: no companion for now
 	ld c,000h		; Slot 0 and the four subslots of slot 3
 	call try_four_subslots
 	ld c,080h
@@ -38,7 +39,7 @@ find_other_cartridge:		; Walks slots 0, 0x80, 0x84, 0x88 and 0x8C looking for Ko
 	call try_four_subslots
 	ret
 try_four_subslots:		; Tries that slot and the next three; as soon as one matches, the search stops
-	ld a,(0f0f4h)		; If it was already found, the search does not go on
+	ld a,(TWINBEE_FOUND)	; If it was already found, the search does not go on
 	and a
 	ret nz
 	ld b,004h		; Four subslots
@@ -50,7 +51,7 @@ try_one_subslot:		; Tries that subslot and moves on to the next one
 	inc c			; The next one
 	djnz try_one_subslot
 	xor a
-	ld (0f0f4h),a
+	ld (TWINBEE_FOUND),a
 	ret
 compare_mark:		; Reads six bytes backwards from 0xBFFF in that slot and compares them with the ones at 0x50AE
 	ld hl,0bfffh		; Six bytes are read from the end of page 2 of ANOTHER slot, backwards.
@@ -73,7 +74,7 @@ L_5095:
 	dec hl
 	djnz L_5095
 	ld a,001h		; If all six match, 0xF0F4 = 1, and that switches on extra graphics.
-	ld (0f0f4h),a
+	ld (TWINBEE_FOUND),a
 	xor a
 	ret
 
@@ -88,8 +89,8 @@ clear_typing_state:		; 0xE1E0 to zero and the eight bytes at 0xE1E8 behind it
 	push hl
 	push bc
 	ld hl,00000h
-	ld (0e1e0h),hl
-	ld hl,0e1e8h
+	ld (TYPED_COUNT),hl
+	ld hl,TYPED_KEYS
 	ld b,008h		; Eight bytes
 L_50C1:
 	ld (hl),000h		; Eight bytes to zero

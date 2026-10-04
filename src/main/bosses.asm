@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - bosses.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public aim_both_turrets,card_position,dispatch_boss_step_3,dispatch_boss_step_4,draw_eight_pieces,draw_piece_at_e9a0
 	public draw_single_piece,erase_one_piece,erase_two_pieces,paint_boss,paint_two_pieces,run_and_draw_boss
 	public run_and_draw_boss_2,run_and_draw_boss_3,run_five_at_e7a0,run_piece_at_e9a0,run_six_pieces,start_erasing_boss
@@ -24,11 +26,11 @@ continued_from_bank_1:		; This is where the split instruction that starts at p01
 	exx
 	ld c,a			; The byte is kept in the alternate C
 	exx
-	ld de,0e790h		; 0xE790 and 0xE7C0: if the boss is already set up, it is not set up again
+	ld de,BOSS_PIECES+BOSS_PIECE_SIZE	; This and 0xE7C0: if the boss is already set up, it is not set up again
 	ld a,(de)
 	and a
 	jr z,L_8013
-	ld de,0e7c0h
+	ld de,BOSS_PIECES+4*BOSS_PIECE_SIZE
 	ld a,(de)
 	and a
 	ret nz
@@ -68,7 +70,7 @@ table_8041:
 	defb 21h,18h,06h,10h,06h,06h,04h,00h,00h,00h,00h,00h,16h,14h,06h,10h
 	defb 20h,20h
 run_five_at_e7a0:		; The five slots at 0xE7A0; only the type 4 ones do anything
-	ld ix,0e7a0h
+	ld ix,BOSS_PIECES+2*BOSS_PIECE_SIZE
 	ld b,005h		; Five slots
 L_8079:
 	push bc
@@ -84,7 +86,7 @@ fire_piece_shot:		; Every so many frames (fewer the harder it is) fires a shot f
 	dec (ix+007h)
 	ret nz
 	ld a,01bh		; 0x1B minus the difficulty, divided by two: the frames between shots
-	ld hl,0e111h
+	ld hl,DIFFICULTY
 	sub (hl)
 	sra a
 	ld (ix+007h),a
@@ -108,7 +110,7 @@ table_80B0:
 	defb 1Eh,00h,0Eh,00h,06h,00h,00h,00h,00h,00h,0F8h,00h,0F8h,0Ah,0F8h,02h
 	defb 0F8h,02h,0FCh,00h,0FCh,00h,02h,00h,02h,00h,0Ch,00h,00h,00h,08h,00h
 run_six_pieces:		; The six slots at 0xE790: each with its mover routine according to its type
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 	ld b,006h		; Six slots
 L_8106:
 	push bc
@@ -169,7 +171,7 @@ L_8159:
 	ld a,(ix+003h)
 	ld c,a
 	add a,010h
-	ld hl,0e204h		; 0xE204: towards where the ship is
+	ld hl,SHIP_ROW		; Towards where the ship is
 	cp (hl)
 	jr nc,L_8191
 	ld a,(ix+020h)		; Byte 32 says how far it can go
@@ -211,9 +213,9 @@ ramp_81AD:
 	defb 06h,07h,08h,09h,13h,12h,11h,10h,0Fh,0Eh,0Dh,0Ch,0Bh,0Ah,14h,15h
 	defb 16h,17h,18h,19h,1Ah,1Bh,1Ch,1Dh
 aim_both_turrets:		; The two pieces at 0xE790 and 0xE7C0 look towards the ship: the angle chooses the turret's drawing
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 	call aim_one_turret
-	ld ix,0e7c0h
+	ld ix,BOSS_PIECES+4*BOSS_PIECE_SIZE
 aim_one_turret:		; Measures where the ship is and, with the angle, takes from the table the drawing due to each turret
 	ld a,(ix+000h)
 	and a
@@ -259,7 +261,7 @@ is_in_angle:		; Above Y 0x40, and with the drawing between 0x0A and 0x1E, the tu
 	ccf
 	ret
 angle_drawing:		; The angle at 0xEC18 divided by eight indexes the table, and the R register adds a nudge of minus one to one
-	ld a,(0ec18h)		; 0xEC18: the angle to the ship
+	ld a,(SHIP_ANGLE)	; The angle to the ship
 	rra			; Divided by eight: thirty-two steps
 	rra
 	rra
@@ -296,19 +298,19 @@ start_erasing_boss:		; 0xEC00 to zero: what follows erases instead of painting
 paint_boss:		; 0xEC00 to one: what follows paints
 	ld a,001h
 draw_six_pieces:		; With bank 10 in place, positions the turrets and then draws the six slots at 0xE790
-	ld (0ec00h),a
+	ld (PAINT_FLAG),a
 	di
 	ld a,00ah		; Bank 10 at 0xA000: the drawings are there
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	call place_turrets
 	di
 	ld a,003h		; Bank 3 put back
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 	ld b,006h		; Six slots
 L_82B5:
 	push bc
@@ -320,7 +322,7 @@ L_82B5:
 	ret
 erase_one_piece:		; 0xEC00 to zero, and erase
 	xor a
-	ld (0ec00h),a
+	ld (PAINT_FLAG),a
 draw_one_piece:		; Takes from bank 10 the width, the height and the characters of the drawing, and paints or erases it
 	ld a,(ix+000h)
 	sub 003h		; Below type 3 there is nothing
@@ -332,7 +334,7 @@ L_82D4:
 	di
 	ld a,00ah		; Bank 10 at 0xA000
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld a,(ix+006h)
 	call 047aeh
@@ -345,7 +347,7 @@ L_82D4:
 	ex de,hl
 	ld l,(ix+003h)		; Where it lands
 	ld h,(ix+005h)
-	ld a,(0ec00h)		; 0xEC00 decides: erase or paint
+	ld a,(PAINT_FLAG)	; Decides: erase or paint
 	and a
 	push af
 	call z,048f7h
@@ -354,13 +356,13 @@ L_82D4:
 	di
 	ld a,003h		; Bank 3 put back
 	ld (0a000h),a		; Bank 3 put back
-	ld (0f0f3h),a		; Bank 3 put back
+	ld (BANK_A000),a	; Bank 3 put back
 	ei
 	ret
 place_turrets:		; For the two pieces at 0xE790 and 0xE7C0, works out where their two turrets go
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 	call place_both_turrets_of_one
-	ld ix,0e7c0h
+	ld ix,BOSS_PIECES+4*BOSS_PIECE_SIZE
 place_both_turrets_of_one:		; The drawing's width times eight gives the X offset, and the table at 0x8377 the Y one
 	ld a,(ix+000h)
 	and a
@@ -430,10 +432,10 @@ run_and_draw_boss_2:		; The same with the other pair of routines
 	call start_or_end_boss
 	jp run_one_piece
 start_or_end_boss:		; On step 0 sets up the first piece, and from then on waits for 0xE780 to switch off
-	ld a,(0e190h)
+	ld a,(BOSS_PHASE)
 	or a
 	jr nz,L_83C8
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 	call set_up_piece_card	; Sets up the piece's card
 	ld a,004h		; Type 4
 	ld (de),a
@@ -447,44 +449,44 @@ start_or_end_boss:		; On step 0 sets up the first piece, and from then on waits 
 	ld (de),a
 	jp next_core_step
 L_83C8:
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 	ld a,(hl)		; With 0xE780 at zero, the boss is over
 	or a
 	ret nz
 	jp 07d64h
 boss_step:		; On step 0 works out how long it lasts and how often it releases a piece, all from the difficulty
-	ld a,(0e190h)
+	ld a,(BOSS_PHASE)
 	dec a
 	jr z,release_a_piece
 	jp p,check_boss_over
-	ld a,(0e111h)		; The difficulty plus 0x14...
+	ld a,(DIFFICULTY)	; The difficulty plus 0x14...
 	add a,014h
 	ld h,a
 	ld e,01eh		; ...times 0x1E: the frames the boss lasts
 	call 06743h
-	ld (0e153h),hl
-	ld a,(0e111h)		; And 0x3C minus twice the difficulty: the frames between one piece and the next
+	ld (BOSS_TIMER),hl
+	ld a,(DIFFICULTY)	; And 0x3C minus twice the difficulty: the frames between one piece and the next
 	add a,a			; The frames between one piece and the next
 	sub 03ch
 	neg
-	ld hl,0e156h
+	ld hl,PIECE_TIMER
 	ld (hl),a
 	inc l
 	ld (hl),a
 	inc l
 	ld (hl),000h		; 0xE158 to zero
 	ld hl,00000h		; 0xE15B, 0xE15C, 0xE15D and 0xE15E to zero
-	ld (0e15bh),hl
-	ld (0e15dh),hl
+	ld (HEIGHT_PIECES),hl
+	ld (HEIGHT_PIECES+2),hl
 	jp 07cd4h
 release_a_piece:		; Decrements the long count and, every so many frames, looks for a free slot among the eight and sets up a piece
-	ld hl,(0e153h)		; 0xE153: the frames the boss has left
+	ld hl,(BOSS_TIMER)	; The frames the boss has left
 	dec hl
 	ld a,h
 	or l
 	jp z,07cd4h
-	ld (0e153h),hl
-	ld hl,0e156h		; 0xE156: the frames until the next piece
+	ld (BOSS_TIMER),hl
+	ld hl,PIECE_TIMER	; The frames until the next piece
 	dec (hl)
 	ret nz
 	inc l
@@ -504,7 +506,7 @@ set_up_piece_card:		; Copies the eleven bytes of 0x844D and gives it the Y that 
 	ldi
 	ldi
 	ldi
-	ld a,(0e159h)		; 0xE159: which of the four heights
+	ld a,(PIECE_HEIGHT)	; Which of the four heights
 	exx
 	ld b,a
 	ld hl,08458h		; The table at 0x8458: the four heights
@@ -546,7 +548,7 @@ check_boss_over:		; When no piece is left alive and no explosion either, the bos
 	ret nz
 	jp 07d64h
 choose_piece_height:		; The R register chooses one of the four heights, skipping the one from the previous time and those that already have two pieces
-	ld a,(0e158h)		; 0xE158: the height from the previous time
+	ld a,(PIECE_PREV_HEIGHT)	; The height from the previous time
 	ld c,a
 	ld d,004h		; Four attempts
 	ld a,r			; The R register: one of the four heights
@@ -555,7 +557,7 @@ L_8471:
 	ld b,a
 	cp c			; Not the same as the previous one
 	jr z,L_8481
-	ld hl,0e15bh		; 0xE15B: how many pieces there already are at that height
+	ld hl,HEIGHT_PIECES	; How many pieces there already are at that height
 	add a,l
 	ld l,a
 	ld a,(hl)
@@ -571,12 +573,12 @@ L_8481:
 L_8488:
 	inc (hl)		; The chosen height is noted down
 	ld a,b
-	ld (0e159h),a
-	ld (0e158h),a
+	ld (PIECE_HEIGHT),a
+	ld (PIECE_PREV_HEIGHT),a
 	xor a
 	ret
 any_free:		; Returns in HL the first piece slot that is free
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 	ld de,00010h
 L_8498:
 	ld a,(hl)		; With the first byte at zero, the slot is free
@@ -586,7 +588,7 @@ L_8498:
 	djnz L_8498
 	ret
 any_alive:		; Returns NZ if any piece is still alive
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 	ld de,00010h
 L_84A5:
 	ld a,(hl)		; With the first byte non-zero, one is still alive
@@ -596,7 +598,7 @@ L_84A5:
 	djnz L_84A5
 	ret
 any_explosion:		; And the same with the four explosion slots at 0xE800
-	ld hl,0e800h
+	ld hl,EXPLOSIONS
 	ld de,00008h
 	ld b,004h		; Four
 L_84B4:
@@ -612,13 +614,13 @@ run_one_piece:		; Just one
 run_eight_pieces:		; The eight slots at 0xE780
 	ld a,008h		; Eight slots
 L_84C2:
-	ld (0e159h),a
-	ld ix,0e780h
+	ld (PIECE_HEIGHT),a
+	ld ix,BOSS_PIECES
 L_84C9:
 	call one_piece_step
 	ld de,00010h		; Sixteen bytes: the next one
 	add ix,de		; Sixteen bytes: the next one
-	ld hl,0e159h		; 0xE159 counts the slots
+	ld hl,PIECE_HEIGHT	; Counts the slots
 	dec (hl)
 	jp nz,L_84C9
 	ret
@@ -659,7 +661,7 @@ L_8515:
 	ret nc
 free_height:		; The piece switches off and its height is free again in 0xE15B
 	ld a,(ix+00eh)		; Byte 14 says which height it was at
-	ld hl,0e15bh
+	ld hl,HEIGHT_PIECES
 	add a,l
 	ld l,a
 	dec (hl)
@@ -669,7 +671,7 @@ chase_ship_row:		; Every eight frames it closes in on the ship's ROW, without le
 	ld a,(ix+00ah)		; One in every eight frames
 	and 007h
 	ret nz
-	ld a,(0e204h)		; 0xE204, the ship's row, minus its own
+	ld a,(SHIP_ROW)		; The ship's row, minus its own
 	sub (ix+003h)
 	push af
 	add a,008h
@@ -729,7 +731,7 @@ chase_ship_column:		; Every four frames it closes in on the ship's COLUMN; the m
 	and 003h
 	dec a
 	ret nz
-	ld a,(0e111h)		; The difficulty times four, subtracted from 0x60: how far ahead it stays
+	ld a,(DIFFICULTY)	; The difficulty times four, subtracted from 0x60: how far ahead it stays
 	add a,a			; The piece's column, minus that margin
 	add a,a			; 0xE206 is the ship's column
 	sub 060h
@@ -741,7 +743,7 @@ chase_ship_column:		; Every four frames it closes in on the ship's COLUMN; the m
 	neg
 L_859D:
 	ld c,a
-	ld a,(0e206h)
+	ld a,(SHIP_COLUMN)
 	sub c
 	push af
 	add a,008h
@@ -763,7 +765,7 @@ L_85BC:
 chase_row_fast:		; The same but every two frames and four points at a time, between rows 0x00 and 0x90
 	bit 0,(ix+00ah)		; One in every two frames
 	ret nz			; The ship's row
-	ld a,(0e204h)		; 0xE204: the ship's row
+	ld a,(SHIP_ROW)		; The ship's row
 	sub (ix+003h)
 	push af
 	add a,008h
@@ -797,7 +799,7 @@ chase_column_fast:		; Every two frames it closes in on the ship's column four po
 	neg
 L_860A:
 	ld c,a
-	ld a,(0e206h)
+	ld a,(SHIP_COLUMN)
 	sub c
 	push af
 	add a,008h
@@ -841,7 +843,7 @@ piece_fires:		; Every so many frames (fewer the harder it is) fires three type 0
 	jp p,L_8681
 	dec (ix+008h)
 	ret nz
-	ld a,(0e126h)		; With ten or more objects on screen it does not fire
+	ld a,(LIVE_OBJECTS)	; With ten or more objects on screen it does not fire
 	cp 00ah
 	jr nc,L_868C
 	ld (ix+00bh),00ah	; Ten frames of warning
@@ -862,7 +864,7 @@ L_8681:
 	ld (ix+006h),a
 	ld (ix+007h),a
 L_868C:
-	ld a,(0e111h)		; 0x22 minus twice the difficulty: the frames until the next batch
+	ld a,(DIFFICULTY)	; 0x22 minus twice the difficulty: the frames until the next batch
 	add a,a
 	sub 022h
 	neg
@@ -870,10 +872,10 @@ L_868C:
 	ret
 release_three_shots:		; Three of type 0x0B, one after another
 	ld a,003h		; Three
-	ld (0e15ah),a
+	ld (SHOT_BURST),a
 L_869D:
 	call release_from_piece
-	ld hl,0e15ah
+	ld hl,SHOT_BURST
 	dec (hl)
 	jr nz,L_869D
 	ret
@@ -892,11 +894,11 @@ release_from_piece:		; It comes out eight to the right of the piece and eight ab
 	pop ix
 	ret
 draw_single_piece:
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 	jp draw_piece
 draw_eight_pieces:		; The eight slots at 0xE780
 	ld b,008h		; Eight slots
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 L_86CB:
 	push bc
 	push hl
@@ -948,10 +950,10 @@ card_position:		; Takes the X and the Y from the card
 	ld d,(hl)
 	ret
 dispatch_boss_step_3:		; Four steps, counted in 0xE190
-	ld a,(0e1c0h)		; Not with the screen stopped
+	ld a,(SCROLL_MODE)	; Not with the screen stopped
 	and a
 	ret nz
-	ld a,(0e190h)
+	ld a,(BOSS_PHASE)
 	call 04067h
 
 ; ----------------------------------------------------------------------
@@ -964,15 +966,15 @@ dispatcher_table_8721:
 	defw wait_for_bank_10	; 3
 set_up_this_boss:		; 0x258 frames, the ten bytes of 0x8748 into the slot and two characters on the screen
 	ld hl,00258h		; 0x258 frames
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld hl,08748h		; The ten starting bytes
-	ld de,0e780h		; The ten starting bytes
+	ld de,BOSS_PIECES	; The ten starting bytes
 	ld bc,0000ah
 	ldir
 	ld de,03e3fh
 	call write_two_characters
 next_step_of_this_boss:		; 0xE190 + 1
-	ld hl,0e190h
+	ld hl,BOSS_PHASE
 	inc (hl)
 	ret
 
@@ -990,16 +992,16 @@ table_8748:
 ; the fan comes out on both sides.
 ; ----------------------------------------------------------------------
 this_boss_fires:		; Every two frames fires a type 0x10 shot with one of the sixteen speeds at 0x87AF
-	ld a,(0e789h)		; 0xE789: until it is set up, it does not fire
+	ld a,(BOSS_PIECES+9)	; Until it is set up, it does not fire
 	and a
 	jr z,score_boss
-	ld hl,(0e153h)		; 0xE153: the frames it has left
+	ld hl,(BOSS_TIMER)	; The frames it has left
 	dec hl
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld a,l
 	or h
 	jr z,count_runs_out
-	ld a,(0e003h)
+	ld a,(FRAME_COUNT)
 	ld c,a
 	rra			; One in every two frames
 	ret c
@@ -1017,9 +1019,9 @@ this_boss_fires:		; Every two frames fires a type 0x10 shot with one of the sixt
 	call 06729h
 L_8782:
 	ex de,hl
-	ld (0ec12h),hl		; 0xEC12: the vertical speed
+	ld (AIM_VSPEED),hl	; The vertical speed
 	ld hl,0f900h		; And 0xF900 in Y
-	ld (0ec14h),hl
+	ld (AIM_HSPEED),hl
 	ld a,010h		; Type 0x10
 	ld c,000h
 	jp 06a72h
@@ -1033,9 +1035,9 @@ count_runs_out:		; Changes the characters and leaves 0x5A frames
 L_87A1:
 	call write_two_characters
 	ld a,05ah
-	ld (0e153h),a		; 0x5A frames
+	ld (BOSS_TIMER),a	; 0x5A frames
 	xor a
-	ld (0e1c1h),a
+	ld (TARGET),a
 	jr next_step_of_this_boss
 
 ; ----------------------------------------------------------------------
@@ -1052,29 +1054,29 @@ fan_speeds:
 	defw 0600h,0180h
 	defw 0160h,01A0h
 write_two_characters:		; Puts D and E into two map cells, one above the other
-	ld hl,0ee5bh		; Two map cells, one above the other
+	ld hl,MAP+10*MAP_WIDTH+1Bh	; Two map cells, one above the other
 	ld (hl),d
 	ld bc,00020h		; 0x20: the row below
 	add hl,bc
 	ld (hl),e
 	ret
 wait_until_gone:		; When the count runs out, clears 0xE1A0 and moves on to the next step
-	ld hl,0e153h		; 0xE153: the frames remaining
+	ld hl,BOSS_TIMER	; The frames remaining
 	dec (hl)
 	ret nz
 	xor a
-	ld (0e1a0h),a		; 0xE1A0 to zero
+	ld (FADE_STEP),a	; To zero
 	jp z,next_step_of_this_boss
 wait_for_bank_10:		; Calls bank 3 and, when 0xE1A3 gets set, considers the boss dead
 	call 0a6c0h		; Bank 3 sets up the ending
-	ld a,(0e1a3h)		; 0xE1A3: not until it is set
+	ld a,(FADE_DONE)	; Not until it is set
 	and a
 	ret z
 	ld a,001h
-	ld (0e150h),a
+	ld (BOSS_DONE),a
 	ret
 dispatch_boss_step_4:		; Six steps, counted in 0xE190
-	ld a,(0e190h)
+	ld a,(BOSS_PHASE)
 	call 04067h
 
 ; ----------------------------------------------------------------------
@@ -1088,7 +1090,7 @@ dispatcher_table_87F6:
 	defw release_from_script	; 4
 	defw wait_for_bank_3	; 5
 set_up_two_pieces:		; The 0x1D bytes of 0x8812 to 0xE780: the starting cards of two pieces in a row
-	ld de,0e780h
+	ld de,BOSS_PIECES
 	ld hl,08812h
 	ld bc,0001dh
 	ldir
@@ -1101,14 +1103,14 @@ table_8812:
 	defb 07h,01h,00h,20h,00h,0F8h,00h,10h,18h,20h,07h,07h,00h
 wait_for_distance_178:		; Once past distance 0x178, leaves 0x1E0 frames and sets up the card at 0x884D in 0xE9A0
 	call run_two_pieces
-	ld hl,(0e063h)
+	ld hl,(DISTANCE)
 	ld de,00178h		; Distance 0x178
 	rst 20h
 	ret c
 	ld hl,001e0h		; 0x1E0 frames
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld hl,0884dh		; The five starting bytes
-	ld de,0e9a0h
+	ld de,BOSS4_PIECE
 	ld bc,00005h
 	ldir
 	jr next_boss_step
@@ -1119,77 +1121,77 @@ table_884D:
 	defb 01h,38h,0F8h,20h,00h
 wait_for_ship_to_rise:		; Carries on until the count runs out, or until the ship passes Y 0xC8, and then releases the limit
 	call run_two_pieces
-	ld hl,(0e153h)		; 0xE153: the frames remaining
+	ld hl,(BOSS_TIMER)	; The frames remaining
 	dec hl
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld a,l
 	or h
 	jr z,L_886C
-	ld a,(0e206h)		; Or until the ship passes column 0xC8
+	ld a,(SHIP_COLUMN)	; Or until the ship passes column 0xC8
 	cp 0c8h
 	jr nc,L_886C
-	ld a,(0e10ah)		; Or until the submode gets set
+	ld a,(BIG_PIECE_BLOWN)	; Or until the submode gets set
 	and a
 	ret z
 L_886C:
-	ld hl,0e9a0h		; 0xE9A0 moves to step 2
+	ld hl,BOSS4_PIECE	; Moves to step 2
 	ld a,(hl)
 	cp 002h
 	jr nc,L_8876
 	ld (hl),002h
 L_8876:
 	ld hl,0019fh		; The offset goes up to 0x19F
-	ld (0e105h),hl		; The offset up to 0x19F
+	ld (SCROLL_LIMIT),hl	; The offset up to 0x19F
 	jr next_boss_step	; To the next step
 start_long_count:		; 0xEC1B to zero and another 0x1E0 frames
 	xor a
-	ld (0ec1bh),a
+	ld (TYPE11_DRAWING),a
 	ld hl,001e0h
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 next_boss_step:		; 0xE190 + 1
-	ld hl,0e190h
+	ld hl,BOSS_PHASE
 	inc (hl)
 	ret
 release_from_script:		; On the steps with a new column it checks the script at 0x88F8 and, when everything is used up, clears the flag
 	call run_two_pieces
-	ld a,(0e100h)		; Only on the steps with a column
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	call nz,check_boss_script
-	ld a,(0e107h)		; And only on the steps with a new column
+	ld a,(SCROLL_AT_LIMIT)	; And only on the steps with a new column
 	and a
 	ret z
-	ld a,(0e126h)		; 0xE126: if no object is left alive, it ends right away
+	ld a,(LIVE_OBJECTS)	; If no object is left alive, it ends right away
 	and a			; With no live objects, it ends right away
 	jr z,end_this_boss
-	ld hl,(0e153h)
+	ld hl,(BOSS_TIMER)
 	dec hl
-	ld (0e153h),hl
+	ld (BOSS_TIMER),hl
 	ld a,h
 	or l
 	ret nz
 end_this_boss:		; 0xE1A0 to zero and 0xE114 to one
 	ld a,03bh		; 0xE1A0 to zero and 0xE114 to one
 	xor a
-	ld (0e1a0h),a
+	ld (FADE_STEP),a
 	inc a
-	ld (0e114h),a
+	ld (MUSIC_HOLD),a
 	jr next_boss_step
 wait_for_bank_3:		; When 0xE1A3 gets set, clears the 0x180 bytes of objects and considers the boss dead
 	call switch_off_screen	; Bank 3 sets up the ending
-	ld a,(0e1a3h)
+	ld a,(FADE_DONE)
 	and a
 	ret z
-	ld hl,0e300h		; The 0x180 bytes of objects, zeroed
-	ld de,0e301h
+	ld hl,OBJECTS		; The 0x180 bytes of objects, zeroed
+	ld de,OBJECTS+1
 	ld bc,0017fh
 	ld (hl),000h
 	ldir
 	ld a,001h		; 0xE150 to one: the boss is over
-	ld (0e150h),a
+	ld (BOSS_DONE),a
 	ret
 check_boss_script:		; Walks the table three bytes at a time looking for the exact distance; when it matches, releases a type 0x11 object
 	ld hl,088f8h
-	ld a,(0e063h)		; The distance travelled
+	ld a,(DISTANCE)		; The distance travelled
 L_88D9:
 	cp (hl)
 	call z,L_88E3
@@ -1205,7 +1207,7 @@ L_88E3:
 	ld e,(hl)		; The X and the drawing
 	inc hl
 	ld a,(hl)
-	ld (0ec1bh),a
+	ld (TYPE11_DRAWING),a
 	ld d,0f8h		; It comes out at Y 0xF8
 	ld c,000h
 	ld a,011h		; Type 0x11
@@ -1226,12 +1228,12 @@ table_88F8:
 	defb 95h,10h,35h
 	defb 0FFh
 run_piece_at_e9a0:		; Raises it eight points per scroll step and, on step 2, changes its drawing every 0x20 frames
-	ld a,(0e9a0h)
+	ld a,(BOSS4_PIECE)
 	ld c,a
 	and a
 	ret z
-	ld hl,0e9a2h
-	ld a,(0e100h)		; Only on the steps with a column
+	ld hl,BOSS4_PIECE+2
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	jr z,L_8920
 	ld a,(hl)
@@ -1253,14 +1255,14 @@ L_8920:
 	ret c
 end_piece_at_e9a0:		; 0xE9A0 to step 3
 	ld a,003h
-	ld (0e9a0h),a
+	ld (BOSS4_PIECE),a
 	ret
 draw_piece_at_e9a0:		; On step 2, a rectangle of four by six characters, taken from the table at 0x8953 with the drawing
-	ld a,(0e9a0h)
+	ld a,(BOSS4_PIECE)
 	cp 002h			; Only on step 2
 	ret nz
-	ld hl,(0e9a1h)
-	ld a,(0e9a4h)
+	ld hl,(BOSS4_PIECE+1)
+	ld a,(BOSS4_PIECE+4)
 	add a,a			; Times twenty-four: four by six characters
 	add a,a
 	add a,a
@@ -1314,10 +1316,10 @@ piece_drawings:
 	defb 5Ah,5Ah,5Ah,5Ah
 erase_two_pieces:		; Erases from the screen the two slots at 0xE780 and 0xE790
 	xor a
-	ld (0ec00h),a		; 0xEC00 to zero: erase
-	ld ix,0e780h
+	ld (PAINT_FLAG),a	; To zero: erase
+	ld ix,BOSS_PIECES
 	call L_89F2
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 L_89F2:
 	ld a,(ix+000h)
 	and a
@@ -1344,10 +1346,10 @@ L_8A14:
 	jp set_up_background_explosion	; Ten further down
 paint_two_pieces:		; 0xEC00 to one, and paint the two slots
 	ld a,001h
-	ld (0ec00h),a
-	ld ix,0e780h
+	ld (PAINT_FLAG),a
+	ld ix,BOSS_PIECES
 	call L_8A31
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 L_8A31:
 	ld a,(ix+000h)
 	and a
@@ -1371,14 +1373,14 @@ paint_or_erase_piece:		; The table at 0x8B4C gives the offset and the size of th
 	ld b,(hl)
 	inc hl
 	ex de,hl
-	ld a,(0ec00h)		; 0xEC00 decides: erase or paint
+	ld a,(PAINT_FLAG)	; Decides: erase or paint
 	and a			; The position of the piece
 	jp z,048f7h		; The position of the piece
 	jp 0490ch
 run_two_pieces:		; One step for each of the two slots
-	ld ix,0e780h
+	ld ix,BOSS_PIECES
 	call this_piece_step
-	ld ix,0e790h
+	ld ix,BOSS_PIECES+BOSS_PIECE_SIZE
 this_piece_step:		; Moves, fires, and every 0x10 frames changes drawing using the table at 0x8A93
 	ld a,(ix+000h)
 	and a
@@ -1434,7 +1436,7 @@ L_8AC4:
 	ld (ix+00ah),a
 	ret
 raise_piece:		; On the steps with a new column it rises eight points; on reaching zero it counts as blown up
-	ld a,(0e100h)		; Only on the steps with a column
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	ret z
 	ld a,(ix+005h)
@@ -1449,7 +1451,7 @@ where_it_faces:		; Measures the angle to the ship and from it gets the drawing i
 	add a,038h
 	ld d,a
 	call 066d5h		; Bank 1 measures the angle
-	ld a,(0ec18h)
+	ld a,(SHIP_ANGLE)
 	bit 0,(ix+001h)		; Bit 0 of byte 1: one of the two tables
 	jr z,where_the_other_faces
 	ld c,008h
@@ -1532,29 +1534,29 @@ run_and_draw_boss_3:		; One step of this boss and its drawing
 	call boss_step_3
 	jp run_eight_pieces_3
 boss_step_3:		; On step 0 works out how long it lasts and how often it releases a piece, and then releases them
-	ld a,(0e190h)
+	ld a,(BOSS_PHASE)
 	dec a
 	jr z,release_a_piece_3
 	jp p,check_boss_over_3
 	ld hl,00258h		; 0x258 frames
-	ld (0e153h),hl
-	ld a,(0e111h)		; 0x48 minus twice the difficulty: the frames between one piece and the next
+	ld (BOSS_TIMER),hl
+	ld a,(DIFFICULTY)	; 0x48 minus twice the difficulty: the frames between one piece and the next
 	add a,a			; 0x48 minus twice the difficulty
 	sub 048h
 	neg
-	ld hl,0e156h
+	ld hl,PIECE_TIMER
 	ld (hl),a
 	inc l
 	ld (hl),a
 	jp 07cd4h
 release_a_piece_3:		; Every so many frames looks for a free slot among the eight and copies the ten bytes of 0x8D2F there
-	ld hl,(0e153h)		; 0xE153: the frames the boss has left
+	ld hl,(BOSS_TIMER)	; The frames the boss has left
 	dec hl
 	ld a,h
 	or l
 	jp z,07cd4h
-	ld (0e153h),hl
-	ld hl,0e156h		; 0xE156: the frames until the next piece
+	ld (BOSS_TIMER),hl
+	ld hl,PIECE_TIMER	; The frames until the next piece
 	dec (hl)
 	ret nz
 	inc l
@@ -1583,7 +1585,7 @@ check_boss_over_3:		; When no piece and no explosion are left, the boss is consi
 	ret nz
 	jp 07d64h
 run_eight_pieces_3:		; The eight slots at 0xE780, each through its own step
-	ld ix,0e780h
+	ld ix,BOSS_PIECES
 	ld b,008h		; Eight slots
 L_8D4C:
 	push bc

@@ -7,7 +7,7 @@
 ; walks the three cards (SND_CARD_A, B and C) and runs each channel's stream.
 
 	include "bios.inc"
-	include "sound_ram.inc"
+	include "variables.inc"
 
 	public restore_registers,set_volume,silence_channels
 	extrn write_mix,run_channel,silence_this_channel

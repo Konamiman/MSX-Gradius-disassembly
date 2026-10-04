@@ -3,6 +3,7 @@
 ; ============================================================================
 
 	include "bios.inc"
+	include "variables.inc"
 
 	public intro,just_pressed,load_scoreboard,load_scoreboard_two_thirds,load_stage_font,program_vdp
 	public raise_logo,read_controller,read_controller_no_save,set_border_colour,start_logo_curtain,write_title_panel
@@ -49,7 +50,7 @@ set_border_colour:		; Writes B to VDP register 7: the border and background colo
 	jp L_405A
 read_controller:		; Combines joystick and keyboard into 0xE009 and leaves in 0xE008 what has just been pressed
 	call merge_joystick_and_keyboard
-	ld hl,0e009h
+	ld hl,CONTROLLER
 just_pressed:		; Saves the current state and, with an xor and an and, leaves in the next byte only what has just gone down
 	ld c,(hl)		; What has changed and is set: what was just pressed
 	ld (hl),a
@@ -264,9 +265,9 @@ patterns_2100:
 	defb 00h,7Fh,07h,0Eh,1Ch,38h,70h,7Fh
 start_logo_curtain:		; 0x0E steps in 0xE00A and the cursor at row 21, column 10: that is where the logo starts rising from
 	ld a,00eh
-	ld (0e00ah),a		; Fourteen rows
+	ld (LOGO_ROWS),a	; Fourteen rows
 	ld hl,03aaah		; Row 21, column 10
-	ld (0e00eh),hl
+	ld (LOGO_CURSOR),hl
 	jp jump_to_intro
 intro:		; Decompresses the logo at 0x5A9A into the three thirds of VRAM 0x6200 and sets its 0xD8 colours to white
 	ld de,05a9ah
@@ -277,10 +278,10 @@ intro:		; Decompresses the logo at 0x5A9A into the three thirds of VRAM 0x6200 a
 	ld a,0f0h		; 0xF0: white on transparent
 	jp fill_three_thirds
 raise_logo:		; One row higher per call: paints the logo's three strips of characters and erases the one below
-	ld hl,(0e00eh)
+	ld hl,(LOGO_CURSOR)
 	ld de,0ffe0h		; The cursor goes up 0x20 cells: one row
 	add hl,de
-	ld (0e00eh),hl
+	ld (LOGO_CURSOR),hl
 	ld a,040h		; Three characters at the top, twelve in the middle and twelve at the bottom
 	ld b,003h
 	call character_strip
@@ -290,7 +291,7 @@ raise_logo:		; One row higher per call: paints the logo's three strips of charac
 	call character_strip
 	xor a
 	call FILVRM		; And zeros underneath, which erase what the previous pass left
-	ld hl,0e00ah		; 0xE00A counts the fourteen rows
+	ld hl,LOGO_ROWS		; Counts the fourteen rows
 	dec (hl)
 	ret
 character_strip:		; B consecutive characters starting at A, and then down one row
@@ -323,12 +324,12 @@ build_title_screen:		; With banks 9 and 10 in place, black border, clean screen,
 	di			; Banks 9 and 10: the intro ones
 	ld a,009h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ah
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ld b,0e0h		; 0xE0 in register 7: black border
 	call set_border_colour
@@ -343,12 +344,12 @@ build_title_screen:		; With banks 9 and 10 in place, black border, clean screen,
 	di			; 2 and 3 restored
 	ld a,002h		; 2 and 3 restored
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,003h
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 	ret
 write_title_panel:		; Builds the screen and writes on top of it the 28x5 panel that matches the machine's country
@@ -356,12 +357,12 @@ write_title_panel:		; Builds the screen and writes on top of it the 28x5 panel t
 	di
 	ld a,009h
 	ld (08000h),a
-	ld (0f0f2h),a
+	ld (BANK_8000),a
 	ei
 	di
 	ld a,00ah
 	ld (0a000h),a
-	ld (0f0f3h),a
+	ld (BANK_A000),a
 	ei
 
 ; (Falls through into title_screen.asm, which the link places right after.)

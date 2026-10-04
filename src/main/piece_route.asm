@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - piece_route.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public add_horizontal_acceleration,add_vertical_acceleration,aim_cannon,animate_round_and_round,compare_speed_and_acceleration,draw_the_five
 	public erase_the_five,fire_without_aiming,L_9239,L_9535,move_with_scroll_eight,negate_horizontal_speed
 	public negate_vertical_speed,note_cells_of_the_five,release_enemies,release_enemies_on_column,run_five_pieces,script_entry
@@ -86,7 +88,7 @@ step_9_two_right:		; Until X 0xE0
 	ret nz
 	jr next_route_step
 step_10_towards_ship:		; Closes in on the ship's row; within 0x11, or outside the range 0x30-0x88, moves on to the next one
-	ld a,(0e204h)		; 0xE204: the ship's row
+	ld a,(SHIP_ROW)		; The ship's row
 	sub (ix+003h)
 	push af
 	add a,008h
@@ -130,7 +132,7 @@ add_to_fields_3_and_5:		; Adds D to byte (IX+3) and E to (IX+5), and returns in 
 	ld (hl),a
 	ret
 walk_the_eight:		; The eight cards of sixteen bytes from 0xE780
-	ld hl,0e780h
+	ld hl,BOSS_PIECES
 	ld b,008h		; Eight cards
 L_8E37:
 	push bc
@@ -147,7 +149,7 @@ draw_piece_blinking:		; Four by three characters, alternating every four frames 
 	or a
 	ret z
 	call card_position
-	ld a,(0e003h)		; A bit of the counter: the two drawings alternate
+	ld a,(FRAME_COUNT)	; A bit of the counter: the two drawings alternate
 	and 004h
 	ld hl,08e5fh
 	jr z,L_8E58
@@ -171,12 +173,12 @@ characters_8E6B:
 	defb 0C2h,0C3h,0C4h,0C5h
 	defb 00h,0C0h,0C1h,00h
 set_up_five_pieces:		; Switches on 0xE1B0 and sets up the five slots at 0xEB00 with the positions at 0x8EBA; the pace comes from the difficulty
-	ld hl,0e1b0h
+	ld hl,FIVE_PIECES_ON
 	ld (hl),001h
 	inc l
 	inc l
 	ld (hl),0f8h		; 0xF8 into 0xE1B2
-	ld a,(0e111h)		; 0x5C minus four times the difficulty: the frames between steps
+	ld a,(DIFFICULTY)	; 0x5C minus four times the difficulty: the frames between steps
 	add a,a			; The table at 0x8A93
 	add a,a			; The table at 0x8A93
 	sub 05ch
@@ -187,7 +189,7 @@ set_up_five_pieces:		; Switches on 0xE1B0 and sets up the five slots at 0xEB00 w
 	inc l
 	ld (hl),a
 	ld hl,08ebah
-	ld de,0eb00h
+	ld de,MID_BOSS_PIECES
 	exx
 	ld b,005h		; Five pieces
 L_8E97:
@@ -227,7 +229,7 @@ positions_of_the_five:
 	defb 68h,0F0h
 	defb 70h,0F0h
 run_five_pieces:		; Moves them with the scroll, gives each one a step and animates them
-	ld a,(0e1b0h)		; Without 0xE1B0 there is nothing
+	ld a,(FIVE_PIECES_ON)	; Without it there is nothing
 	or a
 	ret z
 	call shift_group
@@ -236,22 +238,22 @@ run_five_pieces:		; Moves them with the scroll, gives each one a step and animat
 	call animate_the_five
 	ret
 shift_group:		; On the steps with a column, eight points to the left
-	ld a,(0e100h)		; Only on the steps with a column
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	or a
 	ret z
-	ld hl,0e1b2h
+	ld hl,FIVE_PIECES_X
 	ld a,(hl)
 	sub 008h		; Eight points to the left
 	ld (hl),a
 	ret
 walk_the_five:		; The five slots at 0xEB00, 0x20 bytes apart
-	ld hl,0eb00h
+	ld hl,MID_BOSS_PIECES
 	ld a,005h		; Five
-	ld (0e1b6h),a
+	ld (FIVE_PIECES_LOOP),a
 L_8EEB:
 	push hl
 	call step_of_one_of_five
-	ld hl,0e1b6h
+	ld hl,FIVE_PIECES_LOOP
 	dec (hl)
 	pop hl
 	ld de,00020h		; Thirty-two bytes: the next one
@@ -262,7 +264,7 @@ step_of_one_of_five:		; Moves it with the scroll and, if it is type 0x15, change
 	ld a,(hl)
 	or a
 	ret z
-	ld a,(0e100h)
+	ld a,(NEW_COLUMN)
 	or a
 	call nz,shift_this_piece
 	ld a,(hl)
@@ -306,23 +308,23 @@ shift_this_piece:		; Eight points to the left; when it goes off the edge, the sl
 L_8F36:
 	ret
 animate_the_five:		; Every so many frames (as many as 0xE1B5 says) gives a step to each of the five
-	ld a,(0e1c0h)		; Not with the screen stopped
+	ld a,(SCROLL_MODE)	; Not with the screen stopped
 	and a
 	ret nz
-	ld hl,0e1b4h		; 0xE1B4: the frames remaining
+	ld hl,FIVE_PIECES_TIMER	; The frames remaining
 	dec (hl)
 	ret nz
 	inc l
 	ld a,(hl)
 	dec l
 	ld (hl),a
-	ld hl,0eb00h
+	ld hl,MID_BOSS_PIECES
 	ld a,005h		; Five pieces
-	ld (0e1b6h),a
+	ld (FIVE_PIECES_LOOP),a
 L_8F4D:
 	push hl
 	call drop_from_piece
-	ld hl,0e1b6h
+	ld hl,FIVE_PIECES_LOOP
 	dec (hl)
 	pop hl
 	ld de,00020h		; Thirty-two bytes: the next one
@@ -365,7 +367,7 @@ drop_from_piece:		; If the slot is on step 1 and below Y 0x30, looks for a free 
 	inc l
 	ld (hl),0fch		; Speed 0xFC
 	inc l
-	ld a,(0e1b6h)		; The last two have drawing 5, and the rest drawing 4
+	ld a,(FIVE_PIECES_LOOP)	; The last two have drawing 5, and the rest drawing 4
 	cp 003h
 	ld a,004h
 	jr nc,L_8F95
@@ -378,7 +380,7 @@ L_8F95:
 	ld (hl),001h
 	ret
 free_slot_in_e500:		; Returns in HL the first of the ten slots at 0xE500 that is free; with carry, there is none
-	ld hl,0e500h
+	ld hl,ENEMY_SHOTS
 	ld b,00ah		; Ten slots
 L_8FA2:
 	ld a,(hl)
@@ -394,16 +396,16 @@ L_8FAC:
 	scf
 	ret
 note_cells_of_the_five:		; For each of the five, works out the map cell where it lands
-	ld a,(0e1b0h)
+	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
-	ld hl,0eb00h
+	ld hl,MID_BOSS_PIECES
 	ld a,005h		; Five
-	ld (0e1b6h),a
+	ld (FIVE_PIECES_LOOP),a
 L_8FBD:
 	push hl
 	call cell_of_one_of_five
-	ld hl,0e1b6h
+	ld hl,FIVE_PIECES_LOOP
 	dec (hl)
 	pop hl
 	ld de,00020h		; Thirty-two bytes: the next one
@@ -439,7 +441,7 @@ L_8FE4:
 	ex de,hl
 	ldi
 	ldi
-	ld a,(0e1b6h)		; The third one also carries the row below
+	ld a,(FIVE_PIECES_LOOP)	; The third one also carries the row below
 	cp 003h
 	ret nz
 	ld bc,0001eh		; 0x1E: the row below in the map
@@ -448,16 +450,16 @@ L_8FE4:
 	ldi
 	ret
 draw_the_five:		; Writes the characters of each of the five into the map
-	ld a,(0e1b0h)
+	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
-	ld hl,0eb00h
+	ld hl,MID_BOSS_PIECES
 	ld a,005h		; Five
-	ld (0e1b6h),a
+	ld (FIVE_PIECES_LOOP),a
 L_900B:
 	push hl
 	call draw_one_of_five
-	ld hl,0e1b6h
+	ld hl,FIVE_PIECES_LOOP
 	dec (hl)
 	pop hl
 	ld de,00020h		; Thirty-two bytes: the next one
@@ -477,7 +479,7 @@ draw_one_of_five:		; The ones on step 1 get a pair of characters from the table 
 	ld d,(hl)
 	dec b			; Only step 1 has two characters
 	jr nz,draw_just_one
-	ld a,(0e1b6h)
+	ld a,(FIVE_PIECES_LOOP)
 	add a,a			; Times four: two pairs per piece
 	add a,a			; Times four: two pairs
 	ld hl,0905ch
@@ -488,7 +490,7 @@ draw_one_of_five:		; The ones on step 1 get a pair of characters from the table 
 L_9036:
 	ldi
 	ldi
-	ld a,(0e1b6h)		; The third one also paints the row below
+	ld a,(FIVE_PIECES_LOOP)	; The third one also paints the row below
 	cp 003h			; The third one carries the row below
 	ret nz			; 0x1E: the row below
 	ld a,01eh
@@ -524,16 +526,16 @@ characters_905C:
 	defb 5Ch,5Dh,00h,00h
 	defb 5Ah,5Bh,00h,00h
 erase_the_five:		; Puts back into the map what was under each of the five pieces
-	ld a,(0e1b0h)
+	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
-	ld hl,0eb00h
+	ld hl,MID_BOSS_PIECES
 	ld a,005h		; Five
-	ld (0e1b6h),a
+	ld (FIVE_PIECES_LOOP),a
 L_9081:
 	push hl
 	call erase_one_of_five
-	ld hl,0e1b6h
+	ld hl,FIVE_PIECES_LOOP
 	dec (hl)
 	pop hl
 	ld de,00020h		; Thirty-two bytes: the next one
@@ -555,7 +557,7 @@ erase_one_of_five:		; Copies back the two saved characters, and the third one al
 	ld l,a
 	ldi
 	ldi
-	ld a,(0e1b6h)		; The third one also carries the row below
+	ld a,(FIVE_PIECES_LOOP)	; The third one also carries the row below
 	cp 003h
 	ret nz
 	ld a,01eh		; 0x1E: the row below in the map
@@ -571,34 +573,34 @@ release_enemies:		; Keeps releasing enemies while the script has entries for thi
 	call check_enemy_script
 	jr z,release_enemies
 	ret c
-	ld hl,0e108h
+	ld hl,ENEMY_SCRIPT_ROW
 	inc (hl)		; 0xE108: which script entry it is on
 	jr release_enemies
 release_enemies_on_column:		; The same, but only on the steps that bring in a new column
-	ld a,(0e100h)		; Only on the steps with a column
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	ret z
 	ld a,0f8h		; 0xF8 into 0xEC04
-	ld (0ec04h),a
+	ld (ENTRY_X),a
 L_90CB:
 	call check_enemy_script
 	jr z,L_90CB
 	ret
 check_enemy_script:		; Checks the script at 0x9262 and, when it is time, releases a type 1 enemy in the row and with the variant it says
-	ld a,(0e108h)
+	ld a,(ENEMY_SCRIPT_ROW)
 	ld hl,09262h		; The script at 0x9262
 	call script_entry
 	ret nz
-	ld hl,0e108h
+	ld hl,ENEMY_SCRIPT_ROW
 	inc (hl)		; Move on to the next entry
 	ld a,c
-	ld (0e122h),a		; The whole byte is stored in 0xE122
+	ld (ENEMY_SCRIPT_BYTE),a	; The whole byte is stored
 	and 01fh		; The low five bits times eight: the column
 	add a,a
 	add a,a
 	add a,a
 	ld e,a
-	ld a,(0ec04h)		; And the row, from 0xEC04
+	ld a,(ENTRY_X)		; And the row
 	ld d,a
 	xor a
 	bit 6,c			; Bits 6 and 7: the variant
@@ -615,7 +617,7 @@ L_90F8:
 	ret
 script_entry:		; Takes the stage's list from the table at HL and compares the distance travelled with the current entry
 	push af
-	ld a,(0e061h)		; The list for this stage
+	ld a,(STAGE)		; The list for this stage
 	call 047aeh
 	pop af
 	ld c,a
@@ -628,7 +630,7 @@ script_entry:		; Takes the stage's list from the table at HL and compares the di
 	ld d,(hl)
 	inc hl
 	ld c,(hl)		; ...and the data byte
-	ld hl,(0e063h)
+	ld hl,(DISTANCE)
 	rst 20h			; DCOMPR: against the distance travelled
 	ret
 aim_cannon:		; Measures the angle to the ship and uses it to choose the cannon's drawing, taken from the table at 0x9205 according to the stage
@@ -637,7 +639,7 @@ aim_cannon:		; Measures the angle to the ship and uses it to choose the cannon's
 	ld e,(ix+004h)		; The enemy's position
 	ld d,(ix+006h)
 	call 066d5h		; Bank 1 measures the angle
-	ld a,(0ec18h)
+	ld a,(SHIP_ANGLE)
 	cp 080h			; Above 0x80, the angle is mirrored
 	jr c,L_912F
 	neg
@@ -657,13 +659,13 @@ L_9139:
 	add a,e
 	ld hl,09205h		; The table at 0x9205
 	call 0405dh
-	ld a,(0e061h)		; And within it, the stage's row
+	ld a,(STAGE)		; And within it, the stage's row
 	dec a			; And within, the stage's row
 	call 0405dh
 	ld a,(hl)
 	add a,c
 	ld (ix+00ch),a
-	ld a,(0ec18h)
+	ld a,(SHIP_ANGLE)
 	bit 1,(ix+017h)
 	jr nz,L_9163
 	sub 010h		; Bit 1 of byte 23 chooses the firing arc
@@ -677,7 +679,7 @@ L_9163:
 this_enemy_fires:		; With the ship inside its arc and no other shot under way, fires one and recalculates the wait
 	dec (ix+010h)		; 0xE110: the frames left before firing
 	ret nz
-	ld hl,0e112h		; 0xE112: if a shot is already coming out, it waits a frame
+	ld hl,NEW_SHOT		; If a shot is already coming out, it waits a frame
 	ld a,(hl)
 	and a
 	jr z,L_9178
@@ -689,9 +691,9 @@ L_9178:
 	call 06613h
 wait_until_next_shot:		; The wait comes from the ramp at 0x91C5, plus the difficulty and the loop, with a floor of 0x0C frames
 	ld hl,091c5h
-	ld a,(0e066h)		; On the first loop the difficulty is capped at 2
+	ld a,(STAGES_PLAYED)	; On the first loop the difficulty is capped at 2
 	dec a
-	ld a,(0e111h)
+	ld a,(DIFFICULTY)
 	jr nz,L_9193
 	cp 002h
 	jr c,L_9193
@@ -704,14 +706,14 @@ L_9193:
 	inc (ix+018h)
 	and 003h
 	call 0405dh
-	ld a,(0e200h)		; With the shield at 3, four frames fewer
+	ld a,(SHIP)		; With the shield at 3, four frames fewer
 	cp 003h
 	ld a,(hl)
 	jr nz,L_91AD
 	sub 004h
 L_91AD:
 	ld c,a
-	ld a,(0e066h)		; The loop divided by four also subtracts
+	ld a,(STAGES_PLAYED)	; The loop divided by four also subtracts
 	srl a
 	srl a
 	ld b,a
@@ -770,7 +772,7 @@ fire_without_aiming:		; When the count reaches zero fires the shot and works out
 	dec (ix+010h)		; 0xE110: the frames remaining
 	ret nz
 L_9239:
-	ld hl,0e112h		; 0xE112: if one is already coming out, it waits
+	ld hl,NEW_SHOT		; If one is already coming out, it waits
 	ld a,(hl)
 	and a
 	jr z,L_9245
@@ -782,7 +784,7 @@ L_9245:
 	call 06613h
 	jp 06b84h
 move_with_scroll_eight:		; On the steps with a new column it moves eight points to the left; when it goes off the edge, the slot is freed and it returns with carry
-	ld a,(0e100h)		; Only on the steps with a column
+	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	ret z
 	ld a,(ix+006h)
@@ -1043,7 +1045,7 @@ negate_vertical_speed:
 	ld (ix+008h),d
 	ret
 one_in_thirty_two:		; The low five bits of the frame counter
-	ld a,(0e003h)
+	ld a,(FRAME_COUNT)
 	and 01fh
 	ret
 time_to_move:		; Every 0x20 frames decrements byte 28; on reaching zero, returns with carry
@@ -1054,24 +1056,24 @@ time_to_move:		; Every 0x20 frames decrements byte 28; on reaching zero, returns
 	scf
 	ret
 reached_the_end:		; Compares the distance travelled with the end of the range; on stage 1 with a margin of 0x10
-	ld a,(0e061h)
+	ld a,(STAGE)
 	dec a			; Stage 1 has a margin of 0x10
 	jr nz,L_95C7
-	ld hl,(0e103h)
+	ld hl,(MAP_RANGE_END)
 	ld de,00010h
 	or a
 	sbc hl,de
-	ld de,(0e063h)
+	ld de,(DISTANCE)
 	rst 20h			; DCOMPR: against the distance travelled
 	ret
 L_95C7:
-	ld hl,(0e103h)
+	ld hl,(MAP_RANGE_END)
 	dec hl
-	ld de,(0e063h)
+	ld de,(DISTANCE)
 	rst 20h
 	ret
 animate_round_and_round:		; Every so many frames (mask in B) advances the drawing round and round up to C and takes it from the table at HL
-	ld a,(0e003h)		; The mask in B: every how many frames
+	ld a,(FRAME_COUNT)	; The mask in B: every how many frames
 	and b
 	ret nz
 	ld a,(ix+01dh)		; Byte 29: which drawing it is on

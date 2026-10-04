@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - country_check.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public explosion_step_6,explosion_step_7,explosion_step_8,explosion_step_9
 	extrn add_to_score,check_if_sound,clear_screen,get_word,load_scoreboard,next_submode
 	extrn start_slow_message,write_one_letter
@@ -19,7 +21,7 @@
 explosion_step_6:		; Clears the screen, raises the loop number in 0xE070 wrapping at five, and writes the message that is due
 	call clear_screen
 	call load_scoreboard
-	ld hl,0e070h		; 0xE070 is the loop: five and back to zero
+	ld hl,ENDING_INDEX	; The loop: five and back to zero
 	ld c,(hl)
 	ld a,c
 	inc a
@@ -50,9 +52,9 @@ explosion_step_7:		; When the message is done, leaves 0x6001 in 0xE044 and write
 	call write_one_letter
 	ret nz
 	ld hl,06001h		; 0x6001 in 0xE044 and 0xE045
-	ld (0e044h),hl
+	ld (SND_MUTE),hl
 	xor a
-	ld (0e046h),a		; 0xE046 to zero
+	ld (SND_MUTE_STEP),a	; To zero
 	ld hl,05040h		; And the message at 0x5040
 	call start_slow_message
 	jp next_submode
@@ -63,23 +65,23 @@ explosion_step_8:		; When it is done, gives away 500 points
 	call add_to_score
 	jp next_submode
 explosion_step_9:		; Waits for the channel to go quiet, clears the screen and leaves both scripts pointing to 0x504A
-	ld a,(0e012h)		; Until 0xE012 goes quiet, it does not go on
+	ld a,(SND_CARD_A+CARD_MODE)	; Until 0xE012 goes quiet, it does not go on
 	and a
 	ret nz
 	call clear_screen
 	ld a,001h
-	ld (0e150h),a		; 0xE150 to one
+	ld (BOSS_DONE),a	; To one
 	ld de,0504ah		; 0x504A: the script both lists start with
 	ld a,e
-	ld (0e204h),a
+	ld (SHIP_ROW),a
 	ld a,d
-	ld (0e206h),a
-	ld hl,0e224h		; The two pointer tables, the one at 0xE224...
+	ld (SHIP_COLUMN),a
+	ld hl,OPTIONS+4		; The two pointer tables, the first one...
 	call point_all_slots
-	ld hl,0e244h		; ...and the one at 0xE244
+	ld hl,OPTIONS+OPTION_SIZE+4	; ...and the second
 	call point_all_slots
-	ld hl,0e300h		; And the 0x180 bytes of objects, to zero
-	ld de,0e301h
+	ld hl,OBJECTS		; And the 0x180 bytes of objects, to zero
+	ld de,OBJECTS+1
 	ld bc,0017fh
 	ld (hl),000h
 	ldir

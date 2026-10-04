@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - enemy_waves.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public release_stretch_enemies
 	extrn check_1B_script,check_for_wall,check_script,mark_next_or_not,release_big_ones_flock,release_bottom_four
 	extrn release_flock,release_left_ones,release_long_flock,release_mixed_eight,run_wave
@@ -15,26 +17,26 @@
 ; of the stage has its own mix of enemies without needing a long script.
 ; ----------------------------------------------------------------------
 release_stretch_enemies:		; With the stretch's byte of bits, calls the routine of every enemy group that is switched on
-	ld hl,0e129h		; 0xE129: the frames left until the next wave
+	ld hl,WAVE_TIMER	; The frames left until the next wave
 	ld a,(hl)
 	and a
 	jr z,L_A319
 	dec (hl)
 	ret
 L_A319:
-	ld a,(0e1c0h)		; With the screen stopped, no
+	ld a,(SCROLL_MODE)	; With the screen stopped, no
 	and a
 	ret nz
-	ld a,(0e061h)		; From the ninth stage onwards, not either
+	ld a,(STAGE)		; From the ninth stage onwards, not either
 	cp 009h
 	ret nc
-	ld a,(0e140h)		; Nor with a wave already under way
+	ld a,(ENEMY_WAVE)	; Nor with a wave already under way
 	and a
 	ret nz
-	ld a,(0e064h)		; Nor with 0xE064 at two or more
+	ld a,(DISTANCE+1)	; Nor with 0xE064 at two or more
 	cp 002h
 	ret nc
-	ld hl,(0e151h)		; With the boss on screen they only come out on some steps
+	ld hl,(BOSS_STATE)	; With the boss on screen they only come out on some steps
 	ld a,l
 	and a
 	jr z,L_A345
@@ -42,19 +44,19 @@ L_A319:
 	sub 005h
 	cp 002h
 	jr c,L_A345
-	ld a,(0e160h)
+	ld a,(FILE_WAVE_STEP)
 	and a
 	jp nz,run_wave
 	ret
 L_A345:
 	call run_wave
-	ld a,(0e124h)		; 0xE124: whether one has just come out
+	ld a,(SPAWNED_TYPE)	; Whether one has just come out
 	and a
 	jr z,L_A359
-	ld hl,0e126h
+	ld hl,LIVE_OBJECTS
 	ld a,00bh		; With eleven objects minus the live ones below 0xE162, it waits
 	sub (hl)
-	ld hl,0e162h
+	ld hl,FILE_WAVE_LEFT
 	cp (hl)
 	ret c
 L_A359:
@@ -87,10 +89,10 @@ L_A359:
 	call release_long_flock
 	jp release_big_ones_flock
 stretch_bits:		; The distance divided by 0x20 indexes the stage's list and returns the byte of bits
-	ld a,(0e061h)
+	ld a,(STAGE)
 	ld hl,0A3A6h		; The table at 0xA3A6: one list per stage
 	call 047aeh
-	ld hl,(0e063h)		; The distance travelled
+	ld hl,(DISTANCE)	; The distance travelled
 	ld a,l
 	rr h			; Divided by 0x20: the stretch
 	rra
@@ -145,14 +147,14 @@ table_A3A6_A3A8:
 	defw 0404h,0206h
 	defw 0000h,0000h
 release_pair:		; Every 0x70 frames minus twice the difficulty, releases two type 3 enemies, one along row 0x30 and the other along 0x60
-	ld hl,0e96ch		; 0xE96C: the frames left
+	ld hl,PAIR_TIMER	; The frames left
 	ld a,(hl)
 	and a
 	jr z,L_A441
 	dec (hl)
 	ret nz
 L_A441:
-	ld a,(0e126h)		; With eleven or more live objects, it is left for later
+	ld a,(LIVE_OBJECTS)	; With eleven or more live objects, it is left for later
 	cp 00bh
 	ret nc
 	call wait_by_difficulty	; The wait for the next pair is reloaded
@@ -178,7 +180,7 @@ L_A45C:
 	ld a,003h
 	jp 06a72h
 release_trail:		; A line of type 4 enemies, one every eight frames, coming in at four heights that take turns
-	ld hl,0e960h		; 0xE960: how many are still to come out
+	ld hl,TRAIL_COUNT	; How many are still to come out
 	ld a,(hl)
 	and a
 	jr z,start_another_trail
@@ -198,14 +200,14 @@ release_trail:		; A line of type 4 enemies, one every eight frames, coming in at
 	ld a,004h
 	jp 06a72h
 start_another_trail:		; The line is over: the difficulty says how many the next one brings
-	ld a,(0e111h)		; 0xE111, the difficulty, indexes the ramp at 0xA4AA
+	ld a,(DIFFICULTY)	; The difficulty indexes the ramp at 0xA4AA
 	ld de,0a4aah
 	call 04062h
 	ld a,(de)
 	ld (hl),a
 	inc l
 wait_by_difficulty:		; 0x70 minus twice the difficulty: the harder the stage, the shorter the wait
-	ld a,(0e111h)
+	ld a,(DIFFICULTY)
 	add a,a			; The difficulty times two, subtracted from 0x70
 	sub 070h
 	neg

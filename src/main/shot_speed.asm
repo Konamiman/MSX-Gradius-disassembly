@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - main image (banks 0-3) - shot_speed.asm
 ; ============================================================================
 
+	include "variables.inc"
+
 	public aim_from_where_it_is,dispatch_by_stage,finish_type_0F,finish_type_1,finish_type_11,finish_type_7
 	public finish_with_aim,finish_with_slow_aim,L_6B96,set_both_speeds,set_horizontal_speed,set_vertical_speed
 	public shot_speed
@@ -21,7 +23,7 @@
 ; ----------------------------------------------------------------------
 shot_speed:		; The speed step the difficulty says, plus zero to seven from the R register
 	push hl
-	ld a,(0e111h)		; 0xE111 is the difficulty
+	ld a,(DIFFICULTY)
 	ld hl,06b97h
 	add a,l
 	ld l,a
@@ -84,7 +86,7 @@ finish_type_1:		; Gives it the speed halved and the drawing that bits 5 and 6 of
 	call wait_until_next_shot
 	sra a			; Halved, keeping the sign
 	ld (ix+010h),a
-	ld a,(0e122h)
+	ld a,(ENEMY_SCRIPT_BYTE)
 	ld c,a
 	xor a
 	bit 5,c			; Bit 5 of 0xE122...
@@ -98,7 +100,7 @@ L_6C3B:
 	ld (ix+017h),a
 	ret
 finish_type_7:		; The hatch enemy: it goes out to one side or the other, depending on bit 0 of the type of whoever releases it, and with no vertical speed
-	ld a,(0e123h)
+	ld a,(MOVER_TYPE)
 	ld de,00400h		; 0x0400 to the right...
 	rra
 	jr nc,L_6C4B
@@ -113,26 +115,26 @@ finish_with_slow_aim:		; Base speed 0x50 plus twice the difficulty
 finish_with_aim:		; The same but with base 0x60
 	ld c,060h
 L_6C59:
-	ld a,(0e111h)		; The difficulty times two, added to the base
+	ld a,(DIFFICULTY)	; The difficulty times two, added to the base
 	add a,a
 	add a,c
-	ld (0e110h),a
+	ld (ENEMY_SHOT_SPEED),a
 aim_from_where_it_is:		; With the object's position, works out the two speeds towards the ship and stores them
 	ld e,(ix+004h)
 	ld d,(ix+006h)
 	call aim_at_ship
-	ld de,(0ec12h)		; The vertical speed...
+	ld de,(AIM_VSPEED)	; The vertical speed...
 	call set_vertical_speed
-	ld de,(0ec14h)		; ...and the horizontal one
+	ld de,(AIM_HSPEED)	; ...and the horizontal one
 	jr set_horizontal_speed
 finish_type_0F:		; Copies the speeds from 0xE142 and 0xE144, and gives it six to eight of counter with the R register
-	ld hl,(0e142h)		; The speed the background carries
+	ld hl,(ENEMY_WAVE_VSPEED)	; The speed the background carries
 	ld (ix+007h),l
 	ld (ix+008h),h
-	ld hl,(0e144h)
+	ld hl,(ENEMY_WAVE_HSPEED)
 	ld (ix+009h),l
 	ld (ix+00ah),h
-	ld a,(0e061h)		; In stage 4 the scroll goes the other way
+	ld a,(STAGE)		; In stage 4 the scroll goes the other way
 	cp 004h
 	ld hl,00088h
 	jr nz,L_6C96
@@ -146,15 +148,15 @@ L_6C96:
 	ld (ix+00dh),a
 	ret
 finish_type_11:		; The drawing comes from 0xEC1B and it carries no speed
-	ld a,(0ec1bh)
+	ld a,(TYPE11_DRAWING)
 	ld (ix+00ch),a		; The drawing, from byte 12
 	ld de,00000h
 	call set_vertical_speed	; No speed
 	jr set_horizontal_speed
 set_both_speeds:		; The two speeds, crossed: first the Y one and then the X one
-	ld de,(0ec14h)
+	ld de,(AIM_HSPEED)
 	call set_horizontal_speed	; First the Y one...
-	ld de,(0ec12h)		; ...and then the X one
+	ld de,(AIM_VSPEED)	; ...and then the X one
 set_vertical_speed:		; The object's vertical speed, in bytes 7 and 8
 	ld (ix+007h),e
 	ld (ix+008h),d
@@ -165,7 +167,7 @@ set_horizontal_speed:		; And the horizontal one, in bytes 9 and 10
 	ret
 dispatch_by_stage:		; Twelve exits, one per stage
 	call check_which_music_plays
-	ld a,(0e061h)
+	ld a,(STAGE)
 	dec a
 	call 04067h
 
