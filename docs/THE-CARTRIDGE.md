@@ -19,8 +19,9 @@ can put it back.
 | 0x8000 | 2, 5, 7, 9, 11 |
 | 0xA000 | 3, 6, 8, 10, 12 |
 
-Each bank has exactly one address it executes at, which is why the listing can
-be split into sixteen files with sixteen orgs.
+Each bank has exactly one address it executes at, which is why the banks that
+the game maps together can be linked as one image, every module at its
+address.
 
 ## What is in each bank
 

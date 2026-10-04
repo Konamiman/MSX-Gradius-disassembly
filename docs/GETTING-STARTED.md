@@ -7,48 +7,50 @@ is accounted for.
 
 ## The cartridge is not here
 
-No repository ships the game. Put your own dump in the root as `nemesis.rom`,
-131072 bytes, sha256
+No repository ships the game. The sources build it: you need `make`, `python3`
+and Nestor80 (N80 and LK80), and `make verify` assembles every module, links
+them and checks that the result, `build/nemesis.rom`, is the original
+cartridge — 131072 bytes, sha256
 
     3210f8a0f2309dd4b9a89fc2b24d0f178ce4393a0a1f2854fbce545c361261bc
 
-`make check` checks it.
-
 ## What each command does
 
-    make            trace the flow, build the listing, reassemble it, run the tests
-    make verify     the test that decides: reassembling has to give the ROM back
-    make sanity     that not one byte is left unexplained, and no data reads as code
-    make density   how much is commented, routine by routine, bank by bank
-    make recon   measures the mapper on the bytes: Konami4, no SCC
-    make mark      the hidden Konami mark at the end of bank 3
-    make web        rebuild this website from the ROM and the notes
+    make            build the ROM, check it, run the sanity checks and the tests
+    make verify     the test that decides: the sources have to give the ROM back
+    make sanity     that the code in the sources is exactly the code the game runs
+    make density    how much is commented, routine by routine, image by image
+    make recon      measures the mapper on the bytes: Konami4, no SCC
+    make mark       the hidden Konami mark at the end of bank 3
+    make web        rebuild this website from the ROM
 
-## Sixteen banks, sixteen listings
+## Sixteen banks, five images
 
-A 16 KB cartridge is one listing. This one is not. Bank 0 is fixed at
+A 16 KB cartridge is one program. This one is not. Bank 0 is fixed at
 0x4000-0x5FFF and the other three windows are chosen by writing the bank number
 to 0x6000, 0x8000 and 0xA000, so **the same address means different code
 depending on what is mapped**. `tools/banks.py` fixes the one org each bank
-actually executes at, and everything else is done bank by bank:
+actually executes at.
 
-* `src/pNN.entries` — the entry points the tracer cannot deduce: the interrupt
-  hook, the inline dispatch tables and the return addresses this cartridge
-  pushes on the stack instead of calling. Each one has its reason next to it.
-* `src/pNN.nocode` — the word tables glued right behind their `call`. A tracer
-  that walks straight through them eats them as instructions.
-* `src/pNN.notes` — one line per annotation: `L` names a routine, `C` comments
-  an instruction, `B` a block, `D` a data range and `F` the width of a record.
+What the build links together is not the bank but the **image**: the banks
+the game always maps at the same time, which for the CPU are one stretch of
+memory. There are five — `main` (banks 0-3, the game), `scenery` (4-6),
+`sound` (7-8), `screens` (9-10) and `map` (11-12) — and each one has its own
+directory under `src/`, with one source file per part of the program. LK80
+links each image in one run, so code and data can cross from one bank into the
+next as they do in the cartridge. Banks 13, 14 and 15 are empty and have no
+source.
 
-A `D` range only counts for the bank whose notes it is in: 0x6000 is the start
-of bank 1, of bank 4 and of bank 7.
+Everything about a byte is in its source file: the instruction or the data,
+the name of the routine or the table, and the comment. A `; DATA name: ...`
+header explains every block of data.
 
 ## What the numbers mean
 
-`make sanity` prints the budget: **25,471 bytes of traced code** and **105,601
-bytes of data in named ranges**, 0 unexplained, 131,072 in total. `make
-density` prints the comment density per bank: 12,959 instructions, 3,027 line
-comments, **23.4%**, and not one routine below 10% out of 1,540.
+`make sanity` checks the code and prints the budget: **25,474 bytes of traced
+code** and **105,598 bytes of data**, 0 unexplained, 131,072 in total. `make
+density` prints the comment density per image: 12,959 instructions, 2,983 line
+comments, **23.0%**, and 4 routines below 10% out of 1,535.
 
 Every figure on this site comes from those two commands, not from an estimate.
 

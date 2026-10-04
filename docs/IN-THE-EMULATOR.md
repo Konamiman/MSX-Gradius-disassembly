@@ -48,7 +48,7 @@ of every screen with the first third's characters.
 ## Running one yourself
 
     NEM_OUT=<directory> NEM_CHEAT=option openmsx -machine Philips_VG_8020 \\
-        -carta nemesis.rom -script tools/omsx_cheats.tcl
+        -carta build/nemesis.rom -script tools/omsx_cheats.tcl
 
 The script writes its own log next to the screenshots, with the emulated time on
 every line, so a run that goes wrong can be read afterwards instead of guessed

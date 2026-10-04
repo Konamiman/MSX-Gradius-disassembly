@@ -95,6 +95,6 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <ul><li>Con <code>-script</code>, openMSX arranca con el renderer en <em>uninitialized</em> y <code>screenshot</code> escribe un PNG negro devolviendo éxito. Hay que encenderlo a mano: <code>set renderer SDLGL-PP</code>.</li><li>Las capturas se piden con el acelerador <b>puesto</b> y después de <code>after realtime</code>, o salen de un cuadro que no se llegó a dibujar.</li><li><code>type</code> va demasiado rápido. El cartucho solo se entera de una tecla cuando <b>cambia</b>, así que las claves se escriben letra a letra por la matriz.</li><li>Las rutas de salida son rutas de Windows. openMSX escribe donde se le dice, no donde cree la shell.</li></ul>
 <h2 id="como-lanzar-uno">Cómo lanzar uno</h2>
 <pre><code>NEM_OUT=&lt;directorio&gt; NEM_CHEAT=option openmsx -machine Philips_VG_8020 \\
-    -carta nemesis.rom -script tools/omsx_cheats.tcl</code></pre>
+    -carta build/nemesis.rom -script tools/omsx_cheats.tcl</code></pre>
 <p>El script escribe su propio registro al lado de las capturas, con el tiempo emulado en cada línea, para que una tirada que salga mal se pueda leer después en vez de adivinarla.</p>
 <footer><p><em>Nemesis / Gradius</em> lo publico Konami para MSX en 1986; su numero de catalogo es RC-742 y son 128 KB. Todos los derechos sobre el juego siguen siendo de sus titulares. Este trabajo es de preservacion, estudio y documentacion, y la imagen del cartucho no se distribuye.</p></footer></div>

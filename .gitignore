@@ -1,25 +1,21 @@
 # -----------------------------------------------------------------------------
-# Work files that are of no use to whoever downloads this
+# What the build produces
 # -----------------------------------------------------------------------------
-# They are intermediate dumps and results that `make` regenerates on its own.
-#
-# Careful with how this is written: plain 'work/' would exclude the whole
-# directory and then the '!work/msx.sym' below could NOT rescue anything,
-# because git does not look inside an already excluded directory again. With
-# 'work/*' it does work.
+# `make` regenerates all of it: the assembled modules, the link maps and the
+# ROM itself.
 
-dump/
 build/
-work/*
-!work/msx.sym
+work/
+dump/
 
 # -----------------------------------------------------------------------------
 # The original cartridge
 # -----------------------------------------------------------------------------
-# The cartridge image is not distributed: everyone supplies their own. The
-# commented listing IS included.
+# The cartridge image is not distributed. The commented sources that build it
+# ARE included.
 
 *.rom
+*.ROM
 *.cas
 *.dsk
 *.wav

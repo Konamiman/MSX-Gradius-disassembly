@@ -3,11 +3,12 @@
 Desensamblado reproducible, byte a byte, del cartucho MegaROM de 128 KB
 **Nemesis / Gradius**, Konami RC-742 (1986), para MSX1.
 
-El listado se genera trazando el flujo de verdad, banco a banco, y
-**reensamblarlo devuelve la ROM original byte a byte**: los dieciséis bancos de
-8 KB y la imagen entera de 131.072 bytes. Esa es la prueba que decide si un
-desensamblado es fiable; todo lo demás que hay en este repositorio está para
-que además el listado no *mienta* sobre lo que reensambla.
+Los fuentes están partidos en módulos lógicos que se ensamblan uno a uno con
+[Nestor80](https://github.com/Konamiman/Nestor80) y se enlazan cada uno en su
+sitio, y **construirlos devuelve la ROM original byte a byte**: los dieciséis
+bancos de 8 KB y la imagen entera de 131.072 bytes. Esa es la prueba que decide
+si un desensamblado es fiable; todo lo demás que hay en este repositorio está
+para que además los fuentes no *mientan* sobre lo que ensamblan.
 
 *(In English: [README.md](README.md).)*
 
@@ -18,25 +19,25 @@ que además el listado no *mienta* sobre lo que reensambla.
 | ROM | 131.072 bytes, sha256 `3210f8a0f2309dd4b9a89fc2b24d0f178ce4393a0a1f2854fbce545c361261bc` |
 | reensambla byte a byte | sí, los 16 bancos y la imagen entera |
 | bytes explicados | **131.072 de 131.072 (100,00 %)** |
-| código trazado | 25.471 bytes |
-| datos identificados | 105.601 bytes |
+| código trazado | 25.474 bytes |
+| datos identificados | 105.598 bytes |
 | sin explicar | 0 bytes |
-| listado | 26.373 líneas |
-| puntos de entrada, cada uno con su justificación | 277 |
-| etiquetas con nombre | 916 |
-| comentarios anclados | 2.982 |
-| rangos de datos con explicación | 244 |
+| módulos | 72 |
+| líneas de fuente | 23.203 |
+| rutinas con nombre | 910 |
+| comentarios de línea | 2.984 |
+| rangos de datos con explicación | 232 |
 
-Los comentarios están acabados al listón de la serie: **el 23,4 % de las
-instrucciones lleva comentario de línea** — 3.027 de 12.959 en los seis bancos
-con código — y **ni una de las 1.540 rutinas está por debajo del 10 %**. `make
-density` lo imprime banco a banco, y `tests/test_listing.py` guarda, banco a
-banco, cuántas rutinas llamadas siguen sin nombre, de modo que la cifra sólo
-puede bajar.
+**El 23,0 % de las instrucciones lleva comentario de línea** — 2.983 de 12.959
+en las tres imágenes con código — y sólo **4 de las 1.535 rutinas están por
+debajo del 10 %**, todas ellas bucles cortos alrededor de una llamada a la BIOS.
+`make density` lo imprime imagen a imagen, y `tests/test_sources.py` guarda,
+banco a banco, cuántas rutinas llamadas siguen sin nombre, de modo que la cifra
+sólo puede bajar.
 
-La web de [docs/](docs/) sale de esas mismas notas, y sus doce mapas de fase
-están dibujados desde la ROM por `tools/graphics.py`: aquí no hay ni una captura
-de emulador.
+La web de [docs/](docs/) sale de la ROM que construyen los fuentes, y sus doce
+mapas de fase están dibujados desde ella por `tools/graphics.py`: aquí no hay ni
+una captura de emulador.
 
 ## El cartucho
 
@@ -92,43 +93,63 @@ fichero, sino que detrás quedan 96 KB de datos.
 
 ## Cómo se construye
 
-La ROM **no** se distribuye aquí. Pon la tuya en la raíz como `nemesis.rom`
-(131.072 bytes exactos) y:
+Los fuentes construyen el cartucho por sí solos: la ROM original no hace falta,
+y aquí no se distribuye. Hacen falta `make`, `python3` y Nestor80 (N80 y LK80)
+en el PATH:
 
 ```sh
-make check   # comprueba el sha256
-make             # trazado -> listado -> byte a byte -> sanidad -> tests
+make verify      # ensambla y enlaza todo, y comprueba el sha256 del resultado
+make             # verify -> sanidad -> tests
 ```
 
-Hacen falta `python3`, `pasmo`, `z80dasm` y `make`.
+El resultado queda en `build/nemesis.rom`.
+
+## Cómo están organizados los fuentes
+
+La unidad de construcción es la **imagen**, no el banco de la ROM: los bancos
+que el juego pone siempre juntos, que para la CPU son un solo tramo de memoria.
+Cada imagen se enlaza en una sola pasada de LK80, así que un módulo puede pasar
+de un banco al siguiente: la instrucción partida entre los bancos 1 y 2 se
+escribe como la instrucción que es, y los sonidos siguen del banco 7 al 8.
+
+| imagen | bancos | dirección | módulos |
+|---|---|---|---|
+| `main` | 0-3 | 0x4000-0xBFFF | 57, uno por cada parte del juego |
+| `scenery` | 4-6 | 0x6000-0xBFFF | 2 |
+| `sound` | 7-8 | 0x8000-0xBFFF | 8 |
+| `screens` | 9-10 | 0x8000-0xBFFF | 3 |
+| `map` | 11-12 | 0x8000-0xBFFF | 2 |
+
+Los bancos 13, 14 y 15 son 0xFF y no tienen fuente; todo el relleno 0xFF del
+cartucho lo pone el enlazador. La imagen principal llama al reproductor de
+sonido y al motor de las pantallas fijas: esas imágenes se enlazan antes, y
+exportan los símbolos que la principal necesita.
 
 ## Para qué es cada comprobación
 
 `make verify` demuestra que los bytes vuelven. Lo demás caza lo que eso no
 puede cazar:
 
-- `tools/check_trace.py` y `tools/check_data_as_code.py` — ningún byte
-  declarado como datos puede salir como código. Un listado que lee gráficos
-  como instrucciones reensambla igual de bien; lo único que miente es la
-  *lectura*.
-- `tools/check_bank_tracer.py` — este proyecto tiene **dos** trazadores: uno que
-  recorre el cartucho entero siguiendo el mapper y otro que recorre un solo
-  banco desde las entradas escritas en `src/pNN.entries`. Los dos tienen que
-  marcar exactamente los mismos bytes como código. Si no coinciden, o falta una
-  entrada o hay una que lleva a donde no debe.
-- `tools/check_entries.py` — ningún punto de entrada puede caer dentro de un
-  rango declarado como datos. El proyecto contradiciéndose a sí mismo.
-- `tools/budget.py` — cada byte del cartucho es código trazado o cae en un
-  rango de datos con nombre y explicación. **100 %.**
+- `tools/check_code.py` (`make sanity`) — el reensamblado no distingue código
+  de datos: un módulo que escribe gráficos como instrucciones ensambla los
+  mismos bytes; lo único que miente es la *lectura*. El trazador de cartucho
+  entero (`tools/bank_tracer.py`) sigue el código desde los dos puntos de
+  entrada que garantiza el hardware, llevando la cuenta de qué banco hay en cada
+  ranura, y las instrucciones de los fuentes tienen que ser **exactamente** las
+  que él alcanza. Además comprueba que cada línea de datos está bajo una
+  cabecera `; DATA` que la nombra y la explica. **0 bytes sin explicar.**
+- `tools/recon.py` — todas las escrituras al mapper cumplen la regla banco →
+  org.
+- `tests/` — las cifras que se publican, y lo que la web afirma sobre los bytes.
 
 ## Cómo está repartido
 
 ```
-src/pNN.entries   los puntos de entrada, con la instrucción que justifica cada uno
-src/pNN.nocode    las tablas del despachador, que van pegadas detrás de su `call`
-src/pNN.notes     etiquetas, comentarios y rangos de datos, anclados a dirección
-src/nemesis_pNN.asm   el listado generado, uno por banco
-tools/            los trazadores, el generador del listado y las comprobaciones
+src/<imagen>/*.asm  los módulos, un directorio por imagen
+src/inc/            los puntos de entrada de la BIOS y la RAM del reproductor de sonido
+src/seeds.txt       los puntos de entrada que el trazador no encuentra solo
+tools/              el trazador, las comprobaciones y los generadores de la web
+build/              todo lo que produce make (no está en el repositorio)
 ```
 
 ## Legal

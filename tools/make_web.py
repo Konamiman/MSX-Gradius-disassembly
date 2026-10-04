@@ -18,15 +18,15 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from web_style import STYLE                                   # noqa: E402
 
-# The numbers come from counting over the generated listing, not from writing
-# them by eye: 131072 = 25471 + 105601, which is what tools/budget.py
-# prints (make sanity). ROUTINES are the code labels with a proper name
-# (L directive in the .notes), added up over the sixteen banks.
-CODE_BYTES = 25471
-DATA_BYTES = 105601
-ROUTINES = 916
+# The numbers are not written by eye: tools/figures.py (`make figures`)
+# counts them over the sources and the build and writes them here. ROUTINES
+# are the code labels with a proper name; DENSITY is the share of
+# instructions that carry a line comment.
+CODE_BYTES = 25474
+DATA_BYTES = 105598
+ROUTINES = 910
 STAGES = 12
-DENSITY = "23,4"
+DENSITY = "23,0"
 
 
 def thousands(n, lang):

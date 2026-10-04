@@ -17,7 +17,7 @@
 #     CHANGES, so the word is typed letter by letter.
 #
 #   NEM_OUT=<dir> [NEM_CHEAT=option] openmsx -machine Philips_VG_8020 \
-#       -carta nemesis.rom -script this.tcl
+#       -carta build/nemesis.rom -script this.tcl
 set OUT $::env(NEM_OUT)
 file mkdir $OUT
 set LOG [open "$OUT/cheats.log" w]

@@ -37,7 +37,7 @@ from PIL import Image
 from banks import ORG, BANK_SIZE
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ROM = os.path.join(ROOT, "nemesis.rom")
+ROM = os.path.join(ROOT, "build", "nemesis.rom")   # built by `make rom`
 OUT_DIR = os.path.join(ROOT, "docs", "images")
 
 # The TMS9918 palette, as the standard gives it.

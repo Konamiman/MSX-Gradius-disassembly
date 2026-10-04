@@ -19,8 +19,9 @@ interrupción pueda devolverlo.
 | 0x8000 | 2, 5, 7, 9, 11 |
 | 0xA000 | 3, 6, 8, 10, 12 |
 
-Cada banco tiene exactamente una dirección en la que se ejecuta, y por eso el
-listado se puede partir en dieciséis ficheros con dieciséis org.
+Cada banco tiene exactamente una dirección en la que se ejecuta, y por eso los
+bancos que el juego pone juntos se pueden enlazar como una sola imagen, cada
+módulo en su dirección.
 
 ## Qué hay en cada banco
 

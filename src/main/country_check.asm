@@ -1,0 +1,103 @@
+; ============================================================================
+; Nemesis / Gradius - main image (banks 0-3) - country_check.asm
+; ============================================================================
+
+	public explosion_step_6,explosion_step_7,explosion_step_8,explosion_step_9
+	extrn add_to_score,check_if_sound,clear_screen,get_word,load_scoreboard,next_submode
+	extrn start_slow_message,write_one_letter
+
+; ----------------------------------------------------------------------
+; THE CARTRIDGE CHECKS WHICH COUNTRY THE MACHINE IS FROM
+; At the end of a whole loop a message is written, and which one comes out
+; depends on which loop it is: GOOD, NICE, FINE and GREAT for the first
+; four. On the fifth, the cartridge reads 0x002B of the BIOS (the low
+; nibble gives the machine's character set, and at zero it is Japanese)
+; and splits: on a Japanese machine YOROKONDE ITADAKEMASHITAKA comes out,
+; and on any other, CONGRATULATIONS. Both messages are in the ROM, one
+; next to the other.
+; ----------------------------------------------------------------------
+explosion_step_6:		; Clears the screen, raises the loop number in 0xE070 wrapping at five, and writes the message that is due
+	call clear_screen
+	call load_scoreboard
+	ld hl,0e070h		; 0xE070 is the loop: five and back to zero
+	ld c,(hl)
+	ld a,c
+	inc a
+	cp 005h
+	jr c,L_4C3C
+	xor a
+L_4C3C:
+	ld (hl),a
+	ld a,c
+	cp 004h			; Only on the fifth loop is the machine checked
+	jr nz,L_4C50
+	ld a,(0002bh)		; The low nibble of 0x002B: the character set. At zero, Japanese
+	and 00fh
+	ld a,004h
+	jr z,L_4C50
+	ld hl,0502eh		; On any other machine, CONGRATULATIONS
+	jr L_4C57
+L_4C50:
+	ld hl,04feah		; And otherwise, the message for the loop: GOOD, NICE, FINE, GREAT or the Japanese one
+	call get_word
+	ex de,hl
+L_4C57:
+	call start_slow_message
+	ld a,0a9h		; Sound 0xA9
+	call check_if_sound
+	jp next_submode
+explosion_step_7:		; When the message is done, leaves 0x6001 in 0xE044 and writes the one at 0x5040
+	call write_one_letter
+	ret nz
+	ld hl,06001h		; 0x6001 in 0xE044 and 0xE045
+	ld (0e044h),hl
+	xor a
+	ld (0e046h),a		; 0xE046 to zero
+	ld hl,05040h		; And the message at 0x5040
+	call start_slow_message
+	jp next_submode
+explosion_step_8:		; When it is done, gives away 500 points
+	call write_one_letter
+	ret nz
+	ld de,00500h		; 0x0500 in BCD; the message at 0x5040 announces it as BONUS 50000 POINTS
+	call add_to_score
+	jp next_submode
+explosion_step_9:		; Waits for the channel to go quiet, clears the screen and leaves both scripts pointing to 0x504A
+	ld a,(0e012h)		; Until 0xE012 goes quiet, it does not go on
+	and a
+	ret nz
+	call clear_screen
+	ld a,001h
+	ld (0e150h),a		; 0xE150 to one
+	ld de,0504ah		; 0x504A: the script both lists start with
+	ld a,e
+	ld (0e204h),a
+	ld a,d
+	ld (0e206h),a
+	ld hl,0e224h		; The two pointer tables, the one at 0xE224...
+	call point_all_slots
+	ld hl,0e244h		; ...and the one at 0xE244
+	call point_all_slots
+	ld hl,0e300h		; And the 0x180 bytes of objects, to zero
+	ld de,0e301h
+	ld bc,0017fh
+	ld (hl),000h
+	ldir
+	ret
+point_all_slots:		; Leaves the same pointer in the first slot and in the eight behind it
+	ld (hl),e
+	inc l
+	inc l
+	ld (hl),d
+	ld bc,0000ah		; Ten bytes: the next slot
+	add hl,bc
+	ld b,008h		; Eight more slots, now two bytes apart
+L_4CC2:
+	ld (hl),e		; The eight two-byte slots
+	inc l
+	ld (hl),d
+	inc l
+	djnz L_4CC2
+	ret
+
+	end

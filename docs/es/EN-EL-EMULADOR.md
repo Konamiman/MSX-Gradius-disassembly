@@ -47,7 +47,7 @@ en medio** de cada pantalla con los caracteres del primero.
 ## Cómo lanzar uno
 
     NEM_OUT=<directorio> NEM_CHEAT=option openmsx -machine Philips_VG_8020 \\
-        -carta nemesis.rom -script tools/omsx_cheats.tcl
+        -carta build/nemesis.rom -script tools/omsx_cheats.tcl
 
 El script escribe su propio registro al lado de las capturas, con el tiempo
 emulado en cada línea, para que una tirada que salga mal se pueda leer después
