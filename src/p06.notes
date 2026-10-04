@@ -1,14 +1,14 @@
-# Banco 6 (se ejecuta en 0xA000). Directivas: L etiqueta, C comentario de
-# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+# Bank 6 (runs at 0xA000). Directives: L label, C line comment, B block
+# header, D data range, F row width.
 #
-# Los 8192 bytes son 0xFF. Este banco SI se mapea -la rutina que reparte
-# 4/5/6 lo mete en 0xA000 (p00:423F y sus copias)-, pero nadie lee nada de el:
-# esta ahi porque el reparto va de tres en tres y el juego solo necesitaba los
-# bancos 4 y 5.
+# The 8192 bytes are 0xFF. This bank IS mapped (the routine that maps 4/5/6
+# puts it in 0xA000, p00:423F and its copies), but nobody reads anything from
+# it: it is there because the split goes three at a time and the game only
+# needed banks 4 and 5.
 
-B 0xA000 BANCO VACIO
-B 0xA000 8192 bytes de 0xFF. Se mapea en 0xA000 junto con los bancos 4 y 5,
-B 0xA000 pero ninguna instruccion lee de el.
+B 0xA000 EMPTY BANK
+B 0xA000 8192 bytes of 0xFF. It is mapped at 0xA000 together with banks 4 and 5,
+B 0xA000 but no instruction reads from it.
 
-D 0xA000 0xC000 relleno  Relleno 0xFF: los 8192 bytes del banco, sin una sola excepcion.
+D 0xA000 0xC000 filler  0xFF filler: the bank's 8192 bytes, without a single exception.
 F 0xA000 16

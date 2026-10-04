@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
-"""Trazador recursivo Z80: separa codigo de datos siguiendo el flujo de control.
+"""Recursive Z80 tracer: separates code from data by following control flow.
 
-Desensamblar linealmente 40 KB de un juego no funciona: los graficos y las
-tablas se decodifican como instrucciones y a partir de ahi todo queda
-desalineado. Este trazador parte de unos puntos de entrada conocidos, sigue
-saltos y llamadas, y marca que bytes son alcanzables como codigo. Lo que no se
-alcanza se trata como datos.
+Disassembling 40 KB of a game linearly does not work: the graphics and the
+tables get decoded as instructions and from then on everything is
+misaligned. This tracer starts from some known entry points, follows jumps
+and calls, and marks which bytes are reachable as code. Whatever is not
+reached is treated as data.
 
-Salida: un fichero de bloques para z80dasm (-b) y un informe de cobertura.
+Output: a blocks file for z80dasm (-b) and a coverage report.
 
-Limitacion conocida y deliberada: los saltos indirectos (JP (HL), tablas de
-saltos, direcciones metidas en la pila) no se pueden seguir estaticamente. El
-trazador los marca como PUNTO CIEGO y hay que darle esos destinos a mano por el
-fichero de entradas. Por eso el informe lista cada punto ciego con su direccion.
+Known and deliberate limitation: indirect jumps (JP (HL), jump tables,
+addresses pushed on the stack) cannot be followed statically. The tracer
+marks them as a BLIND SPOT and those destinations have to be given to it by
+hand through the entries file. That is why the report lists every blind spot
+with its address.
 """
 import json
 import os
 import sys
 
-# ---------------------------------------------------------------- tablas Z80
+# ---------------------------------------------------------------- Z80 tables
 
-# Longitud en bytes de cada opcode sin prefijo.
+# Length in bytes of each unprefixed opcode.
 BASE_LEN = [1] * 256
 for _op, _n in {
     0x01: 3, 0x11: 3, 0x21: 3, 0x31: 3,          # LD rr,nn
@@ -39,11 +40,11 @@ for _op, _n in {
 }.items():
     BASE_LEN[_op] = _n
 
-# ED xx: 2 bytes salvo los LD (nn),rr / LD rr,(nn) que son 4.
+# ED xx: 2 bytes except LD (nn),rr / LD rr,(nn), which are 4.
 ED_LEN4 = {0x43, 0x53, 0x63, 0x73, 0x4B, 0x5B, 0x6B, 0x7B}
 
-# Opcodes que referencian (HL) y que con prefijo DD/FD pasan a (IX+d)/(IY+d),
-# ganando un byte de desplazamiento.
+# Opcodes that reference (HL) and that with a DD/FD prefix become
+# (IX+d)/(IY+d), gaining a displacement byte.
 IDX_DISP = ({0x34, 0x35, 0x36}
             | {0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E}
             | {0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x77}
@@ -60,40 +61,41 @@ CODE, DATA = 1, 0
 
 
 class Tracer:
-    def __init__(self, data, org, rst_follow=True, nocode=(), saltos=None):
-        # saltos: {direccion_llamada: n} -> tras un CALL a esa direccion, los n
-        # bytes siguientes son PARAMETROS EN LINEA (la rutina hace `pop hl` y
-        # los lee), no codigo: se marcan como datos y el flujo sigue detras.
-        # Konami lo usa en varios de sus cartuchos; un trazador que siga de
-        # largo se los traga como instrucciones. En Nemesis no aparece: aqui
-        # el que hay que declarar es el despachador 0x4067, que lleva la tabla
-        # -no unos parametros- pegada detras del call, y eso se resuelve con
-        # el fichero .nocode.
-        self.saltos = dict(saltos or {})
-        self.params = []                       # (ini, fin) de parametros en linea
+    def __init__(self, data, org, rst_follow=True, nocode=(), skips=None):
+        # skips: {call_address: n} -> after a CALL to that address, the next
+        # n bytes are INLINE PARAMETERS (the routine does `pop hl` and reads
+        # them), not code: they are marked as data and the flow continues
+        # after them. Konami uses this in several of its cartridges; a tracer
+        # that falls through swallows them as instructions. It does not appear
+        # in Nemesis: here the one that has to be declared is the 0x4067
+        # dispatcher, which carries the table (not some parameters) right
+        # after the call, and that is solved with the .nocode file.
+        self.skips = dict(skips or {})
+        self.params = []                       # (start, end) of inline parameters
         self.data = data
         self.org = org
         self.end = org + len(data)
-        self.mark = bytearray(len(data))       # 1 = byte de codigo
-        self.starts = set()                    # inicios de instruccion
-        self.entries = set()                   # destinos de call/jp (etiquetas)
-        self.blind = []                        # saltos indirectos no seguibles
-        # Saltos y llamadas a direcciones FUERA del binario. En un cartucho de
-        # 16 KB son llamadas a la BIOS; en un MegaROM trazado pagina a pagina
-        # son las llamadas a OTRA pagina, y hay que saber cual estaba mapeada
-        # para sembrarla a mano: por eso se guardan (origen, destino).
-        self.externos = []
+        self.mark = bytearray(len(data))       # 1 = code byte
+        self.starts = set()                    # instruction starts
+        self.entries = set()                   # call/jp destinations (labels)
+        self.blind = []                        # indirect jumps that can't be followed
+        # Jumps and calls to addresses OUTSIDE the binary. In a 16 KB
+        # cartridge they are calls to the BIOS; in a MegaROM traced bank by
+        # bank they are the calls to ANOTHER bank, and you need to know which
+        # one was mapped in order to seed it by hand: that is why they are
+        # kept as (source, destination).
+        self.externals = []
         self.rst_follow = rst_follow
-        self.rechazados = []                   # semillas que caian en datos
+        self.rejected = []                     # seeds that fell in data
 
-        # Zonas que sabemos a ciencia cierta que son datos (graficos, textos,
-        # tablas). El trazador no entra en ellas.
+        # Zones that we know for certain are data (graphics, texts, tables).
+        # The tracer does not go into them.
         #
-        # Hace falta porque un solo destino mal deducido -de una tabla de
-        # punteros, por ejemplo- mete al trazador en una zona de graficos, y
-        # desde ahi sigue "decodificando" pixeles como instrucciones sin parar.
-        # Sin esta barrera el trazado pasaba del 13% al 80%, pero marcando como
-        # codigo el 100% de la tabla de colores y de los textos: cobertura falsa.
+        # It is needed because a single wrongly deduced destination (from a
+        # pointer table, for example) puts the tracer in a graphics zone, and
+        # from there it keeps "decoding" pixels as instructions without end.
+        # Without this barrier the trace went from 13% to 80%, but marking
+        # 100% of the colour table and of the texts as code: fake coverage.
         self.nocode = bytearray(len(data))
         for a, b in nocode:
             for i in range(max(0, a - org), min(len(data), b - org)):
@@ -102,7 +104,7 @@ class Tracer:
     def inside(self, a):
         return self.org <= a < self.end
 
-    def es_datos(self, a):
+    def is_data(self, a):
         return self.inside(a) and self.nocode[a - self.org]
 
     def byte(self, a):
@@ -112,18 +114,18 @@ class Tracer:
         return self.byte(a) | (self.byte(a + 1) << 8)
 
     def ilen(self, a):
-        """Longitud de la instruccion en a. Devuelve 0 si no cabe entera.
+        """Length of the instruction at a. Returns 0 if it does not fit whole.
 
-        Que devuelva 0 cuando la instruccion se sale del binario importa: si
-        devolviera su longitud nominal, quien la use para avanzar leeria bytes
-        que no existen. Los llamadores de dentro ya lo comprobaban aparte, pero
-        la funcion tiene que ser correcta por si sola.
+        Returning 0 when the instruction runs past the end of the binary
+        matters: if it returned its nominal length, whoever uses it to advance
+        would read bytes that do not exist. The internal callers already
+        checked this separately, but the function has to be correct on its own.
         """
-        n = self._ilen_bruto(a)
+        n = self._raw_ilen(a)
         return n if n and self.inside(a + n - 1) else 0
 
-    def _ilen_bruto(self, a):
-        """Longitud segun el opcode, sin mirar si cabe."""
+    def _raw_ilen(self, a):
+        """Length according to the opcode, without checking whether it fits."""
         if not self.inside(a):
             return 0
         op = self.byte(a)
@@ -139,24 +141,24 @@ class Tracer:
             op2 = self.byte(a + 1)
             if op2 == 0xCB:
                 return 4
-            if op2 in (0xDD, 0xFD, 0xED):     # prefijo redundante: 1 byte
+            if op2 in (0xDD, 0xFD, 0xED):     # redundant prefix: 1 byte
                 return 1
             return 1 + BASE_LEN[op2] + (1 if op2 in IDX_DISP else 0)
         return BASE_LEN[op]
 
     def trace(self, entry_list):
-        buenas = [a for a in entry_list if not self.es_datos(a)]
-        self.rechazados = [a for a in entry_list if self.es_datos(a)]
-        work = list(buenas)
-        self.entries.update(a for a in buenas if self.inside(a))
+        good = [a for a in entry_list if not self.is_data(a)]
+        self.rejected = [a for a in entry_list if self.is_data(a)]
+        work = list(good)
+        self.entries.update(a for a in good if self.inside(a))
         while work:
             pc = work.pop()
             while True:
-                if not self.inside(pc) or self.es_datos(pc):
+                if not self.inside(pc) or self.is_data(pc):
                     break
                 off = pc - self.org
                 if self.mark[off] and pc in self.starts:
-                    break                      # ya trazado desde aqui
+                    break                      # already traced from here
                 n = self.ilen(pc)
                 if n == 0 or pc + n > self.end:
                     break
@@ -174,8 +176,8 @@ class Tracer:
                 elif op == 0xCD:                           # CALL nn
                     t = self.word(pc + 1)
                     self._add(t, work, pc)
-                    if t in self.saltos:
-                        k = self.saltos[t]
+                    if t in self.skips:
+                        k = self.skips[t]
                         self.params.append((nxt, nxt + k))
                         nxt = nxt + k
                 elif op in CALL_CC:
@@ -192,14 +194,14 @@ class Tracer:
                     self.blind.append((pc, "JP (IX/IY)")); stop = True
                 elif op == 0xED and self.inside(pc + 1) and self.byte(pc + 1) in (0x45, 0x4D):
                     stop = True                            # RETN / RETI
-                # OJO: HALT (0x76) NO corta el flujo. Espera a la siguiente
-                # interrupcion y sigue en la instruccion de despues; los juegos
-                # lo usan para sincronizar con el barrido de pantalla. Tratarlo
-                # como fin de rutina dejaba el trazado en el 2% de cobertura.
+                # NOTE: HALT (0x76) does NOT cut the flow. It waits for the
+                # next interrupt and continues at the following instruction;
+                # games use it to sync with the screen scan. Treating it as
+                # the end of a routine left the trace at 2% coverage.
                 elif op in RST:
                     if self.rst_follow and self.inside(RST[op]):
                         self._add(RST[op], work)
-                # RET cc y los CALL/JP condicionales continuan en nxt
+                # RET cc and the conditional CALL/JP continue at nxt
 
                 if stop:
                     break
@@ -208,9 +210,9 @@ class Tracer:
     def _add(self, target, work, pc=None):
         if not self.inside(target):
             if pc is not None:
-                self.externos.append((pc, target))
+                self.externals.append((pc, target))
             return
-        if not self.es_datos(target):
+        if not self.is_data(target):
             self.entries.add(target)
             if not (self.mark[target - self.org] and target in self.starts):
                 work.append(target)
@@ -220,7 +222,7 @@ class Tracer:
         return b - 256 if b > 127 else b
 
     def blocks(self):
-        """Regiones contiguas [(tipo, ini, fin)] con tipo 'c' o 'd'."""
+        """Contiguous regions [(kind, start, end)] with kind 'c' or 'd'."""
         out = []
         cur = self.mark[0]
         start = self.org
@@ -242,7 +244,7 @@ class Tracer:
 
 
 def write_z80dasm_blocks(blocks, path):
-    """Fichero -b de z80dasm. Formato: '<inicio> <tipo> <fin>' por linea."""
+    """z80dasm -b file. Format: '<start> <kind> <end>' per line."""
     with open(path, "w") as f:
         for kind, a, b in blocks:
             f.write(f"{a:#06x} {'code' if kind=='c' else 'defb'} {b-1:#06x}\n")
@@ -253,15 +255,15 @@ def main():
     org = int(org, 0)
     data = open(binpath, "rb").read()
     entries = []
-    saltos = {}
+    skips = {}
     for ln in open(entries_path):
         ln = ln.split("#")[0].strip()
         if not ln:
             continue
         if ln.lower().startswith("!skip"):
-            # !skip 0x5F65 6  -> tras cada CALL 0x5F65, 6 bytes de parametros
+            # !skip 0x5F65 6  -> after every CALL 0x5F65, 6 bytes of parameters
             _, a, n = ln.split()[:3]
-            saltos[int(a, 0)] = int(n, 0)
+            skips[int(a, 0)] = int(n, 0)
             continue
         entries.append(int(ln.split()[0], 0))
 
@@ -275,13 +277,13 @@ def main():
             if ln:
                 a, b = ln.split()[:2]
                 nocode.append((int(a, 0), int(b, 0)))
-        print(f"zonas declaradas como datos: {len(nocode)} (de {ncpath})")
+        print(f"zones declared as data: {len(nocode)} (from {ncpath})")
 
-    t = Tracer(data, org, nocode=nocode, saltos=saltos)
+    t = Tracer(data, org, nocode=nocode, skips=skips)
     t.trace(entries)
     blocks = t.blocks()
     if t.params:
-        print(f"parametros en linea saltados tras CALL: {len(t.params)} sitios, "
+        print(f"inline parameters skipped after CALL: {len(t.params)} sites, "
               f"{sum(b - a for a, b in t.params)} bytes")
     write_z80dasm_blocks(blocks, outprefix + ".blocks")
 
@@ -291,27 +293,27 @@ def main():
                        entries=sorted(t.entries),
                        blind=[[hex(a), k] for a, k in t.blind],
                        params=[[a, b] for a, b in t.params],
-                       externos=[[a, b] for a, b in t.externos],
+                       externals=[[a, b] for a, b in t.externals],
                        blocks=[[k, a, b] for k, a, b in blocks]), f, indent=1)
 
-    print(f"binario {binpath}  org={org:#06x}  {len(data)} bytes")
-    print(f"  codigo    : {r['code_bytes']} bytes ({r['coverage']*100:.1f}%)")
-    print(f"  datos     : {r['data_bytes']} bytes")
-    print(f"  instrucc. : {r['instructions']}")
-    print(f"  etiquetas : {r['labels']}")
-    print(f"  regiones  : {len(blocks)}")
-    if t.rechazados:
-        print(f"  semillas RECHAZADAS por caer en zona de datos: {len(t.rechazados)}")
-        for a in t.rechazados[:10]:
+    print(f"binary {binpath}  org={org:#06x}  {len(data)} bytes")
+    print(f"  code      : {r['code_bytes']} bytes ({r['coverage']*100:.1f}%)")
+    print(f"  data      : {r['data_bytes']} bytes")
+    print(f"  instrs.   : {r['instructions']}")
+    print(f"  labels    : {r['labels']}")
+    print(f"  regions   : {len(blocks)}")
+    if t.rejected:
+        print(f"  seeds REJECTED for falling in a data zone: {len(t.rejected)}")
+        for a in t.rejected[:10]:
             print(f"      {a:#06x}")
-    print(f"  llamadas/saltos fuera del binario: {len(t.externos)} "
-          f"({len(set(b for _, b in t.externos))} destinos distintos)")
-    print(f"  PUNTOS CIEGOS (saltos indirectos, hay que resolverlos a mano): "
+    print(f"  calls/jumps outside the binary: {len(t.externals)} "
+          f"({len(set(b for _, b in t.externals))} distinct targets)")
+    print(f"  BLIND SPOTS (indirect jumps, they have to be resolved by hand): "
           f"{r['blind_jumps']}")
     for a, k in t.blind[:20]:
         print(f"      {a:#06x}  {k}")
     if len(t.blind) > 20:
-        print(f"      ... y {len(t.blind)-20} mas (ver {outprefix}.trace.json)")
+        print(f"      ... and {len(t.blind)-20} more (see {outprefix}.trace.json)")
 
 
 if __name__ == "__main__":

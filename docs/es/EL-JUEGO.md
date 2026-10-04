@@ -15,7 +15,7 @@ sí solo sabe un nombre: la marca escondida al final del banco 3 pone
 ## Las doce fases, y las cuatro que son de bonus
 
 El número de fase vive en 0xE061, y **no** se sube sin más. De una fase se sale
-por dos sitios: `acaba_la_fase` (0x6D53), que suma uno, y `salta_a_la_fase`
+por dos sitios: `end_stage` (0x6D53), que suma uno, y `jump_to_stage`
 (0x6FB9), que le mete un número escrito a mano. A este segundo saltan ocho
 sitios, cada uno con el suyo, y de ahí sale el recorrido de verdad:
 
@@ -77,7 +77,7 @@ tabla de 0x5163. Acertar el de la fase en la que estás da todo, como `HYPER`.
 `BAKA` y `AHO` son *tonto* e *idiota* en japonés, y caen en 0x5127, que pone a
 cero las naves, el aviso de la demo y las dos banderas del mando.
 
-Todo esto está medido en openMSX con `tools/omsx_claves.tcl`, no deducido: en
+Todo esto está medido en openMSX con `tools/omsx_cheats.tcl`, no deducido: en
 pausa, 0xE1E8 se llena con `4F 50 54 49 4F 4E` — OPTION — y al pulsar RETURN
 0xE20B pasa de 00 a 02, las dos opciones.
 

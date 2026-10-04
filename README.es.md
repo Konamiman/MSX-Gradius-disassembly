@@ -30,12 +30,12 @@ que además el listado no *mienta* sobre lo que reensambla.
 Los comentarios están acabados al listón de la serie: **el 23,4 % de las
 instrucciones lleva comentario de línea** — 3.027 de 12.959 en los seis bancos
 con código — y **ni una de las 1.540 rutinas está por debajo del 10 %**. `make
-densidad` lo imprime banco a banco, y `tests/test_listado.py` guarda, banco a
+density` lo imprime banco a banco, y `tests/test_listing.py` guarda, banco a
 banco, cuántas rutinas llamadas siguen sin nombre, de modo que la cifra sólo
 puede bajar.
 
 La web de [docs/](docs/) sale de esas mismas notas, y sus doce mapas de fase
-están dibujados desde la ROM por `tools/graficos.py`: aquí no hay ni una captura
+están dibujados desde la ROM por `tools/graphics.py`: aquí no hay ni una captura
 de emulador.
 
 ## El cartucho
@@ -43,7 +43,7 @@ de emulador.
 128 KB con el **mapper de Konami SIN SCC** (Konami4): dieciséis bancos de 8 KB.
 Para 0x4000-0x5FFF no hay registro —el banco 0 está fijo ahí— y las otras tres
 ventanas se eligen escribiendo el número de banco en 0x6000, 0x8000 y 0xA000.
-`tools/reconocimiento.py` lo mide sobre los bytes: ni una escritura a 0x5000,
+`tools/recon.py` lo mide sobre los bytes: ni una escritura a 0x5000,
 0x7000, 0x9000 ni 0xB000 (los registros del mapper con SCC), y las 68
 escrituras a los registros del Konami4 llevan todas un banco que cumple la
 regla.
@@ -86,7 +86,7 @@ gráficos de más.
 Al final del banco 3 (offset 0x07FF5 del fichero) hay once bytes: el título al
 revés, cuántos son, las dos últimas cifras del RC en BCD, y 0xAA. Aquí sale
 RC-742 y グラディウス, o sea *Gradius*. **El hallazgo no es nuestro: lo destapó
-Manuel Pazos (@ManuelPazosMSX), y `tools/marca_konami.py` sólo lee lo que él
+Manuel Pazos (@ManuelPazosMSX), y `tools/konami_mark.py` sólo lee lo que él
 enseñó que estaba ahí.** Ojo: en un MegaROM la marca *no* está al final del
 fichero, sino que detrás quedan 96 KB de datos.
 
@@ -96,7 +96,7 @@ La ROM **no** se distribuye aquí. Pon la tuya en la raíz como `nemesis.rom`
 (131.072 bytes exactos) y:
 
 ```sh
-make comprueba   # comprueba el sha256
+make check   # comprueba el sha256
 make             # trazado -> listado -> byte a byte -> sanidad -> tests
 ```
 
@@ -107,18 +107,18 @@ Hacen falta `python3`, `pasmo`, `z80dasm` y `make`.
 `make verify` demuestra que los bytes vuelven. Lo demás caza lo que eso no
 puede cazar:
 
-- `tools/check_trace.py` y `tools/check_datos_como_codigo.py` — ningún byte
+- `tools/check_trace.py` y `tools/check_data_as_code.py` — ningún byte
   declarado como datos puede salir como código. Un listado que lee gráficos
   como instrucciones reensambla igual de bien; lo único que miente es la
   *lectura*.
-- `tools/check_bancos.py` — este proyecto tiene **dos** trazadores: uno que
+- `tools/check_bank_tracer.py` — este proyecto tiene **dos** trazadores: uno que
   recorre el cartucho entero siguiendo el mapper y otro que recorre un solo
   banco desde las entradas escritas en `src/pNN.entries`. Los dos tienen que
   marcar exactamente los mismos bytes como código. Si no coinciden, o falta una
   entrada o hay una que lleva a donde no debe.
-- `tools/check_entradas.py` — ningún punto de entrada puede caer dentro de un
+- `tools/check_entries.py` — ningún punto de entrada puede caer dentro de un
   rango declarado como datos. El proyecto contradiciéndose a sí mismo.
-- `tools/presupuesto.py` — cada byte del cartucho es código trazado o cae en un
+- `tools/budget.py` — cada byte del cartucho es código trazado o cae en un
   rango de datos con nombre y explicación. **100 %.**
 
 ## Cómo está repartido

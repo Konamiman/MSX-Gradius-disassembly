@@ -1,8 +1,8 @@
-; Simbolos MSX para z80dasm
-; Generado desde /Users/fx-media/Documents/BARCOEMESEKS/MSXgl/engine/src (bios_mainrom.h, bios_var.h)
-; Fuente original citada por MSXgl: MSX2 Technical Handbook, map.grauw.nl
+; MSX symbols for z80dasm
+; Generated from /Users/fx-media/Documents/BARCOEMESEKS/MSXgl/engine/src (bios_mainrom.h, bios_var.h)
+; Original source cited by MSXgl: MSX2 Technical Handbook, map.grauw.nl
 
-; --- BIOS Main-ROM y variables de sistema ---
+; --- BIOS Main-ROM and system variables ---
 CHKRAM:	equ 0x0000	; Tests RAM and sets RAM slot for the system  [alias: STARTUP, RESET, BOOT]
 CGTABL:	equ 0x0004	; Character Generator TABLe - Base address of the MSX character set in ROM
 VDP_DR:	equ 0x0006	; Base port address for VDP data read
@@ -428,13 +428,13 @@ RG27SAV:	equ 0xfffc	; System saves the byte written to the register R#27 here, U
 SVFFFD:	equ 0xfffd	; Reserved
 SLTSL:	equ 0xffff	; Access address to selection register of secondary slots. (Available in extended slots only.)
 
-; --- Puertos de E/S ---
-VDP_DATA:	equ 0x98	; VDP puerto de datos (lectura/escritura VRAM)
-VDP_CTRL:	equ 0x99	; VDP puerto de control (registros / direccion VRAM)
-PSG_ADDR:	equ 0xa0	; PSG AY-3-8910: selector de registro
-PSG_DATA:	equ 0xa1	; PSG: escritura de dato
-PSG_READ:	equ 0xa2	; PSG: lectura de dato (joystick, cinta)
-PPI_A_SLOT:	equ 0xa8	; PPI 8255 puerto A: registro de seleccion de slots primarios
-PPI_B_KEY:	equ 0xa9	; PPI puerto B: lectura de fila de teclado
-PPI_C:	equ 0xaa	; PPI puerto C: fila de teclado, CAPS, motor cinta, click
-PPI_CTRL:	equ 0xab	; PPI registro de control
+; --- I/O ports ---
+VDP_DATA:	equ 0x98	; VDP data port (VRAM read/write)
+VDP_CTRL:	equ 0x99	; VDP control port (registers / VRAM address)
+PSG_ADDR:	equ 0xa0	; PSG AY-3-8910: register select
+PSG_DATA:	equ 0xa1	; PSG: data write
+PSG_READ:	equ 0xa2	; PSG: data read (joystick, tape)
+PPI_A_SLOT:	equ 0xa8	; PPI 8255 port A: primary slot select register
+PPI_B_KEY:	equ 0xa9	; PPI port B: keyboard row read
+PPI_C:	equ 0xaa	; PPI port C: keyboard row, CAPS, tape motor, click
+PPI_CTRL:	equ 0xab	; PPI control register

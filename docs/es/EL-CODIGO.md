@@ -46,7 +46,7 @@ Doce ranuras de 32 bytes en 0xE300, más ocho de 0x20 contadas hacia atrás en
 | 0x17..0x1A | las dos aceleraciones |
 | 0x1B | banderas: si se le puede disparar, si se dibuja |
 
-`saca_un_objeto` (0x6A72) es la rutina más llamada del banco 1: se le entra con
+`spawn_object` (0x6A72) es la rutina más llamada del banco 1: se le entra con
 el tipo, dónde va y un byte de ajuste, y ella busca ranura libre, la rellena con
 la ficha de cuatro bytes de 0x6BA3 y sube la cuenta de vivos. Tres tipos se
 salen de lo normal: el 0x1E necesita **tres ranuras seguidas**, el 0x0E va a la

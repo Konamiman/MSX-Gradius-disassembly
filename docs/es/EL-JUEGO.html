@@ -2,16 +2,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>El juego — Nemesis / Gradius (Konami, 1986)</title>
 <style>
-:root{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;--linea:#23262e;
-  --rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
-@media (prefers-color-scheme:light){:root{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;
-  --panel:#f7f6f2;--linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}}
-:root[data-theme="dark"]{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;
-  --linea:#23262e;--rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
-:root[data-theme="light"]{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;--panel:#f7f6f2;
-  --linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}
+:root{--ink:#cfd0d4;--muted:#83868f;--bg:#000;--panel:#0c0e13;--line:#23262e;
+  --red:#ff897d;--cyan:#65dbef;--green:#3eb849;--gold:#ded087}
+@media (prefers-color-scheme:light){:root{--ink:#191a1e;--muted:#5a5d66;--bg:#e9e7e1;
+  --panel:#f7f6f2;--line:#d0cdc5;--red:#b23f34;--cyan:#1c6b7c;--green:#2b7734;--gold:#8a7420}}
+:root[data-theme="dark"]{--ink:#cfd0d4;--muted:#83868f;--bg:#000;--panel:#0c0e13;
+  --line:#23262e;--red:#ff897d;--cyan:#65dbef;--green:#3eb849;--gold:#ded087}
+:root[data-theme="light"]{--ink:#191a1e;--muted:#5a5d66;--bg:#e9e7e1;--panel:#f7f6f2;
+  --line:#d0cdc5;--red:#b23f34;--cyan:#1c6b7c;--green:#2b7734;--gold:#8a7420}
 *{box-sizing:border-box}
-body{margin:0;background:var(--fondo);color:var(--tinta);padding:0 1.25rem 6rem;
+body{margin:0;background:var(--bg);color:var(--ink);padding:0 1.25rem 6rem;
   font:15px/1.7 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
 .w{max-width:1120px;margin:0 auto}
 .n{max-width:68ch}
@@ -21,74 +21,74 @@ img{image-rendering:pixelated;max-width:100%;height:auto;display:block}
 header.top{display:flex;flex-direction:column;align-items:center;gap:1.5rem;
   padding:4rem 0 2rem;text-align:center}
 header.top img{width:min(100%,642px)}
-.claim{max-width:60ch;color:var(--suave);font-size:1.05rem}
-.claim b{color:var(--tinta);font-weight:400}
-.ficha{display:flex;flex-wrap:wrap;justify-content:center;gap:0 1.5rem;width:100%;
-  font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave);
-  border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);padding:.85rem 0}
-.ficha b{color:var(--rojo);font-weight:400}
+.claim{max-width:60ch;color:var(--muted);font-size:1.05rem}
+.claim b{color:var(--ink);font-weight:400}
+.facts{display:flex;flex-wrap:wrap;justify-content:center;gap:0 1.5rem;width:100%;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:.85rem 0}
+.facts b{color:var(--red);font-weight:400}
 nav{display:flex;flex-wrap:wrap;gap:1.25rem;justify-content:center;padding:1.25rem 0;
   font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-nav a{color:var(--suave);text-decoration:none;border-bottom:1px solid transparent}
-nav a:hover,nav a:focus{color:var(--tinta);border-bottom-color:var(--rojo)}
-nav.docs{border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);
+nav a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover,nav a:focus{color:var(--ink);border-bottom-color:var(--red)}
+nav.docs{border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   margin-bottom:1rem}
 section{margin-top:4.5rem;scroll-margin-top:1rem}
 section>h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;
-  border-left:3px solid var(--rojo);padding-left:.9rem;margin:0 0 1.5rem}
-.cifras{display:grid;gap:1px;background:var(--linea);border:1px solid var(--linea);
+  border-left:3px solid var(--red);padding-left:.9rem;margin:0 0 1.5rem}
+.stats{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
   grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
-.cifra{background:var(--panel);padding:1.1rem}
-.cifra b{display:block;font-size:1.7rem;color:var(--oro);font-weight:400;
+.stat{background:var(--panel);padding:1.1rem}
+.stat b{display:block;font-size:1.7rem;color:var(--gold);font-weight:400;
   font-variant-numeric:tabular-nums;line-height:1.2}
-.cifra span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--suave)}
-.hall{border-top:1px solid var(--linea);padding-top:1.75rem;margin-top:2.5rem}
-.hall:first-of-type{border-top:0;padding-top:0;margin-top:0}
-.hall h3{margin:0 0 .75rem;font-size:1.15rem;color:var(--rojo)}
-.hall h4{color:var(--oro);margin:1.5rem 0 .5rem;font-size:.95rem}
-.hall p{margin:0 0 1rem}
-pre.asm{background:var(--panel);border-left:2px solid var(--verde);margin:1.25rem 0;
-  padding:1rem 1.1rem;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--tinta)}
-.par{display:grid;gap:1.25rem;grid-template-columns:1fr}
-@media(min-width:820px){.par{grid-template-columns:1fr 1fr}}
-.par figure{margin:0}
+.stat span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.finding{border-top:1px solid var(--line);padding-top:1.75rem;margin-top:2.5rem}
+.finding:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.finding h3{margin:0 0 .75rem;font-size:1.15rem;color:var(--red)}
+.finding h4{color:var(--gold);margin:1.5rem 0 .5rem;font-size:.95rem}
+.finding p{margin:0 0 1rem}
+pre.asm{background:var(--panel);border-left:2px solid var(--green);margin:1.25rem 0;
+  padding:1rem 1.1rem;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--ink)}
+.pair{display:grid;gap:1.25rem;grid-template-columns:1fr}
+@media(min-width:820px){.pair{grid-template-columns:1fr 1fr}}
+.pair figure{margin:0}
 table{border-collapse:collapse;width:100%;margin:1.25rem 0;font-size:13px;display:block;
   overflow-x:auto}
-th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--linea)}
-th{color:var(--suave);font-weight:400;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
-td.num{font-variant-numeric:tabular-nums;color:var(--oro)}
-.nivel{margin-top:2rem}
-.nivel h3{margin:0 0 .9rem;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase}
-.nivel em{color:var(--cyan);font-style:normal}
-.sep{color:var(--suave);margin:0 .6rem}
-.rejilla{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
-.rejilla figure{margin:0;background:var(--panel);box-shadow:0 0 0 1px var(--linea)}
-.rejilla figcaption{display:flex;justify-content:space-between;padding:.45rem .65rem;
-  font-size:11px;color:var(--suave);border-top:1px solid var(--linea)}
-.dir{font-variant-numeric:tabular-nums;color:var(--verde)}
-footer{margin-top:5rem;padding-top:1.5rem;border-top:1px solid var(--linea);
-  color:var(--suave);font-size:12px}
+th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:400;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+td.num{font-variant-numeric:tabular-nums;color:var(--gold)}
+.level{margin-top:2rem}
+.level h3{margin:0 0 .9rem;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase}
+.level em{color:var(--cyan);font-style:normal}
+.sep{color:var(--muted);margin:0 .6rem}
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.grid figure{margin:0;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.grid figcaption{display:flex;justify-content:space-between;padding:.45rem .65rem;
+  font-size:11px;color:var(--muted);border-top:1px solid var(--line)}
+.addr{font-variant-numeric:tabular-nums;color:var(--green)}
+footer{margin-top:5rem;padding-top:1.5rem;border-top:1px solid var(--line);
+  color:var(--muted);font-size:12px}
 
-/* Aviso de trabajo en curso: tiene que verse antes que las cifras, porque un
-   100% mal leido hace mas dano que no ponerlo. */
-.aviso{background:#3a2a10;border-left:3px solid var(--oro);margin:1.5rem auto;
+/* Work-in-progress notice: it has to be seen before the figures, because a
+   misread 100% does more harm than not showing it at all. */
+.notice{background:#3a2a10;border-left:3px solid var(--gold);margin:1.5rem auto;
   padding:1rem 1.2rem;max-width:900px;border-radius:4px}
-.aviso p{margin:0;color:var(--tinta);font-size:15px;line-height:1.65}
-.galeria{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+.notice p{margin:0;color:var(--ink);font-size:15px;line-height:1.65}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
   gap:1.5rem;margin:1.5rem 0}
-.galeria figure{margin:0}
-.galeria img{width:100%;height:auto;image-rendering:pixelated;
-  border:1px solid var(--linea);border-radius:3px}
-.galeria figcaption{color:var(--suave);font-size:13px;margin-top:.5rem}
+.gallery figure{margin:0}
+.gallery img{width:100%;height:auto;image-rendering:pixelated;
+  border:1px solid var(--line);border-radius:3px}
+.gallery figcaption{color:var(--muted);font-size:13px;margin-top:.5rem}
 audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 </style>
-<div class="w"><nav class="top"><a href="index.html">Portada</a><a href="EMPEZAR.html">Empezar</a><a href="EL-JUEGO.html" style=color:var(--tinta)>El juego</a><a href="EL-CARTUCHO.html">El cartucho</a><a href="EL-CODIGO.html">El código</a><a href="HALLAZGOS.html">Hallazgos</a><a href="EN-EL-EMULADOR.html">En el emulador</a><a href="PREGUNTAS-ABIERTAS.html">Preguntas abiertas</a><a href="../THE-GAME.html" style="margin-left:auto;color:var(--oro)">English</a></nav>
+<div class="w"><nav class="top"><a href="index.html">Portada</a><a href="EMPEZAR.html">Empezar</a><a href="EL-JUEGO.html" style=color:var(--ink)>El juego</a><a href="EL-CARTUCHO.html">El cartucho</a><a href="EL-CODIGO.html">El código</a><a href="HALLAZGOS.html">Hallazgos</a><a href="EN-EL-EMULADOR.html">En el emulador</a><a href="PREGUNTAS-ABIERTAS.html">Preguntas abiertas</a><a href="../THE-GAME.html" style="margin-left:auto;color:var(--gold)">English</a></nav>
 <h1 id="el-juego">El juego</h1>
 <p>El Gradius de Konami, publicado para MSX1 en 1986 y llamado <b>Nemesis</b> fuera de Japón. Un matamarcianos de scroll horizontal: doce fases, un medidor de mejoras que se llena recogiendo cápsulas, y opciones que van detrás de la nave copiando su recorrido.</p>
 <h2 id="que-nombre-ensena">Qué nombre enseña</h2>
 <p>Los dos. El logotipo se elige al arrancar: el cartucho le pregunta a la BIOS de qué país es la máquina y pone el título japonés o el occidental. El cartucho en sí solo sabe un nombre: la marca escondida al final del banco 3 pone グラディウス, <em>Gradius</em>.</p>
 <h2 id="las-doce-fases-y-las-cuatro-que-son-de-bonus">Las doce fases, y las cuatro que son de bonus</h2>
-<p>El número de fase vive en 0xE061, y <b>no</b> se sube sin más. De una fase se sale por dos sitios: <code>acaba_la_fase</code> (0x6D53), que suma uno, y <code>salta_a_la_fase</code> (0x6FB9), que le mete un número escrito a mano. A este segundo saltan ocho sitios, cada uno con el suyo, y de ahí sale el recorrido de verdad:</p>
+<p>El número de fase vive en 0xE061, y <b>no</b> se sube sin más. De una fase se sale por dos sitios: <code>end_stage</code> (0x6D53), que suma uno, y <code>jump_to_stage</code> (0x6FB9), que le mete un número escrito a mano. A este segundo saltan ocho sitios, cada uno con el suyo, y de ahí sale el recorrido de verdad:</p>
 <pre><code>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8 - final - 1</code></pre>
 <p><b>Las fases 9, 10, 11 y 12 son de bonus</b>, metidas entre las otras. No llevan jefe: su final son seis instrucciones que devuelven la fase a la 3, la 4, la 5 y la 8, que son los cuatro bytes de la tabla de 0x418F.</p>
 <p>Y lo que las abre es el blanco. Los finales de las fases 2, 3, 4 y 7 miran 0xE1C0, y lo único en los 128 KB que pone ese byte distinto de cero es 0xB130, que corre cuando la nave toca el blanco del final de la fase. O sea que <b>tocarlo te manda a la fase de bonus, y no tocarlo sigue el guion normal</b>. La fase 1 también tiene blanco, y no lleva a ninguna.</p>
@@ -102,7 +102,7 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <table><tr><th>palabra</th><th>qué da</th></tr><tr><td><code>HYPER</code></td><td>las cinco de golpe, pero solo la primera vez</td></tr><tr><td><code>SHIELD</code></td><td>el escudo</td></tr><tr><td><code>LASER</code></td><td>el láser</td></tr><tr><td><code>MISSILE</code></td><td>el misil</td></tr><tr><td><code>DOUBLE</code></td><td>el disparo doble</td></tr><tr><td><code>OPTION</code></td><td>una opción más</td></tr><tr><td><code>DOWN</code></td><td>deja la velocidad a cero</td></tr><tr><td><code>BAKA</code>, <code>AHO</code></td><td>nada bueno: ponen las naves a cero</td></tr></table>
 <p>Y cada fase tiene <b>su propio nombre de mujer</b> — MOMOKO, CHIE, AKEMI, SYUKO, CHIAKI, NORIKO, SATOE, YASUKO, KINUYO, HISAE, MIYUKI, YOHKO — que reparte la tabla de 0x5163. Acertar el de la fase en la que estás da todo, como <code>HYPER</code>.</p>
 <p><code>BAKA</code> y <code>AHO</code> son <em>tonto</em> e <em>idiota</em> en japonés, y caen en 0x5127, que pone a cero las naves, el aviso de la demo y las dos banderas del mando.</p>
-<p>Todo esto está medido en openMSX con <code>tools/omsx_claves.tcl</code>, no deducido: en pausa, 0xE1E8 se llena con <code>4F 50 54 49 4F 4E</code> — OPTION — y al pulsar RETURN 0xE20B pasa de 00 a 02, las dos opciones.</p>
+<p>Todo esto está medido en openMSX con <code>tools/omsx_cheats.tcl</code>, no deducido: en pausa, 0xE1E8 se llena con <code>4F 50 54 49 4F 4E</code> — OPTION — y al pulsar RETURN 0xE20B pasa de 00 a 02, las dos opciones.</p>
 <h2 id="la-demo-se-juega-sola-leyendo-una-grabacion">La demo se juega sola leyendo una grabación</h2>
 <p>Si se le deja, el cartucho juega una fase por su cuenta. No es un piloto automático: en el banco 12 hay, por fase, una lista de parejas [cuántos cuadros][qué vale el mando], y 0x5CDA mete el valor grabado en la misma casilla donde se deja lo que se lee del joystick de verdad. El bit del disparo va forzado, así que la nave de la demo dispara sin parar, y arranca con todo puesto: 0x5CB8 llama a la misma rutina que la clave <code>HYPER</code>.</p>
 <footer><p><em>Nemesis / Gradius</em> lo publico Konami para MSX en 1986; su numero de catalogo es RC-742 y son 128 KB. Todos los derechos sobre el juego siguen siendo de sus titulares. Este trabajo es de preservacion, estudio y documentacion, y la imagen del cartucho no se distribuye.</p></footer></div>

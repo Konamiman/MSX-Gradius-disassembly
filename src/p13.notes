@@ -1,13 +1,13 @@
-# Banco 13. Directivas: L etiqueta, C comentario de linea, B cabecera de
-# bloque, D rango de datos, F anchura de fila.
+# Bank 13. Directives: L label, C line comment, B block header, D data
+# range, F row width.
 #
-# Los 8192 bytes son 0xFF y NINGUN registro del mapper lo selecciona nunca
-# (tools/reconocimiento.py lo comprueba). Es relleno hasta los 128 KB del
-# cartucho. El org 0x8000 con el que se lista es una convencion nuestra: como
-# no se mapea, no tiene una direccion propia.
+# The 8192 bytes are 0xFF and NO mapper register ever selects it
+# (tools/recon.py checks this). It is filler up to the 128 KB of the
+# cartridge. The org 0x8000 it is listed at is our own convention: since it is
+# never mapped, it has no address of its own.
 
-B 0x8000 BANCO NO USADO
-B 0x8000 8192 bytes de 0xFF. Ninguna escritura al mapper lo selecciona.
+B 0x8000 UNUSED BANK
+B 0x8000 8192 bytes of 0xFF. No write to the mapper selects it.
 
-D 0x8000 0xA000 relleno  Relleno 0xFF hasta completar los 128 KB del cartucho.
+D 0x8000 0xA000 filler  0xFF filler up to the full 128 KB of the cartridge.
 F 0x8000 16

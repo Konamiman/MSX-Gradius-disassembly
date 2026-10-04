@@ -1,33 +1,34 @@
-# Banco 4 (se ejecuta en 0x6000). Directivas: L etiqueta, C comentario de
-# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+# Bank 4 (runs at 0x6000). Directives: L label, C line comment, B block
+# header, D data range, F row width.
 #
-# ESTE BANCO NO LLEVA CODIGO. Sus 8192 bytes son graficos comprimidos con el
-# formato de 0x49B9 (ver tools/rle.py): patrones y colores de los decorados de
-# cada fase. Quien los pide es la rutina 0x4371 del banco 0, que recorre unas
-# fichas de seis bytes -bandera, origen de los colores, indice de caracter,
-# origen de los patrones- guardadas en el banco 5, y le pasa cada origen a
-# 0x49B9. Por eso casi ningun bloque aparece apuntado por un `ld de,nnnn`: la
-# direccion sale de la ficha, no de una instruccion.
+# THIS BANK HOLDS NO CODE. Its 8192 bytes are graphics compressed in the
+# 0x49B9 format (see tools/rle.py): patterns and colours of each stage's
+# scenery. The one that asks for them is routine 0x4371 in bank 0, which walks
+# some six-byte records (flag, colour source, character index, pattern
+# source) kept in bank 5, and hands each source to 0x49B9. That is why almost
+# no block is pointed at by an `ld de,nnnn`: the address comes from the
+# record, not from an instruction.
 #
-# Que los bloques encajen unos con otros sin dejar ni un byte suelto no es
-# casualidad: es la prueba de que el formato esta bien leido. Un byte de mas o
-# de menos en cualquiera de ellos y el siguiente empezaria donde no debe.
+# That the blocks fit one against the other without leaving a single stray
+# byte is no accident: it is the proof that the format has been read
+# correctly. One byte too many or too few in any of them and the next one
+# would start where it should not.
 
-B 0x6000 GRAFICOS DE LOS DECORADOS (banco 4, 8192 bytes)
-B 0x6000 Todo el banco es flujo comprimido para 0x49B9. Los cortes de abajo
-B 0x6000 son los sitios exactos que pide el codigo del banco 0 con un
-B 0x6000 `ld de,nnnn`; entre corte y corte hay cadenas de bloques que se
-B 0x6000 piden desde las fichas de seis bytes del banco 5.
+B 0x6000 SCENERY GRAPHICS (bank 4, 8192 bytes)
+B 0x6000 The whole bank is a compressed stream for 0x49B9. The splits below are
+B 0x6000 the exact places that bank 0 code asks for with an `ld de,nnnn`;
+B 0x6000 between one split and the next there are chains of blocks that are
+B 0x6000 requested from the six-byte records of bank 5.
 
-D 0x6000 0x62C7 graficos_cadena_6000  Cadena de 19 bloques comprimidos, del 0x6000 al 0x62C6, que encajan sin holgura. Los piden las fichas del banco 5 (0x4371), no una instruccion con la direccion escrita.
+D 0x6000 0x62C7 graphics_chain_6000  Chain of 19 compressed blocks, from 0x6000 to 0x62C6, that fit with no slack. They are requested by the records of bank 5 (0x4371), not by an instruction with the address written in it.
 F 0x6000 16
-D 0x62C7 0x6379 graficos_colores_30A8  Bloque comprimido que 0x53FF y 0x5408 vuelcan en la VRAM 0x30A8 y 0x3160: colores del marcador.
+D 0x62C7 0x6379 graphics_colours_30A8  Compressed block that 0x53FF and 0x5408 dump into VRAM 0x30A8 and 0x3160: scoreboard colours.
 F 0x62C7 16
-D 0x6379 0x7674 graficos_cadena_6379  Cadena de 75 bloques comprimidos. El primero (0x6379) lo pide 0x53F6 para la VRAM 0x3058; los demas salen de las fichas del banco 5.
+D 0x6379 0x7674 graphics_chain_6379  Chain of 75 compressed blocks. The first one (0x6379) is requested by 0x53F6 for VRAM 0x3058; the rest come from the records of bank 5.
 F 0x6379 16
-D 0x7674 0x7703 graficos_patrones_10A8  Bloque comprimido que 0x541A vuelca en la VRAM 0x10A8: patrones del marcador.
+D 0x7674 0x7703 graphics_patterns_10A8  Compressed block that 0x541A dumps into VRAM 0x10A8: scoreboard patterns.
 F 0x7674 16
-D 0x7703 0x7793 graficos_patrones_1160  Bloque comprimido que 0x5423 vuelca en la VRAM 0x1160.
+D 0x7703 0x7793 graphics_patterns_1160  Compressed block that 0x5423 dumps into VRAM 0x1160.
 F 0x7703 16
-D 0x7793 0x8000 graficos_cadena_7793  Cadena de 49 bloques comprimidos hasta el final del banco. El primero (0x7793) lo pide 0x5411 para la VRAM 0x1058.
+D 0x7793 0x8000 graphics_chain_7793  Chain of 49 compressed blocks up to the end of the bank. The first one (0x7793) is requested by 0x5411 for VRAM 0x1058.
 F 0x7793 16

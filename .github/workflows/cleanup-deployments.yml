@@ -1,0 +1,58 @@
+# Leaves a single Pages deployment: the one that is serving.
+#
+# GitHub creates a new deployment every time it rebuilds the website, so
+# without this dozens of entries pile up in the repository history. None of
+# them is of any use once superseded: only the latest one serves the website.
+#
+# It is triggered by `page_build`, which is exactly the event GitHub emits when
+# it has just published the website, so the cleanup always comes after the good
+# deployment and never overwrites it.
+
+name: Clean up old deployments
+
+on:
+  page_build:
+  workflow_dispatch:      # and by hand, in case a sweep is wanted
+
+permissions:
+  deployments: write
+
+concurrency:
+  group: cleanup-deployments
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the superseded deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          LIST="repos/$REPO/deployments?environment=github-pages&per_page=100"
+
+          # The API returns them newest first: the first one is the live one.
+          ACTIVE=$(gh api "$LIST" --jq '.[0].id // empty')
+          if [ -z "$ACTIVE" ]; then
+            echo "No deployments; nothing to clean up."
+            exit 0
+          fi
+          echo "Keeping the active deployment: $ACTIVE"
+
+          DELETED=0
+          for ID in $(gh api "$LIST" --jq ".[] | select(.id != $ACTIVE) | .id"); do
+            # GitHub does not allow deleting an active deployment, so it is
+            # first marked as inactive. If it already was, this step does
+            # nothing.
+            gh api -X POST "repos/$REPO/deployments/$ID/statuses" \
+              -f state=inactive --silent 2>/dev/null || true
+            if gh api -X DELETE "repos/$REPO/deployments/$ID" --silent; then
+              echo "  deleted $ID"
+              DELETED=$((DELETED + 1))
+            else
+              echo "  could not delete $ID (left as it is)"
+            fi
+          done
+          echo "Deployments deleted: $DELETED"

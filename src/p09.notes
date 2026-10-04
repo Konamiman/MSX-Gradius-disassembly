@@ -1,36 +1,37 @@
-# Banco 9 (se ejecuta en 0x8000). Directivas: L etiqueta, C comentario de
-# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+# Bank 9 (runs at 0x8000). Directives: L label, C line comment, B block
+# header, D data range, F row width.
 #
-# ESTE BANCO NO LLEVA CODIGO. Son las pantallas fijas: el titulo, el mapa de
-# la nave y las pantallas de texto. Se mapea junto con el banco 10 (0xA000)
-# desde p00:5315-p00:5321, p00:5B34-p00:5B3E, p00:5B7D-p00:5B87 y
+# THIS BANK HOLDS NO CODE. These are the fixed screens: the title, the ship
+# map and the text screens. It is mapped together with bank 10 (0xA000) from
+# p00:5315-p00:5321, p00:5B34-p00:5B3E, p00:5B7D-p00:5B87 and
 # p00:5BFE-p00:5C08.
 #
-# Casi todo son bloques comprimidos para 0x49B9 (tools/rle.py). La prueba de
-# que estan bien delimitados es que las cadenas encajan sin holgura: de 0x8300
-# a 0x9B3F salen seis bloques exactos, y de 0x9C57 al final del banco, dos.
+# Almost all of it is compressed blocks for 0x49B9 (tools/rle.py). The proof
+# that they are correctly delimited is that the chains fit with no slack:
+# from 0x8300 to 0x9B3F there are exactly six blocks, and from 0x9C57 to the
+# end of the bank, two.
 
-B 0x8000 PANTALLAS FIJAS (banco 9)
+B 0x8000 FIXED SCREENS (bank 9)
 
-D 0x8000 0x8300 pantalla_de_nombres  768 bytes en crudo -no comprimidos- que 0x5C66 copia con LDIRVM a la VRAM 0x3800: una tabla de nombres entera, 24 filas de 32 caracteres.
+D 0x8000 0x8300 name_table_screen  768 raw bytes (not compressed) that 0x5C66 copies with LDIRVM to VRAM 0x3800: a whole name table, 24 rows of 32 characters.
 F 0x8000 32
-D 0x8300 0x87FA graficos_colores_2008  Bloque comprimido que 0x5C15 vuelca en la VRAM 0x2008 (colores, primer tercio).
+D 0x8300 0x87FA graphics_colours_2008  Compressed block that 0x5C15 dumps into VRAM 0x2008 (colours, first third).
 F 0x8300 16
-D 0x87FA 0x8CB2 graficos_colores_2808  Bloque comprimido que 0x5C1E vuelca en la VRAM 0x2808 (colores, segundo tercio).
+D 0x87FA 0x8CB2 graphics_colours_2808  Compressed block that 0x5C1E dumps into VRAM 0x2808 (colours, second third).
 F 0x87FA 16
-D 0x8CB2 0x917E graficos_colores_3008  Bloque comprimido que 0x5C27 vuelca en la VRAM 0x3008 (colores, tercer tercio).
+D 0x8CB2 0x917E graphics_colours_3008  Compressed block that 0x5C27 dumps into VRAM 0x3008 (colours, third third).
 F 0x8CB2 16
-D 0x917E 0x9515 graficos_patrones_0008  Bloque comprimido que 0x5C30 vuelca en la VRAM 0x0008 (patrones, primer tercio).
+D 0x917E 0x9515 graphics_patterns_0008  Compressed block that 0x5C30 dumps into VRAM 0x0008 (patterns, first third).
 F 0x917E 16
-D 0x9515 0x989F graficos_patrones_0808  Bloque comprimido que 0x5C39 vuelca en la VRAM 0x0808 (patrones, segundo tercio).
+D 0x9515 0x989F graphics_patterns_0808  Compressed block that 0x5C39 dumps into VRAM 0x0808 (patterns, second third).
 F 0x9515 16
-D 0x989F 0x9B3F graficos_patrones_1008  Bloque comprimido que 0x5C42 vuelca en la VRAM 0x1008 (patrones, tercer tercio).
+D 0x989F 0x9B3F graphics_patterns_1008  Compressed block that 0x5C42 dumps into VRAM 0x1008 (patterns, third third).
 F 0x989F 16
-D 0x9B3F 0x9BCB graficos_9B3F  Bloque comprimido que pide 0x5B98.
+D 0x9B3F 0x9BCB graphics_9B3F  Compressed block requested by 0x5B98.
 F 0x9B3F 16
-D 0x9BCB 0x9C57 graficos_9BCB  Bloque comprimido que pide 0x5B93.
+D 0x9BCB 0x9C57 graphics_9BCB  Compressed block requested by 0x5B93.
 F 0x9BCB 16
-D 0x9C57 0x9EAB graficos_2468  Bloque comprimido que 0x5B56 pasa a 0x4988 con HL=0x2468: 0x4988 lo vuelca tres veces, una por tercio de pantalla, sumando 0x800 cada vez.
+D 0x9C57 0x9EAB graphics_2468  Compressed block that 0x5B56 passes to 0x4988 with HL=0x2468: 0x4988 dumps it three times, once per screen third, adding 0x800 each time.
 F 0x9C57 16
-D 0x9EAB 0xA000 graficos_0468  Bloque comprimido que 0x5B5F pasa a 0x4988 con HL=0x0468, otra vez por los tres tercios.
+D 0x9EAB 0xA000 graphics_0468  Compressed block that 0x5B5F passes to 0x4988 with HL=0x0468, again across the three thirds.
 F 0x9EAB 16

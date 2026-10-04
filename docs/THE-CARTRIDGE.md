@@ -1,7 +1,7 @@
 # The cartridge
 
 **RC-742**, 128 KB, sixteen banks of 8 KB, with the Konami mapper **without
-SCC** (Konami4). `tools/reconocimiento.py` measures that on the bytes rather
+SCC** (Konami4). `tools/recon.py` measures that on the bytes rather
 than assuming it: there is not one write to 0x5000, 0x7000, 0x9000 or 0xB000,
 which are the registers of the other Konami mapper, the one with the SCC.
 
@@ -95,4 +95,4 @@ characters are made out of the other half instead of being stored twice.
 At the end of bank 3, at offset 0x07FFF of the dump, sit the cartridge code
 **RC-742** and eight katakana characters that read **グラディウス**, *Gradius*.
 It is the signature Konami hid in its cartridges; the person who found it and
-documented it is **Manuel Pazos**. `make marca` reads it back out of the ROM.
+documented it is **Manuel Pazos**. `make mark` reads it back out of the ROM.

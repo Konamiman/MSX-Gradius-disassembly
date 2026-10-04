@@ -5,7 +5,7 @@ is what was checked with the cartridge actually running, and how.
 
 ## What was measured, and what came out
 
-**The keyboard cheats.** `tools/omsx_claves.tcl` boots the cartridge, starts a
+**The keyboard cheats.** `tools/omsx_cheats.tcl` boots the cartridge, starts a
 game, presses GRAPH to pause, types the word letter by letter, presses RETURN
 and writes down the bytes of the ship's card before and after. With `OPTION`,
 0xE1E8 fills with `4F 50 54 49 4F 4E` and 0xE20B goes from 00 to 02. With
@@ -47,8 +47,8 @@ of every screen with the first third's characters.
 
 ## Running one yourself
 
-    NEM_OUT=<directory> NEM_CLAVE=option openmsx -machine Philips_VG_8020 \\
-        -carta nemesis.rom -script tools/omsx_claves.tcl
+    NEM_OUT=<directory> NEM_CHEAT=option openmsx -machine Philips_VG_8020 \\
+        -carta nemesis.rom -script tools/omsx_cheats.tcl
 
 The script writes its own log next to the screenshots, with the emulated time on
 every line, so a run that goes wrong can be read afterwards instead of guessed

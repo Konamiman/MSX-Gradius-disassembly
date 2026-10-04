@@ -1,51 +1,51 @@
 #!/usr/bin/env python3
-"""Genera la portada de la web, en los dos idiomas.
+"""Generates the website's front page, in both languages.
 
-El diseno es el compartido por la serie (tools/estilo_web.py) y la pagina sale
-autocontenida, con las imagenes embebidas como data URI.
+The design is the one shared by the series (tools/web_style.py) and the page
+comes out self-contained, with the images embedded as data URIs.
 
-Las imagenes NO son ilustraciones ni capturas: se dibujan a partir de los
-propios bytes de la ROM por tools/graficos.py, ejecutando en Python el mismo
-descompresor de rachas, el mismo cargador de caracteres y el mismo montador de
-columnas que corre el Z80. Ninguna se ha retocado.
+The images are NOT illustrations or captures: they are drawn from the ROM's
+own bytes by tools/graphics.py, running in Python the same run-length
+decompressor, the same character loader and the same column builder that the
+Z80 runs. None of them has been retouched.
 
-Uso: make_web.py <docs/imagenes> <salida.html> <idioma>
+Usage: make_web.py <docs/images> <output.html> <language>
 """
 import base64
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from estilo_web import ESTILO                                   # noqa: E402
+from web_style import STYLE                                   # noqa: E402
 
-# Las cifras salen de contar sobre el listado generado, no de escribirlas a ojo:
-# 131072 = 25471 + 105601, que es lo que imprime tools/presupuesto.py
-# (make sanity). RUTINAS son las etiquetas de codigo con nombre propio
-# (directiva L de los .notes), sumadas sobre las dieciseis paginas.
-CODIGO = 25471
-DATOS = 105601
-RUTINAS = 916
-FASES = 12
-DENSIDAD = "23,4"
+# The numbers come from counting over the generated listing, not from writing
+# them by eye: 131072 = 25471 + 105601, which is what tools/budget.py
+# prints (make sanity). ROUTINES are the code labels with a proper name
+# (L directive in the .notes), added up over the sixteen banks.
+CODE_BYTES = 25471
+DATA_BYTES = 105601
+ROUTINES = 916
+STAGES = 12
+DENSITY = "23,4"
 
 
-def mil(n, idioma):
-    return f"{n:,}".replace(",", "." if idioma == "es" else ",")
+def thousands(n, lang):
+    return f"{n:,}".replace(",", "." if lang == "es" else ",")
 
 
 TXT = {
     "es": dict(
-        titulo="Nemesis / Gradius — desensamblado comentado",
-        aviso="<b>Aquí no hay ninguna ilustración ni captura.</b> Las pantallas "
-              "y los doce mapas están <b>dibujados desde los bytes de la "
-              "ROM</b>, ejecutando en Python el mismo descompresor de rachas, "
-              "el mismo cargador de caracteres y el mismo montador de columnas "
-              "que corre el Z80. El listado y las cifras salen del binario y se "
-              "reproducen con <code>make</code>.",
+        title="Nemesis / Gradius — desensamblado comentado",
+        notice="<b>Aquí no hay ninguna ilustración ni captura.</b> Las pantallas "
+               "y los doce mapas están <b>dibujados desde los bytes de la "
+               "ROM</b>, ejecutando en Python el mismo descompresor de rachas, "
+               "el mismo cargador de caracteres y el mismo montador de columnas "
+               "que corre el Z80. El listado y las cifras salen del binario y se "
+               "reproducen con <code>make</code>.",
         claim="El Gradius de Konami metido en un MegaROM de 128 KB para MSX1: "
               "doce fases, treinta y un tipos de bicho y un medidor de mejoras, "
               "con los mapas montados columna a columna en la RAM.",
-        ficha=["Konami · <b>© Konami 1986</b>",
+        facts=["Konami · <b>© Konami 1986</b>",
                "MegaROM <b>RC-742</b>, 128 KB, mapper Konami4",
                "MSX1 · <b>16 bancos de 8 KB</b>",
                "Solo <b>6 bancos</b> llevan código"],
@@ -57,33 +57,33 @@ TXT = {
                 ("HALLAZGOS.html", "Hallazgos"),
                 ("EN-EL-EMULADOR.html", "En el emulador"),
                 ("PREGUNTAS-ABIERTAS.html", "Preguntas abiertas")],
-        otro=("../", "In English"),
+        other=("../", "In English"),
         h_num="El cartucho en cifras", h_find="Lo que apareció al desmontarlo",
         h_scr="Lo que el cartucho dibuja",
-        cifras=[("100 %", "del binario explicado"),
-                (str(RUTINAS), "rutinas bautizadas"),
-                (str(FASES), "fases dibujadas"),
-                (mil(CODIGO, "es"), "bytes de código"),
-                (mil(DATOS, "es"), "bytes de datos"),
-                (DENSIDAD + " %", "de líneas comentadas")],
-        nota_scr="Debajo de la imagen está de dónde sale y qué se está viendo. "
+        stats=[("100 %", "del binario explicado"),
+               (str(ROUTINES), "rutinas bautizadas"),
+               (str(STAGES), "fases dibujadas"),
+               (thousands(CODE_BYTES, "es"), "bytes de código"),
+               (thousands(DATA_BYTES, "es"), "bytes de datos"),
+               (DENSITY + " %", "de líneas comentadas")],
+        note_scr="Debajo de la imagen está de dónde sale y qué se está viendo. "
                  "Los mapas son la fase entera, de punta a punta.",
-        pie_leg="Esto es trabajo de documentación y preservación: el código y "
-                "los gráficos siguen siendo de sus autores y de Konami, y la "
-                "imagen del cartucho no se distribuye.",
+        legal="Esto es trabajo de documentación y preservación: el código y "
+              "los gráficos siguen siendo de sus autores y de Konami, y la "
+              "imagen del cartucho no se distribuye.",
     ),
     "en": dict(
-        titulo="Nemesis / Gradius — a commented disassembly",
-        aviso="<b>There is not one illustration or capture here.</b> The "
-              "screens and the twelve maps are <b>drawn from the bytes of the "
-              "ROM</b>, by running in Python the same run-length decompressor, "
-              "the same character loader and the same column builder the Z80 "
-              "runs. The listing and the numbers come from the binary and are "
-              "reproducible with <code>make</code>.",
+        title="Nemesis / Gradius — a commented disassembly",
+        notice="<b>There is not one illustration or capture here.</b> The "
+               "screens and the twelve maps are <b>drawn from the bytes of the "
+               "ROM</b>, by running in Python the same run-length decompressor, "
+               "the same character loader and the same column builder the Z80 "
+               "runs. The listing and the numbers come from the binary and are "
+               "reproducible with <code>make</code>.",
         claim="Konami's Gradius squeezed into a 128 KB MegaROM for the MSX1: "
               "twelve stages, thirty-one kinds of enemy and a power-up meter, "
               "with the maps built one column at a time in RAM.",
-        ficha=["Konami · <b>© Konami 1986</b>",
+        facts=["Konami · <b>© Konami 1986</b>",
                "An <b>RC-742</b> 128 KB MegaROM, Konami4 mapper",
                "MSX1 · <b>16 banks of 8 KB</b>",
                "Only <b>6 banks</b> carry code"],
@@ -96,29 +96,29 @@ TXT = {
                 ("FINDINGS.html", "Findings"),
                 ("IN-THE-EMULATOR.html", "In the emulator"),
                 ("OPEN-QUESTIONS.html", "Open questions")],
-        otro=("es/", "En castellano"),
+        other=("es/", "En castellano"),
         h_num="The cartridge in numbers",
         h_find="What turned up when we took it apart",
         h_scr="What the cartridge draws",
-        cifras=[("100%", "of the binary explained"),
-                (str(RUTINAS), "routines named"),
-                (str(FASES), "stages drawn"),
-                (mil(CODIGO, "en"), "bytes of code"),
-                (mil(DATOS, "en"), "bytes of data"),
-                (DENSIDAD.replace(",", ".") + "%", "of lines commented")],
-        nota_scr="Under each picture is where it comes from and what is on it. "
+        stats=[("100%", "of the binary explained"),
+               (str(ROUTINES), "routines named"),
+               (str(STAGES), "stages drawn"),
+               (thousands(CODE_BYTES, "en"), "bytes of code"),
+               (thousands(DATA_BYTES, "en"), "bytes of data"),
+               (DENSITY.replace(",", ".") + "%", "of lines commented")],
+        note_scr="Under each picture is where it comes from and what is on it. "
                  "The maps are the whole stage, end to end.",
-        pie_leg="This is documentation and preservation work: the code and "
-                "artwork still belong to their authors and to Konami, and the "
-                "cartridge image is not distributed.",
+        legal="This is documentation and preservation work: the code and "
+              "artwork still belong to their authors and to Konami, and the "
+              "cartridge image is not distributed.",
     ),
 }
 
-HALLAZGOS = {
+FINDINGS = {
     "es": [
         ("Las fases no van en orden, y cuatro de ellas son de bonus",
-         "<p>De una fase se sale por dos sitios: <code>acaba_la_fase</code> le "
-         "suma uno al numero de fase, y <code>salta_a_la_fase</code> le mete uno "
+         "<p>De una fase se sale por dos sitios: <code>end_stage</code> le "
+         "suma uno al numero de fase, y <code>jump_to_stage</code> le mete uno "
          "escrito a mano. A este segundo saltan OCHO sitios, cada uno con el "
          "suyo, y de ahi sale el recorrido de verdad: "
          "<b>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8</b>. Las fases 9 a "
@@ -197,8 +197,8 @@ HALLAZGOS = {
     ],
     "en": [
         ("The stages are not played in order, and four of them are bonus",
-         "<p>There are two ways out of a stage: <code>acaba_la_fase</code> adds "
-         "one to the stage number, and <code>salta_a_la_fase</code> writes one "
+         "<p>There are two ways out of a stage: <code>end_stage</code> adds "
+         "one to the stage number, and <code>jump_to_stage</code> writes one "
          "straight in. EIGHT places jump to the second, each with its own "
          "number, and that gives the real running order: "
          "<b>1 - 2 - 9 - 3 - 10 - 4 - 11 - 5 - 6 - 7 - 12 - 8</b>. Stages 9 to "
@@ -277,8 +277,8 @@ HALLAZGOS = {
     ],
 }
 
-GALERIA = [
-    ("presentacion.png",
+GALLERY = [
+    ("intro.png",
      "La pantalla de presentación, montada como la monta el cartucho: seis "
      "bloques comprimidos del banco 9 a los tres tercios de patrones y de "
      "colores, los caracteres del marco desde el banco 10 y la tabla de "
@@ -287,17 +287,17 @@ GALERIA = [
      "blocks from bank 9 into the three thirds of patterns and colours, the "
      "frame characters from bank 10, and the name table, 768 uncompressed "
      "bytes, from the start of bank 9"),
-    ("titulo.png",
-     "La pantalla del título, la otra: monta_la_pantalla_del_titulo (0x5B31) "
+    ("title.png",
+     "La pantalla del título, la otra: build_title_screen (0x5B31) "
      "descomprime sus patrones de 0x9C57 y sus colores de 0x9EAB en los tres "
-     "tercios, y encima escribe_el_panel_del_titulo (0x5B77) pone el panel del "
+     "tercios, y encima write_title_panel (0x5B77) pone el panel del "
      "logotipo, cinco filas de 28 caracteres desde la casilla 0x3882",
      "The title screen proper, which is a different one: monta_la_pantalla_del_"
      "titulo (0x5B31) decompresses its patterns from 0x9C57 and its colours "
      "from 0x9EAB into the three thirds, and on top of that escribe_el_panel_"
      "del_titulo (0x5B77) writes the logo panel, five rows of 28 characters "
      "from cell 0x3882"),
-    ("rotulo_gradius.png",
+    ("logo_gradius.png",
      "EL MISMO BINARIO LLEVA LOS DOS NOMBRES. Este es el otro panel, el de "
      "0x9BCB, dibujado igual que el de la cabecera. El cartucho lee el juego de "
      "caracteres de la máquina en 0x002B de la BIOS y, con el nibble bajo a "
@@ -310,29 +310,29 @@ GALERIA = [
      "at zero -a Japanese machine-, writes this one; with anything else, the "
      "one at 0x9B3F, which reads NEMESIS. These are not two versions of the "
      "cartridge: the two panels sit right next to each other in bank 9"),
-    ("mapa_fase01.png",
+    ("stage01_map.png",
      "Fase 1 entera. Los primeros 0x80 pasos son cielo -una estrella por "
      "columna, en la fila que diga la tabla de 0x478E- y a partir de ahí manda "
      "el guión: el suelo con volcanos y vegetación, y el techo",
      "The whole of stage 1. The first 0x80 steps are sky -one star per column, "
      "on the row the table at 0x478E gives- and from there the script takes "
      "over: the ground with volcanoes and vegetation, and the ceiling"),
-    ("mapa_fase02.png",
+    ("stage02_map.png",
      "Fase 2: estalactitas y estalagmitas, y al final las construcciones de "
      "piedra. Todo sale del mismo juego de piezas de 0x8000 del banco 11",
      "Stage 2: stalactites and stalagmites, and the stone structures at the "
      "end. All of it comes from the same set of pieces at 0x8000 of bank 11"),
-    ("mapa_fase03.png",
+    ("stage03_map.png",
      "Fase 3. Aquí no hay terreno ninguno: su tramo de guión es 0xFFFF, o sea "
      "que 0x46AE manda SIEMPRE a la rutina de estrellas y la fase entera es "
      "cielo. Lo mismo pasa con la sexta",
      "Stage 3. There is no terrain at all here: its script range is 0xFFFF, so "
      "0x46AE always goes to the star routine and the whole stage is sky. The "
      "same happens with the sixth"),
-    ("mapa_fase04.png",
+    ("stage04_map.png",
      "Fase 4, la de los cristales",
      "Stage 4, the crystal one"),
-    ("mapa_fase05.png",
+    ("stage05_map.png",
      "Fase 5. Es la única con motor de fondo propio -0xB2AA, en el banco 3- y "
      "usa el otro juego de piezas, el de 0x8FF0. Casi todo lo que se mueve en "
      "ella no está en el mapa: son rectángulos de caracteres que se borran y se "
@@ -341,32 +341,32 @@ GALERIA = [
      "bank 3- and it uses the other set of pieces, the one at 0x8FF0. Most of "
      "what moves in it is not in the map at all: they are rectangles of "
      "characters erased and repainted every frame"),
-    ("mapa_fase06.png",
+    ("stage06_map.png",
      "Fase 6. La otra fase de puro cielo, como la tercera",
      "Stage 6. The other pure-sky stage, like the third one"),
-    ("mapa_fase07.png",
+    ("stage07_map.png",
      "Fase 7, la única que lleva las apariciones escritas una a una: cuarenta y "
      "tres palabras en 0xAF3F, cada una con nueve bits de distancia, cinco de "
      "fila y dos de variante",
      "Stage 7, the only one with its spawns written out one by one: forty-three "
      "words at 0xAF3F, each with nine bits of distance, five of row and two of "
      "variant"),
-    ("mapa_fase08.png",
+    ("stage08_map.png",
      "Fase 8, la del laberinto de celdas",
      "Stage 8, the cell maze one"),
-    ("mapa_fase09.png",
+    ("stage09_map.png",
      "Fase 9, la primera de las cuatro de BONUS: se entra tocando el blanco al final de la segunda, y al acabar se sale a la tercera",
      "Stage 9, the first of the four BONUS stages: you get in by touching the target at the end of stage 2, and it drops you into stage 3"),
-    ("mapa_fase10.png",
+    ("stage10_map.png",
      "Fase 10, de BONUS: se entra desde la tercera y se sale a la cuarta",
      "Stage 10, a BONUS stage: entered from stage 3 and leaving into stage 4"),
-    ("mapa_fase11.png",
+    ("stage11_map.png",
      "Fase 11, de BONUS: se entra desde la cuarta y se sale a la quinta",
      "Stage 11, a BONUS stage: entered from stage 4 and leaving into stage 5"),
-    ("mapa_fase12.png",
+    ("stage12_map.png",
      "Fase 12, de BONUS: se entra desde la septima y se sale a la octava, que es la ultima",
      "Stage 12, a BONUS stage: entered from stage 7 and leaving into stage 8, the last one"),
-    ("caracteres_fase01.png",
+    ("stage01_characters.png",
      "Los 256 caracteres de cada uno de los tres tercios con los que se dibuja "
      "la primera fase, tal como los deja el cargador de 0x42FC. En el tercero "
      "se leen los rótulos del medidor de mejoras: <code>SPEED UP</code>, "
@@ -376,7 +376,7 @@ GALERIA = [
      "just as the loader at 0x42FC leaves them. In the third one you can read "
      "the power-up meter labels: <code>SPEED UP</code>, <code>MISSILE</code>, "
      "<code>DOUBLE</code>, <code>LASER</code> and <code>OPTION</code>"),
-    ("caracteres_del_final.png",
+    ("ending_characters.png",
      "Y los del final de la partida, que salen del banco 10. La tabla de nombres "
      "de esa pantalla casi no se usa: lo unico que se escribe encima es el "
      "dibujo de cuatro por cuatro del flujo de 0x4FB2",
@@ -393,8 +393,8 @@ GALERIA = [
 ]
 
 
-def img64(ruta):
-    with open(ruta, "rb") as f:
+def img64(path):
+    with open(path, "rb") as f:
         return "data:image/png;base64," + base64.b64encode(f.read()).decode()
 
 
@@ -402,67 +402,67 @@ def main(argv):
     if len(argv) < 4:
         print(__doc__)
         return 2
-    imgdir, salida, idioma = argv[1:4]
-    t = TXT[idioma]
+    imgdir, output, lang = argv[1:4]
+    t = TXT[lang]
 
-    # El "logotipo" de la cabecera no es un montaje ni una captura: es el panel
-    # de 28x5 que el propio cartucho escribe en la fila 4 de su pantalla de
-    # titulo -0x9B3F, banco 9-, dibujado desde la ROM por graficos.py. Si el PNG
-    # no esta, se cae al texto.
-    ruta_logo = os.path.join(imgdir, "rotulo.png")
-    cabecera = (f'<img src="{img64(ruta_logo)}" alt="Nemesis">'
-                if os.path.exists(ruta_logo)
-                else "<h1>Nemesis <span style='opacity:.55'>/ Gradius</span></h1>")
+    # The header "logo" is not a montage or a capture: it is the 28x5 panel
+    # that the cartridge itself writes on row 4 of its title screen (0x9B3F,
+    # bank 9), drawn from the ROM by graphics.py. If the PNG is not there, it
+    # falls back to text.
+    logo_path = os.path.join(imgdir, "logo.png")
+    header = (f'<img src="{img64(logo_path)}" alt="Nemesis">'
+              if os.path.exists(logo_path)
+              else "<h1>Nemesis <span style='opacity:.55'>/ Gradius</span></h1>")
 
     nav = "".join(f'<a href="{h}">{x}</a>' for h, x in t["nav"])
     nav += "".join(f'<a href="{h}">{x}</a>' for h, x in t["docnav"])
-    nav += (f'<a href="{t["otro"][0]}" style="margin-left:auto;color:var(--oro)">'
-            f'{t["otro"][1]}</a>')
+    nav += (f'<a href="{t["other"][0]}" style="margin-left:auto;color:var(--gold)">'
+            f'{t["other"][1]}</a>')
 
-    cifras = "".join(f'<div class="cifra"><b>{v}</b><span>{e}</span></div>'
-                     for v, e in t["cifras"])
-    halls = "".join(f'<div class="hall"><h3>{tit}</h3>{cuerpo}</div>'
-                    for tit, cuerpo in HALLAZGOS[idioma])
+    stats = "".join(f'<div class="stat"><b>{v}</b><span>{e}</span></div>'
+                    for v, e in t["stats"])
+    findings = "".join(f'<div class="finding"><h3>{title}</h3>{body}</div>'
+                       for title, body in FINDINGS[lang])
     imgs = ""
-    faltan = []
-    for fich, es, en in GALERIA:
-        ruta = os.path.join(imgdir, fich)
-        if not os.path.exists(ruta):
-            faltan.append(fich)
+    missing = []
+    for fname, es, en in GALLERY:
+        path = os.path.join(imgdir, fname)
+        if not os.path.exists(path):
+            missing.append(fname)
             continue
-        pie = es if idioma == "es" else en
-        imgs += (f'<figure><img src="{img64(ruta)}" alt="{pie}">'
-                 f'<figcaption>{pie}</figcaption></figure>')
-    if faltan:
-        print("  (faltan %d imagenes: %s)" % (len(faltan), " ".join(faltan)))
+        caption = es if lang == "es" else en
+        imgs += (f'<figure><img src="{img64(path)}" alt="{caption}">'
+                 f'<figcaption>{caption}</figcaption></figure>')
+    if missing:
+        print("  (%d images missing: %s)" % (len(missing), " ".join(missing)))
 
     html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{t['titulo']}</title>
-<style>{ESTILO}</style>
+<title>{t['title']}</title>
+<style>{STYLE}</style>
 <header class="top">
-  {cabecera}
+  {header}
   <p class="claim">{t['claim']}</p>
-  <p class="ficha">{' · '.join(t['ficha'])}</p>
+  <p class="facts">{' · '.join(t['facts'])}</p>
 </header>
-<p class="ficha" style="border:1px solid var(--oro);padding:.8em 1em;margin:1.5em 0">
-{t['aviso']}</p>
+<p class="facts" style="border:1px solid var(--gold);padding:.8em 1em;margin:1.5em 0">
+{t['notice']}</p>
 <nav>{nav}</nav>
 <section id="numbers">
   <h2>{t['h_num']}</h2>
-  <div class="cifras">{cifras}</div>
+  <div class="stats">{stats}</div>
 </section>
-<section id="findings"><h2>{t['h_find']}</h2>{halls}</section>
+<section id="findings"><h2>{t['h_find']}</h2>{findings}</section>
 <section id="screens">
   <h2>{t['h_scr']}</h2>
-  <p class="n">{t['nota_scr']}</p>
-  <div class="galeria">{imgs}</div>
+  <p class="n">{t['note_scr']}</p>
+  <div class="gallery">{imgs}</div>
 </section>
-<footer><p>{t['pie_leg']}</p></footer>
+<footer><p>{t['legal']}</p></footer>
 """
-    with open(salida, "w", encoding="utf-8") as f:
+    with open(output, "w", encoding="utf-8") as f:
         f.write(html)
-    print("  %s: %d KB (%s)" % (salida, len(html) // 1024, idioma))
+    print("  %s: %d KB (%s)" % (output, len(html) // 1024, lang))
     return 0
 
 

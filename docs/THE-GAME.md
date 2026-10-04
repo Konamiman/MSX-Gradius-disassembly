@@ -14,8 +14,8 @@ only knows one name — the hidden mark at the end of bank 3 reads グラディ�
 ## The twelve stages, and the four that are bonus
 
 The stage number lives in 0xE061, and it is **not** simply counted up. There are
-two ways out of a stage: `acaba_la_fase` (0x6D53) adds one, and
-`salta_a_la_fase` (0x6FB9) writes a number straight in. Eight places jump to the
+two ways out of a stage: `end_stage` (0x6D53) adds one, and
+`jump_to_stage` (0x6FB9) writes a number straight in. Eight places jump to the
 second one, each with its own number, and that is where the real running order
 comes from:
 
@@ -77,7 +77,7 @@ like `HYPER`.
 `BAKA` and `AHO` are *idiot* and *fool* in Japanese, and they fall into 0x5127,
 which zeroes the lives, the demo flag and both joystick flags.
 
-All of this was measured in openMSX with `tools/omsx_claves.tcl`, not deduced:
+All of this was measured in openMSX with `tools/omsx_cheats.tcl`, not deduced:
 paused, 0xE1E8 fills with `4F 50 54 49 4F 4E` — OPTION — and on RETURN 0xE20B
 goes from 00 to 02, the two options.
 

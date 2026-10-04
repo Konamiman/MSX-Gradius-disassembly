@@ -46,7 +46,7 @@ at 0xE700 for the background. Inside a slot:
 | 0x17..0x1A | the two accelerations |
 | 0x1B | flags: whether it can be shot, whether it is drawn |
 
-`saca_un_objeto` (0x6A72) is the most called routine in bank 1: give it the
+`spawn_object` (0x6A72) is the most called routine in bank 1: give it the
 type, where it goes and one adjustment byte, and it finds a free slot, fills it
 from the four-byte record at 0x6BA3 and bumps the live count. Three types break
 the rule: 0x1E needs **three consecutive slots**, 0x0E goes to the other table,

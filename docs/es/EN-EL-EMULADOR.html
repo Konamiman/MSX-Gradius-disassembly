@@ -2,16 +2,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>En el emulador — Nemesis / Gradius (Konami, 1986)</title>
 <style>
-:root{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;--linea:#23262e;
-  --rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
-@media (prefers-color-scheme:light){:root{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;
-  --panel:#f7f6f2;--linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}}
-:root[data-theme="dark"]{--tinta:#cfd0d4;--suave:#83868f;--fondo:#000;--panel:#0c0e13;
-  --linea:#23262e;--rojo:#ff897d;--cyan:#65dbef;--verde:#3eb849;--oro:#ded087}
-:root[data-theme="light"]{--tinta:#191a1e;--suave:#5a5d66;--fondo:#e9e7e1;--panel:#f7f6f2;
-  --linea:#d0cdc5;--rojo:#b23f34;--cyan:#1c6b7c;--verde:#2b7734;--oro:#8a7420}
+:root{--ink:#cfd0d4;--muted:#83868f;--bg:#000;--panel:#0c0e13;--line:#23262e;
+  --red:#ff897d;--cyan:#65dbef;--green:#3eb849;--gold:#ded087}
+@media (prefers-color-scheme:light){:root{--ink:#191a1e;--muted:#5a5d66;--bg:#e9e7e1;
+  --panel:#f7f6f2;--line:#d0cdc5;--red:#b23f34;--cyan:#1c6b7c;--green:#2b7734;--gold:#8a7420}}
+:root[data-theme="dark"]{--ink:#cfd0d4;--muted:#83868f;--bg:#000;--panel:#0c0e13;
+  --line:#23262e;--red:#ff897d;--cyan:#65dbef;--green:#3eb849;--gold:#ded087}
+:root[data-theme="light"]{--ink:#191a1e;--muted:#5a5d66;--bg:#e9e7e1;--panel:#f7f6f2;
+  --line:#d0cdc5;--red:#b23f34;--cyan:#1c6b7c;--green:#2b7734;--gold:#8a7420}
 *{box-sizing:border-box}
-body{margin:0;background:var(--fondo);color:var(--tinta);padding:0 1.25rem 6rem;
+body{margin:0;background:var(--bg);color:var(--ink);padding:0 1.25rem 6rem;
   font:15px/1.7 ui-monospace,"SF Mono",Menlo,Consolas,monospace}
 .w{max-width:1120px;margin:0 auto}
 .n{max-width:68ch}
@@ -21,72 +21,72 @@ img{image-rendering:pixelated;max-width:100%;height:auto;display:block}
 header.top{display:flex;flex-direction:column;align-items:center;gap:1.5rem;
   padding:4rem 0 2rem;text-align:center}
 header.top img{width:min(100%,642px)}
-.claim{max-width:60ch;color:var(--suave);font-size:1.05rem}
-.claim b{color:var(--tinta);font-weight:400}
-.ficha{display:flex;flex-wrap:wrap;justify-content:center;gap:0 1.5rem;width:100%;
-  font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--suave);
-  border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);padding:.85rem 0}
-.ficha b{color:var(--rojo);font-weight:400}
+.claim{max-width:60ch;color:var(--muted);font-size:1.05rem}
+.claim b{color:var(--ink);font-weight:400}
+.facts{display:flex;flex-wrap:wrap;justify-content:center;gap:0 1.5rem;width:100%;
+  font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:.85rem 0}
+.facts b{color:var(--red);font-weight:400}
 nav{display:flex;flex-wrap:wrap;gap:1.25rem;justify-content:center;padding:1.25rem 0;
   font-size:12px;letter-spacing:.08em;text-transform:uppercase}
-nav a{color:var(--suave);text-decoration:none;border-bottom:1px solid transparent}
-nav a:hover,nav a:focus{color:var(--tinta);border-bottom-color:var(--rojo)}
-nav.docs{border-top:1px solid var(--linea);border-bottom:1px solid var(--linea);
+nav a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover,nav a:focus{color:var(--ink);border-bottom-color:var(--red)}
+nav.docs{border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   margin-bottom:1rem}
 section{margin-top:4.5rem;scroll-margin-top:1rem}
 section>h2{font-size:1rem;letter-spacing:.1em;text-transform:uppercase;
-  border-left:3px solid var(--rojo);padding-left:.9rem;margin:0 0 1.5rem}
-.cifras{display:grid;gap:1px;background:var(--linea);border:1px solid var(--linea);
+  border-left:3px solid var(--red);padding-left:.9rem;margin:0 0 1.5rem}
+.stats{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
   grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
-.cifra{background:var(--panel);padding:1.1rem}
-.cifra b{display:block;font-size:1.7rem;color:var(--oro);font-weight:400;
+.stat{background:var(--panel);padding:1.1rem}
+.stat b{display:block;font-size:1.7rem;color:var(--gold);font-weight:400;
   font-variant-numeric:tabular-nums;line-height:1.2}
-.cifra span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--suave)}
-.hall{border-top:1px solid var(--linea);padding-top:1.75rem;margin-top:2.5rem}
-.hall:first-of-type{border-top:0;padding-top:0;margin-top:0}
-.hall h3{margin:0 0 .75rem;font-size:1.15rem;color:var(--rojo)}
-.hall h4{color:var(--oro);margin:1.5rem 0 .5rem;font-size:.95rem}
-.hall p{margin:0 0 1rem}
-pre.asm{background:var(--panel);border-left:2px solid var(--verde);margin:1.25rem 0;
-  padding:1rem 1.1rem;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--tinta)}
-.par{display:grid;gap:1.25rem;grid-template-columns:1fr}
-@media(min-width:820px){.par{grid-template-columns:1fr 1fr}}
-.par figure{margin:0}
+.stat span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.finding{border-top:1px solid var(--line);padding-top:1.75rem;margin-top:2.5rem}
+.finding:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.finding h3{margin:0 0 .75rem;font-size:1.15rem;color:var(--red)}
+.finding h4{color:var(--gold);margin:1.5rem 0 .5rem;font-size:.95rem}
+.finding p{margin:0 0 1rem}
+pre.asm{background:var(--panel);border-left:2px solid var(--green);margin:1.25rem 0;
+  padding:1rem 1.1rem;overflow-x:auto;font-size:13px;line-height:1.6;color:var(--ink)}
+.pair{display:grid;gap:1.25rem;grid-template-columns:1fr}
+@media(min-width:820px){.pair{grid-template-columns:1fr 1fr}}
+.pair figure{margin:0}
 table{border-collapse:collapse;width:100%;margin:1.25rem 0;font-size:13px;display:block;
   overflow-x:auto}
-th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--linea)}
-th{color:var(--suave);font-weight:400;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
-td.num{font-variant-numeric:tabular-nums;color:var(--oro)}
-.nivel{margin-top:2rem}
-.nivel h3{margin:0 0 .9rem;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase}
-.nivel em{color:var(--cyan);font-style:normal}
-.sep{color:var(--suave);margin:0 .6rem}
-.rejilla{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
-.rejilla figure{margin:0;background:var(--panel);box-shadow:0 0 0 1px var(--linea)}
-.rejilla figcaption{display:flex;justify-content:space-between;padding:.45rem .65rem;
-  font-size:11px;color:var(--suave);border-top:1px solid var(--linea)}
-.dir{font-variant-numeric:tabular-nums;color:var(--verde)}
-footer{margin-top:5rem;padding-top:1.5rem;border-top:1px solid var(--linea);
-  color:var(--suave);font-size:12px}
+th,td{text-align:left;padding:.5rem .75rem;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:400;font-size:11px;letter-spacing:.07em;text-transform:uppercase}
+td.num{font-variant-numeric:tabular-nums;color:var(--gold)}
+.level{margin-top:2rem}
+.level h3{margin:0 0 .9rem;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase}
+.level em{color:var(--cyan);font-style:normal}
+.sep{color:var(--muted);margin:0 .6rem}
+.grid{display:grid;gap:.9rem;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.grid figure{margin:0;background:var(--panel);box-shadow:0 0 0 1px var(--line)}
+.grid figcaption{display:flex;justify-content:space-between;padding:.45rem .65rem;
+  font-size:11px;color:var(--muted);border-top:1px solid var(--line)}
+.addr{font-variant-numeric:tabular-nums;color:var(--green)}
+footer{margin-top:5rem;padding-top:1.5rem;border-top:1px solid var(--line);
+  color:var(--muted);font-size:12px}
 
-/* Aviso de trabajo en curso: tiene que verse antes que las cifras, porque un
-   100% mal leido hace mas dano que no ponerlo. */
-.aviso{background:#3a2a10;border-left:3px solid var(--oro);margin:1.5rem auto;
+/* Work-in-progress notice: it has to be seen before the figures, because a
+   misread 100% does more harm than not showing it at all. */
+.notice{background:#3a2a10;border-left:3px solid var(--gold);margin:1.5rem auto;
   padding:1rem 1.2rem;max-width:900px;border-radius:4px}
-.aviso p{margin:0;color:var(--tinta);font-size:15px;line-height:1.65}
-.galeria{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+.notice p{margin:0;color:var(--ink);font-size:15px;line-height:1.65}
+.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
   gap:1.5rem;margin:1.5rem 0}
-.galeria figure{margin:0}
-.galeria img{width:100%;height:auto;image-rendering:pixelated;
-  border:1px solid var(--linea);border-radius:3px}
-.galeria figcaption{color:var(--suave);font-size:13px;margin-top:.5rem}
+.gallery figure{margin:0}
+.gallery img{width:100%;height:auto;image-rendering:pixelated;
+  border:1px solid var(--line);border-radius:3px}
+.gallery figcaption{color:var(--muted);font-size:13px;margin-top:.5rem}
 audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 </style>
-<div class="w"><nav class="top"><a href="index.html">Portada</a><a href="EMPEZAR.html">Empezar</a><a href="EL-JUEGO.html">El juego</a><a href="EL-CARTUCHO.html">El cartucho</a><a href="EL-CODIGO.html">El código</a><a href="HALLAZGOS.html">Hallazgos</a><a href="EN-EL-EMULADOR.html" style=color:var(--tinta)>En el emulador</a><a href="PREGUNTAS-ABIERTAS.html">Preguntas abiertas</a><a href="../IN-THE-EMULATOR.html" style="margin-left:auto;color:var(--oro)">English</a></nav>
+<div class="w"><nav class="top"><a href="index.html">Portada</a><a href="EMPEZAR.html">Empezar</a><a href="EL-JUEGO.html">El juego</a><a href="EL-CARTUCHO.html">El cartucho</a><a href="EL-CODIGO.html">El código</a><a href="HALLAZGOS.html">Hallazgos</a><a href="EN-EL-EMULADOR.html" style=color:var(--ink)>En el emulador</a><a href="PREGUNTAS-ABIERTAS.html">Preguntas abiertas</a><a href="../IN-THE-EMULATOR.html" style="margin-left:auto;color:var(--gold)">English</a></nav>
 <h1 id="en-el-emulador">En el emulador</h1>
 <p>Algunas de las cosas escritas en este listado no se pueden zanjar leyendo. Esta página es lo que se comprobó con el cartucho corriendo de verdad, y cómo.</p>
 <h2 id="que-se-midio-y-que-salio">Qué se midió, y qué salió</h2>
-<p><b>Las claves de teclado.</b> <code>tools/omsx_claves.tcl</code> arranca el cartucho, empieza una partida, pulsa GRAPH para pausar, escribe la palabra letra a letra, pulsa RETURN y apunta los bytes de la ficha de la nave antes y después. Con <code>OPTION</code>, 0xE1E8 se llena con <code>4F 50 54 49 4F 4E</code> y 0xE20B pasa de 00 a 02. Con <code>BAKA</code>, las naves de 0xE060 pasan de 02 a 00 y el aviso de 0xE05F se apaga.</p>
+<p><b>Las claves de teclado.</b> <code>tools/omsx_cheats.tcl</code> arranca el cartucho, empieza una partida, pulsa GRAPH para pausar, escribe la palabra letra a letra, pulsa RETURN y apunta los bytes de la ficha de la nave antes y después. Con <code>OPTION</code>, 0xE1E8 se llena con <code>4F 50 54 49 4F 4E</code> y 0xE20B pasa de 00 a 02. Con <code>BAKA</code>, las naves de 0xE060 pasan de 02 a 00 y el aviso de 0xE05F se apaga.</p>
 <p>El primer intento falló, y el fallo fue el hallazgo: escribir la palabra jugando no hace absolutamente nada. El código solo lee el teclado <b>con el juego en pausa</b>, así que el script tuvo que pulsar GRAPH primero.</p>
 <p><b>Los mapas.</b> Los doce mapas de la portada están dibujados desde la ROM, no capturados, pero se comprobaron contra lo real. Un script deja correr la demo, vuelca los 704 bytes del mapa de 0xED00 junto con la distancia de 0xE063, y las mismas columnas se generan en Python. De 704 casillas, <b>6 se salían a distancia 138 y 9 a distancia 201</b>. Son las estrellas, que el cartucho elige con el registro R, y los caracteres que el disparo escribe encima del mapa.</p>
 <p><b>La pantalla de presentación.</b> Se volcó la VRAM entera del emulador y se comparó, byte a byte, con la que fabrica la herramienta desde los bloques comprimidos. Coinciden en toda la zona del dibujo; los únicos bytes que se salen son los de los caracteres 0xC0 a 0xFF, que el juego reescribe, y la tabla de atributos de sprite.</p>
@@ -94,7 +94,7 @@ audio{display:block;width:100%;max-width:640px;margin:.75rem 0 1.5rem}
 <h2 id="las-trampas-ya-pagadas">Las trampas, ya pagadas</h2>
 <ul><li>Con <code>-script</code>, openMSX arranca con el renderer en <em>uninitialized</em> y <code>screenshot</code> escribe un PNG negro devolviendo éxito. Hay que encenderlo a mano: <code>set renderer SDLGL-PP</code>.</li><li>Las capturas se piden con el acelerador <b>puesto</b> y después de <code>after realtime</code>, o salen de un cuadro que no se llegó a dibujar.</li><li><code>type</code> va demasiado rápido. El cartucho solo se entera de una tecla cuando <b>cambia</b>, así que las claves se escriben letra a letra por la matriz.</li><li>Las rutas de salida son rutas de Windows. openMSX escribe donde se le dice, no donde cree la shell.</li></ul>
 <h2 id="como-lanzar-uno">Cómo lanzar uno</h2>
-<pre><code>NEM_OUT=&lt;directorio&gt; NEM_CLAVE=option openmsx -machine Philips_VG_8020 \\
-    -carta nemesis.rom -script tools/omsx_claves.tcl</code></pre>
+<pre><code>NEM_OUT=&lt;directorio&gt; NEM_CHEAT=option openmsx -machine Philips_VG_8020 \\
+    -carta nemesis.rom -script tools/omsx_cheats.tcl</code></pre>
 <p>El script escribe su propio registro al lado de las capturas, con el tiempo emulado en cada línea, para que una tirada que salga mal se pueda leer después en vez de adivinarla.</p>
 <footer><p><em>Nemesis / Gradius</em> lo publico Konami para MSX en 1986; su numero de catalogo es RC-742 y son 128 KB. Todos los derechos sobre el juego siguen siendo de sus titulares. Este trabajo es de preservacion, estudio y documentacion, y la imagen del cartucho no se distribuye.</p></footer></div>

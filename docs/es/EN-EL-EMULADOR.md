@@ -5,7 +5,7 @@ página es lo que se comprobó con el cartucho corriendo de verdad, y cómo.
 
 ## Qué se midió, y qué salió
 
-**Las claves de teclado.** `tools/omsx_claves.tcl` arranca el cartucho, empieza
+**Las claves de teclado.** `tools/omsx_cheats.tcl` arranca el cartucho, empieza
 una partida, pulsa GRAPH para pausar, escribe la palabra letra a letra, pulsa
 RETURN y apunta los bytes de la ficha de la nave antes y después. Con `OPTION`,
 0xE1E8 se llena con `4F 50 54 49 4F 4E` y 0xE20B pasa de 00 a 02. Con `BAKA`,
@@ -46,8 +46,8 @@ en medio** de cada pantalla con los caracteres del primero.
 
 ## Cómo lanzar uno
 
-    NEM_OUT=<directorio> NEM_CLAVE=option openmsx -machine Philips_VG_8020 \\
-        -carta nemesis.rom -script tools/omsx_claves.tcl
+    NEM_OUT=<directorio> NEM_CHEAT=option openmsx -machine Philips_VG_8020 \\
+        -carta nemesis.rom -script tools/omsx_cheats.tcl
 
 El script escribe su propio registro al lado de las capturas, con el tiempo
 emulado en cada línea, para que una tirada que salga mal se pueda leer después

@@ -1,63 +1,63 @@
 #!/usr/bin/env python3
-"""Control de sanidad del trazado: detecta cobertura falsa.
+"""Trace sanity check: detects false coverage.
 
-Por que existe: al sembrar el trazador con destinos sacados de tablas de
-punteros, la cobertura salto del 13% al 80%. Parecia un exito, pero era falso:
-cuatro de las semillas eran falsos positivos que apuntaban a zonas de graficos,
-y desde ahi el trazador siguio "decodificando" pixeles como instrucciones hasta
-marcar como codigo el 100% de la tabla de colores y de los textos del final.
+Why it exists: when the tracer was seeded with targets taken from pointer
+tables, the coverage jumped from 13% to 80%. It looked like a success, but it
+was false: four of the seeds were false positives pointing at graphics areas,
+and from there the tracer kept "decoding" pixels as instructions until it had
+marked as code 100% of the colour table and of the ending texts.
 
-Un desensamblado con ese trazado sigue reensamblando bien (los bytes no cambian,
-solo su interpretacion), asi que `make verify` NO lo detecta. Hace falta esta
-comprobacion aparte: si una zona que sabemos que son datos aparece como codigo,
-el trazado esta contaminado y el listado miente.
+A disassembly with that trace still reassembles fine (the bytes do not change,
+only their interpretation), so `make verify` does NOT detect it. This separate
+check is needed: if an area we know is data shows up as code, the trace is
+contaminated and the listing lies.
 
-Uso: check_trace.py <trace.json> <nocode> [umbral_pct]
+Usage: check_trace.py <trace.json> <nocode> [threshold_pct]
 """
 import json
 import sys
 
 
-def main(tracepath, nocodepath, umbral=5):
+def main(tracepath, nocodepath, threshold=5):
     tr = json.load(open(tracepath))
-    zonas = []
+    zones = []
     for ln in open(nocodepath):
         txt = ln.split("#")
-        campos = txt[0].split()
-        if len(campos) >= 2:
-            zonas.append((int(campos[0], 0), int(campos[1], 0),
+        fields = txt[0].split()
+        if len(fields) >= 2:
+            zones.append((int(fields[0], 0), int(fields[1], 0),
                           txt[1].strip() if len(txt) > 1 else ""))
-    if not zonas:
-        print("no hay zonas declaradas como datos; nada que comprobar")
+    if not zones:
+        print("no zones declared as data; nothing to check")
         return 0
 
-    # Mapa de que bytes ha marcado el trazador como codigo
+    # Map of which bytes the tracer has marked as code
     lo = min(a for _, a, b in tr["blocks"] for a in (a,))
     hi = max(b for _, a, b in tr["blocks"])
-    cod = bytearray(hi - lo)
+    code = bytearray(hi - lo)
     for kind, a, b in tr["blocks"]:
         if kind == "c":
             for i in range(a - lo, b - lo):
-                cod[i] = 1
+                code[i] = 1
 
-    print(f"Control de sanidad del trazado ({len(zonas)} zonas de datos conocidas)")
-    malas = 0
-    for a, b, desc in zonas:
-        ini, fin = max(a, lo), min(b, hi)
-        if fin <= ini:
+    print(f"Trace sanity check ({len(zones)} known data zones)")
+    bad = 0
+    for a, b, desc in zones:
+        start, end = max(a, lo), min(b, hi)
+        if end <= start:
             continue
-        n = sum(cod[ini - lo:fin - lo])
-        pct = n * 100 // (fin - ini)
-        estado = "ok" if pct <= umbral else "CONTAMINADA"
-        if pct > umbral:
-            malas += 1
-        print(f"  {a:#06x}..{b:#06x}  codigo={pct:3d}%  {estado:12s} {desc}")
+        n = sum(code[start - lo:end - lo])
+        pct = n * 100 // (end - start)
+        status = "ok" if pct <= threshold else "CONTAMINATED"
+        if pct > threshold:
+            bad += 1
+        print(f"  {a:#06x}..{b:#06x}  code={pct:3d}%  {status:12s} {desc}")
 
-    if malas:
-        print(f"\nFALLO: {malas} zonas de datos aparecen como codigo. El trazado esta")
-        print("contaminado: revisa las semillas de src/*.entries, alguna apunta a datos.")
+    if bad:
+        print(f"\nFAIL: {bad} data zones show up as code. The trace is")
+        print("contaminated: check the seeds in src/*.entries, one of them points at data.")
         return 1
-    print("\nOK: ninguna zona de datos conocida se ha marcado como codigo")
+    print("\nOK: no known data zone has been marked as code")
     return 0
 
 

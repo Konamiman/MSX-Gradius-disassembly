@@ -1,11 +1,12 @@
 # -----------------------------------------------------------------------------
-# Ficheros de trabajo que no aportan nada a quien se descargue esto
+# Work files that are of no use to whoever downloads this
 # -----------------------------------------------------------------------------
-# Son volcados intermedios y resultados que `make` vuelve a generar solo.
+# They are intermediate dumps and results that `make` regenerates on its own.
 #
-# Ojo con la forma de escribirlo: 'work/' a secas excluiria el directorio entero
-# y entonces el '!work/msx.sym' de abajo NO podria rescatar nada, porque git no
-# vuelve a mirar dentro de un directorio ya excluido. Con 'work/*' si funciona.
+# Careful with how this is written: plain 'work/' would exclude the whole
+# directory and then the '!work/msx.sym' below could NOT rescue anything,
+# because git does not look inside an already excluded directory again. With
+# 'work/*' it does work.
 
 dump/
 build/
@@ -13,10 +14,10 @@ work/*
 !work/msx.sym
 
 # -----------------------------------------------------------------------------
-# El cartucho original
+# The original cartridge
 # -----------------------------------------------------------------------------
-# No se distribuye la imagen del cartucho: cada cual pone la suya. El listado
-# comentado SI va incluido.
+# The cartridge image is not distributed: everyone supplies their own. The
+# commented listing IS included.
 
 *.rom
 *.cas
@@ -24,7 +25,7 @@ work/*
 *.wav
 
 # -----------------------------------------------------------------------------
-# Basura del sistema y del entorno
+# System and environment junk
 # -----------------------------------------------------------------------------
 .DS_Store
 __pycache__/

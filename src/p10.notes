@@ -1,110 +1,111 @@
-# Banco 10 (se ejecuta en 0xA000). Directivas: L etiqueta, C comentario de
-# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+# Bank 10 (runs at 0xA000). Directives: L label, C line comment, B block
+# header, D data range, F row width.
 #
-# Banco mixto: 424 bytes de codigo y el resto datos. Se mapea junto con el 9
-# (0x8000) para las pantallas fijas, y tambien junto con el 2 (p00:4B0A) para
-# cargar los graficos del marcador.
-D 0xA000 0xA0DB datos_A000  219 bytes que ninguna instruccion apunta con la direccion escrita: van pegados por delante del primer bloque comprimido del banco. SUPOSICION: son la cabecera o la primera parte de esa misma tanda de graficos.
+# Mixed bank: 424 bytes of code and the rest data. It is mapped together with
+# bank 9 (0x8000) for the fixed screens, and also together with bank 2
+# (p00:4B0A) to load the scoreboard graphics.
+D 0xA000 0xA0DB data_A000  219 bytes that no instruction points at with the address written in it: they sit right in front of the first compressed block of the bank. ASSUMPTION: they are the header or the first part of that same batch of graphics.
 F 0xA000 16
-D 0xA0DB 0xA3F4 graficos_patrones_2418  Bloque comprimido que 0x4B17 pasa a 0x4988 con HL=0x2418: se vuelca tres veces, una por tercio, sumando 0x800. En este cartucho los patrones viven en la VRAM 0x2000 y los colores en la 0x0000, al reves de lo que pone la BIOS.
+D 0xA0DB 0xA3F4 graphics_patterns_2418  Compressed block that 0x4B17 passes to 0x4988 with HL=0x2418: it is dumped three times, once per third, adding 0x800. In this cartridge the patterns live at VRAM 0x2000 and the colours at 0x0000, the other way round from what the BIOS sets up.
 F 0xA0DB 16
-D 0xA3F4 0xA683 graficos_colores_0418  Bloque comprimido que 0x4B20 pasa a 0x4988 con HL=0x0418.
+D 0xA3F4 0xA683 graphics_colours_0418  Compressed block that 0x4B20 passes to 0x4988 with HL=0x0418.
 F 0xA3F4 16
-D 0xA683 0xA758 graficos_sprites_1800  Bloque comprimido que 0x4B29 vuelca en la VRAM 0x1800, que en este cartucho es la tabla de patrones de sprite.
+D 0xA683 0xA758 graphics_sprites_1800  Compressed block that 0x4B29 dumps into VRAM 0x1800, which in this cartridge is the sprite pattern table.
 F 0xA683 16
-D 0xA758 0xA783 graficos_patrones_2780  Bloque comprimido que 0x5C4B pasa a 0x4988 con HL=0x2780.
+D 0xA758 0xA783 graphics_patterns_2780  Compressed block that 0x5C4B passes to 0x4988 with HL=0x2780.
 F 0xA758 16
-D 0xA783 0xA7A4 graficos_colores_0780  Bloque comprimido que 0x5C54 pasa a 0x4988 con HL=0x0780.
+D 0xA783 0xA7A4 graphics_colours_0780  Compressed block that 0x5C54 passes to 0x4988 with HL=0x0780.
 F 0xA783 16
-D 0xA7A4 0xA809 graficos_sprites_1800_b  Bloque comprimido que 0x5C5D vuelca en la VRAM 0x1800, la de patrones de sprite.
+D 0xA7A4 0xA809 graphics_sprites_1800_b  Compressed block that 0x5C5D dumps into VRAM 0x1800, the sprite pattern one.
 F 0xA7A4 16
-B 0xA809 UN MOTOR DE CUATRO SPRITES POR BICHO, SOLO PARA LA PANTALLA FIJA
-B 0xA809 Este banco lleva su propio motorcillo, aparte del del juego: ocho fichas
-B 0xA809 de ocho bytes en 0xE300, tres soltadores en 0xE500 y, para cada ficha,
-B 0xA809 hasta CUATRO fichas de sprite seguidas en el buffer de 0xEC80. Cada
-B 0xA809 bicho va asomando de sprite en sprite -el byte 5 cuenta cuantos lleva- y
-B 0xA809 se mueve con un par de desplazamientos fijos que le tocan por su tipo.
-L 0xA809 monta_la_pantalla   Limpia la RAM de trabajo, pone los tres soltadores y se copia a si mismo una rutina a 0xE710
-C 0xA809 0x800 bytes de 0xE300 en adelante, a cero
-C 0xA816 Los tres soltadores, de 0xA881 a 0xE500
-C 0xA81C Tres fichas
-C 0xA81F Cuatro bytes utiles de cada una
-C 0xA82E 0xE700, 0xE702 y 0xE704: por donde empieza cada uno
-C 0xA83D Y 0x38 bytes de rutina, copiados a 0xE710 para ejecutarlos desde la RAM
-D 0xA849 0xA881 rutina_para_la_RAM  56 bytes que 0xA840 copia con LDIR a 0xE710. Se ejecutan desde la RAM, no desde aqui.
+B 0xA809 A FOUR-SPRITES-PER-CRITTER ENGINE, ONLY FOR THE FIXED SCREEN
+B 0xA809 This bank carries its own little engine, separate from the game's:
+B 0xA809 eight slots of eight bytes at 0xE300, three spawners at 0xE500 and,
+B 0xA809 for each slot, up to FOUR consecutive sprite entries in the buffer at
+B 0xA809 0xEC80. Each critter comes into view one sprite at a time (byte 5
+B 0xA809 counts how many it has) and moves with a pair of fixed displacements
+B 0xA809 that its type gives it.
+L 0xA809 set_up_screen   Clears the work RAM, sets up the three spawners and copies a routine for itself to 0xE710
+C 0xA809 0x800 bytes from 0xE300 onwards, to zero
+C 0xA816 The three spawners, from 0xA881 to 0xE500
+C 0xA81C Three slots
+C 0xA81F Four useful bytes of each one
+C 0xA82E 0xE700, 0xE702 and 0xE704: where each one starts
+C 0xA83D And 0x38 bytes of routine, copied to 0xE710 to run them from RAM
+D 0xA849 0xA881 routine_for_RAM  56 bytes that 0xA840 copies with LDIR to 0xE710. They run from RAM, not from here.
 F 0xA849 16
-D 0xA881 0xA88D valores_iniciales  Tres grupos de cuatro bytes que 0xA816 reparte en 0xE500, dejando cuatro huecos entre grupo y grupo.
+D 0xA881 0xA88D initial_values  Three groups of four bytes that 0xA816 spreads over 0xE500, leaving four empty bytes between one group and the next.
 F 0xA881 4
-L 0xA88D anda_la_pantalla   Un cuadro entero: mueve los bichos, deja que los soltadores suelten mas, y arma las fichas de sprite
-L 0xA897 mueve_los_ocho   Las ocho fichas de ocho bytes de 0xE300, una por una
-C 0xA89B Ocho fichas
-C 0xA89E La ficha vacia no se toca
-C 0xA8A6 Ocho bytes: la ficha siguiente
-L 0xA8AE paso_de_un_bicho   Mientras asoma le va anadiendo sprites, y ya entero se mueve hasta salirse
-C 0xA8AE El byte 1: si ya ha acabado de asomar
-C 0xA8B4 El byte 2: los cuadros hasta el sprite siguiente
-C 0xA8B8 Dos cuadros por sprite
-C 0xA8BC El byte 5: un sprite mas
-C 0xA8C2 Cuatro sprites y ya esta entero
-L 0xA8C9 el_bicho_se_mueve   Los dos desplazamientos que le tocan a su tipo; al salirse por abajo o por la derecha, la ficha se apaga
-C 0xA8D0 La tabla de 0xA8F3: dos bytes por tipo
-C 0xA8D4 El byte 3, la fila, mas el suyo
-C 0xA8DC Pasada la fila 0xC0, fuera
-C 0xA8E4 Y el byte 4, la columna
-C 0xA8EB Pasada la columna 0xF0, tambien
-D 0xA8F3 0xA90B desplazamientos  Veinticuatro bytes que lee 0xA8D0.
+L 0xA88D run_screen   A whole frame: moves the critters, lets the spawners release more, and builds the sprite entries
+L 0xA897 move_the_eight   The eight eight-byte slots at 0xE300, one by one
+C 0xA89B Eight slots
+C 0xA89E An empty slot is left alone
+C 0xA8A6 Eight bytes: the next slot
+L 0xA8AE critter_step   While it is coming into view it keeps getting more sprites, and once whole it moves until it goes off screen
+C 0xA8AE Byte 1: whether it has finished coming into view
+C 0xA8B4 Byte 2: the frames until the next sprite
+C 0xA8B8 Two frames per sprite
+C 0xA8BC Byte 5: one more sprite
+C 0xA8C2 Four sprites and it is whole
+L 0xA8C9 critter_moves   The two displacements its type gives it; when it leaves through the bottom or the right, the slot is switched off
+C 0xA8D0 The table at 0xA8F3: two bytes per type
+C 0xA8D4 Byte 3, the row, plus its own
+C 0xA8DC Past row 0xC0, out
+C 0xA8E4 And byte 4, the column
+C 0xA8EB Past column 0xF0, out too
+D 0xA8F3 0xA90B displacements  Twenty-four bytes read by 0xA8D0.
 F 0xA8F3 24
-L 0xA90B corren_los_soltadores   Los tres soltadores de 0xE500 sueltan un bicho cada ocho cuadros
-C 0xA90F Tres soltadores
-C 0xA912 El byte 2: los cuadros que faltan
-C 0xA917 Ocho cuadros entre bicho y bicho
-C 0xA91F Ocho bytes: el soltador siguiente
-L 0xA927 suelta_un_bicho   Elige el tipo en la tabla de 0xA989, busca ficha libre en las ocho y la rellena con su posicion, su dibujo y su color
-C 0xA927 El tipo del soltador, por cuatro
-C 0xA92D El byte 5: cual de los cuatro le toca
-C 0xA932 Cada cuatro bichos, 0x60 cuadros de descanso
-C 0xA93A Uno mas para la proxima
-C 0xA93E La tabla de 0xA989: cuatro tipos por soltador
-C 0xA946 Las ocho fichas de 0xE300
-C 0xA94C La primera con el primer byte a cero
-C 0xA956 El tipo, en el primer byte
-C 0xA958 Sin sprites todavia, y dos cuadros para el primero
-C 0xA95E El tipo por tres: la tabla de 0xA995
-C 0xA96B La fila del soltador mas su desvio...
-C 0xA970 ...y su columna
-C 0xA977 El byte 5 a uno: un sprite ya
-C 0xA97D Y de 0xA9B9 sale su color
-D 0xA989 0xA995 tabla_A989  Doce bytes que lee 0xA93E.
+L 0xA90B run_spawners   The three spawners at 0xE500 release a critter every eight frames
+C 0xA90F Three spawners
+C 0xA912 Byte 2: the frames still to go
+C 0xA917 Eight frames between one critter and the next
+C 0xA91F Eight bytes: the next spawner
+L 0xA927 release_critter   Picks the type from the table at 0xA989, looks for a free slot among the eight and fills it with its position, its drawing and its colour
+C 0xA927 The spawner's type, times four
+C 0xA92D Byte 5: which of the four is next
+C 0xA932 Every four critters, 0x60 frames of rest
+C 0xA93A One more for next time
+C 0xA93E The table at 0xA989: four types per spawner
+C 0xA946 The eight slots at 0xE300
+C 0xA94C The first one with its first byte at zero
+C 0xA956 The type, in the first byte
+C 0xA958 No sprites yet, and two frames until the first one
+C 0xA95E The type times three: the table at 0xA995
+C 0xA96B The spawner's row plus its offset...
+C 0xA970 ...and its column
+C 0xA977 Byte 5 to one: one sprite already
+C 0xA97D And its colour comes from 0xA9B9
+D 0xA989 0xA995 table_A989  Twelve bytes read by 0xA93E.
 F 0xA989 12
-D 0xA995 0xA9B9 tabla_A995  Treinta y seis bytes que lee 0xA961.
+D 0xA995 0xA9B9 table_A995  Thirty-six bytes read by 0xA961.
 F 0xA995 12
-D 0xA9B9 0xA9C2 tabla_A9B9  Nueve bytes que lee 0xA97D.
+D 0xA9B9 0xA9C2 table_A9B9  Nine bytes read by 0xA97D.
 F 0xA9B9 9
-L 0xA9C2 arma_las_fichas_de_sprite   Por cada uno de los ocho bichos, cuatro fichas de sprite en el buffer de 0xEC80
-C 0xA9C2 Ocho bichos
-C 0xA9C8 0xEC80: el buffer de atributos de sprite
-C 0xA9CC Vacia o llena, cada bicho ocupa sus cuatro fichas
-C 0xA9D8 Ocho bytes: el bicho siguiente
-L 0xA9E1 cuatro_fichas_apagadas   0x10 bytes a 0xE0: los cuatro sprites de este bicho, fuera de pantalla
-L 0xA9E9 fichas_de_este_bicho   Una ficha por sprite asomado, con el desvio que le toca a su tipo en la tabla de 0xAA46
-C 0xA9E9 El tipo por ocho: la tabla de 0xAA46
-C 0xA9F7 El byte 5: cuantos sprites lleva
-C 0xA9FE La fila del bicho mas el desvio...
-C 0xAA02 ...y por debajo de la 0xC0 no se dibuja
-C 0xAA0B ...y su columna
-C 0xAA10 Si la columna da la vuelta, el sprite se apaga
-C 0xAA26 El byte 6: el dibujo
-C 0xAA2B Y el byte 7: el color
-L 0xAA32 apaga_las_que_sobran   Los sprites que aun no han asomado, con 0xE0 en los cuatro bytes
-C 0xAA32 Cuatro menos los que lleva
-C 0xAA39 0xE0: el VDP no los dibuja
-C 0xAA3B Los cuatro bytes de la ficha
-C 0xAA42 Y a por la siguiente
-D 0xAA46 0xAAA6 tabla_AA46  Noventa y seis bytes que lee 0xA9EF.
+L 0xA9C2 build_sprite_entries   For each of the eight critters, four sprite entries in the buffer at 0xEC80
+C 0xA9C2 Eight critters
+C 0xA9C8 0xEC80: the sprite attribute buffer
+C 0xA9CC Empty or full, each critter takes up its four entries
+C 0xA9D8 Eight bytes: the next critter
+L 0xA9E1 four_entries_off   0x10 bytes set to 0xE0: this critter's four sprites, off screen
+L 0xA9E9 this_critter_entries   One entry per sprite in view, with the offset its type gets from the table at 0xAA46
+C 0xA9E9 The type times eight: the table at 0xAA46
+C 0xA9F7 Byte 5: how many sprites it has
+C 0xA9FE The critter's row plus the offset...
+C 0xAA02 ...and below 0xC0 it is not drawn
+C 0xAA0B ...and its column
+C 0xAA10 If the column wraps around, the sprite is switched off
+C 0xAA26 Byte 6: the drawing
+C 0xAA2B And byte 7: the colour
+L 0xAA32 switch_off_leftovers   The sprites that have not come into view yet, with 0xE0 in all four bytes
+C 0xAA32 Four minus the ones it has
+C 0xAA39 0xE0: the VDP does not draw them
+C 0xAA3B The four bytes of the entry
+C 0xAA42 And on to the next one
+D 0xAA46 0xAAA6 table_AA46  Ninety-six bytes read by 0xA9EF.
 F 0xAA46 16
-D 0xAAA6 0xAAB0 tabla_AAA6  Cinco palabras que lee 0x831B del banco 2 con 0x47AE, indexando con (IX+6).
+D 0xAAA6 0xAAB0 table_AAA6  Five words read by 0x831B in bank 2 with 0x47AE, indexing with (IX+6).
 F 0xAAA6 w2
-D 0xAAB0 0xAF29 datos_AAB0  Lo que apunta la tabla de arriba, y lo que lee 0x834F del banco 2. 1145 bytes hasta donde empieza el relleno.
+D 0xAAB0 0xAF29 data_AAB0  What the table above points to, and what 0x834F in bank 2 reads. 1145 bytes up to where the filler starts.
 F 0xAAB0 16
-D 0xAF29 0xC000 relleno  Relleno 0xFF hasta los 8192 bytes del banco.
+D 0xAF29 0xC000 filler  0xFF filler up to the bank's 8192 bytes.
 F 0xAF29 16

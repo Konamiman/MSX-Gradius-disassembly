@@ -88,8 +88,8 @@ los bits 1 y 2 son la variante, y los cinco de arriba, la fila.
 
 ## Las fases no van en orden, y cuatro de ellas son de bonus
 
-De una fase se sale por dos sitios. `acaba_la_fase` (0x6D53) le suma uno a
-0xE061; `salta_a_la_fase` (0x6FB9) le mete un número escrito a mano, y **a ese
+De una fase se sale por dos sitios. `end_stage` (0x6D53) le suma uno a
+0xE061; `jump_to_stage` (0x6FB9) le mete un número escrito a mano, y **a ese
 saltan ocho sitios, cada uno con el suyo**. Juntándolos sale el recorrido de
 verdad:
 
@@ -101,7 +101,7 @@ que son justo los cuatro bytes de la tabla de 0x418F.
 
 Lo que las abre es el **blanco**. Los finales de las fases 2, 3, 4 y 7 miran
 0xE1C0, y la única instrucción de los 128 KB que pone ese byte distinto de cero
-es 0xB130, dentro de `cierra_el_tramo`, que corre cuando la nave toca el blanco
+es 0xB130, dentro de `close_stretch`, que corre cuando la nave toca el blanco
 del final de la fase. Tocarlo te lleva a la de bonus; no tocarlo sigue el guion
 normal. La fase 1 también tiene blanco, y no lleva a ninguna.
 
@@ -127,7 +127,7 @@ ya está. El fallo es real y su efecto es ninguno.
 
 0x44E7 mira la tecla GRAPH y, con la pantalla parada, 0x50C9 va guardando letras
 en 0xE1E8 hasta RETURN. Escribirlas jugando no hace nada. Medido en openMSX con
-`tools/omsx_claves.tcl`: en pausa, 0xE1E8 se llena con `4F 50 54 49 4F 4E` y al
+`tools/omsx_cheats.tcl`: en pausa, 0xE1E8 se llena con `4F 50 54 49 4F 4E` y al
 pulsar RETURN 0xE20B pasa de 00 a 02.
 
 Además de las siete palabras de siempre hay doce más, una por fase, todas

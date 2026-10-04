@@ -1,1015 +1,1020 @@
-# Banco 2 (se ejecuta en 0x8000). Directivas: L etiqueta, C comentario de
-# linea, B cabecera de bloque, D rango de datos, F anchura de fila.
+# Bank 2 (runs at 0x8000). Directives: L label, C line comment,
+# B block header, D data range, F row width.
 #
-# EL BANCO EMPIEZA A MEDIA INSTRUCCION. Su primer byte, el 0x80 de 0x8000, no
-# es el principio de nada: es el tercer byte del `ld hl,0x8041` que empieza en
-# 0x7FFE del banco 1. La ejecucion entra aqui por 0x8001, sin ningun salto.
-# Es el unico sitio del cartucho donde una instruccion queda partida entre dos
-# bancos, y suelda el banco 1 al 2: solo funciona con el reparto que pone INIT.
+# THE BANK STARTS IN THE MIDDLE OF AN INSTRUCTION. Its first byte, the 0x80 at
+# 0x8000, is not the start of anything: it is the third byte of the
+# `ld hl,0x8041` that starts at 0x7FFE of bank 1. Execution enters here at
+# 0x8001, without any jump. It is the only place in the cartridge where an
+# instruction is split between two banks, and it welds bank 1 to bank 2: it
+# only works with the bank layout that INIT sets up.
 #
-# Por abajo pasa algo parecido pero mas suave: el codigo sigue de largo de
-# 0x9FFF al 0xA000, o sea al banco 3.
-B 0x8000 EL PRIMER BYTE ES EL TERCERO DE UNA INSTRUCCION DEL BANCO 1
-D 0x8000 0x8001 tercer_byte_de_la_instruccion_partida  El 0x80 que completa el `ld hl,0x8041` de p01:7FFE. Se lista aparte porque en este banco no hay instruccion que lo contenga.
+# Something similar but milder happens at the bottom end: the code falls
+# through from 0x9FFF into 0xA000, that is, into bank 3.
+B 0x8000 THE FIRST BYTE IS THE THIRD BYTE OF AN INSTRUCTION FROM BANK 1
+D 0x8000 0x8001 third_byte_of_split_instruction  The 0x80 that completes the `ld hl,0x8041` at p01:7FFE. It is listed separately because there is no instruction in this bank that contains it.
 F 0x8000 1
-B 0x8001 EL BANCO DE LOS JEFES Y DE LOS CHOQUES CON EL MAPA
-B 0x8001 En este banco viven los motores de los jefes de fase, la rutina que dice
-B 0x8001 si un punto choca con el mapa, y buena parte del dibujado. Empieza de una
-B 0x8001 forma rara: la primera instruccion NO esta entera aqui, sino que sus dos
-B 0x8001 primeros bytes son los ultimos del banco 1.
-L 0x8001 sigue_del_banco_1  Aqui continua la instruccion partida que empieza en p01:7FFE.
-C 0x8001 Aqui llega HL desde el banco 1
-C 0x8004 El byte se guarda en el C alternativo
-C 0x8006 0xE790 y 0xE7C0: si el jefe ya esta montado, no se vuelve a montar
-C 0x8013 Diez bytes de 0x8051 a la ficha
-C 0x8021 El bit 0 de C: la primera pieza
-C 0x802F Y el bit 1: la segunda
-C 0x803B Doce bytes de ficha
-D 0x8041 0x8073 tabla_8041  Cincuenta bytes a los que apunta el `ld hl,0x8041` de la instruccion partida: es lo primero que el codigo carga al entrar en este banco.
+B 0x8001 THE BANK OF THE BOSSES AND OF COLLISIONS WITH THE MAP
+B 0x8001 This bank holds the mover routines of the stage bosses, the routine that
+B 0x8001 says whether a point collides with the map, and a good part of the
+B 0x8001 drawing. It starts in an odd way: the first instruction is NOT entirely
+B 0x8001 here; its first two bytes are the last ones of bank 1.
+L 0x8001 continued_from_bank_1  This is where the split instruction that starts at p01:7FFE continues.
+C 0x8001 HL arrives here from bank 1
+C 0x8004 The byte is kept in the alternate C
+C 0x8006 0xE790 and 0xE7C0: if the boss is already set up, it is not set up again
+C 0x8013 Ten bytes from 0x8051 to the card
+C 0x8021 Bit 0 of C: the first piece
+C 0x802F And bit 1: the second
+C 0x803B Twelve bytes of card
+D 0x8041 0x8073 table_8041  Fifty bytes pointed to by the `ld hl,0x8041` of the split instruction: it is the first thing the code loads on entering this bank.
 F 0x8041 16
-L 0x8073 corre_los_cinco_de_e7a0   Las cinco ranuras de 0xE7A0; solo las del tipo 4 hacen algo
-C 0x8077 Cinco ranuras
-C 0x807D El tipo 4
-C 0x8083 Dieciseis bytes: la ranura siguiente
-L 0x808B dispara_la_pieza   Cada tantos cuadros -menos cuantos mas dificil- suelta un disparo desde donde diga la tabla de 0x80B0
-C 0x808F 0x1B menos la dificultad, partido por dos: los cuadros entre disparos
-C 0x809D La tabla de 0x80B0: de donde le sale el disparo a cada dibujo
-C 0x80AD Y el banco 1 lo monta
-D 0x80B0 0x8100 tabla_80B0  Ochenta bytes que lee 0x809D.
+L 0x8073 run_five_at_e7a0   The five slots at 0xE7A0; only the type 4 ones do anything
+C 0x8077 Five slots
+C 0x807D Type 4
+C 0x8083 Sixteen bytes: the next slot
+L 0x808B fire_piece_shot   Every so many frames (fewer the harder it is) fires a shot from wherever the table at 0x80B0 says
+C 0x808F 0x1B minus the difficulty, divided by two: the frames between shots
+C 0x809D The table at 0x80B0: where each drawing's shot comes out from
+C 0x80AD And bank 1 sets it up
+D 0x80B0 0x8100 table_80B0  Eighty bytes read by 0x809D.
 F 0x80B0 16
-L 0x8100 corre_las_seis_piezas   Las seis ranuras de 0xE790: cada una con su motor segun el tipo
-C 0x8104 Seis ranuras
-C 0x810B Dieciseis bytes: la ranura siguiente
-L 0x8113 paso_de_la_pieza   Los tipos 3 y mas: el 3 se retira, y los demas giran hacia el dibujo que les toca
-C 0x8116 Por debajo del tipo 3 no hace nada
-C 0x8119 El tipo 3 se retira
-C 0x811F El registro R: de cinco a ocho cuadros por paso
-C 0x812A El byte 10 es el dibujo de ahora y el 11 el que quiere alcanzar
-C 0x8135 Un paso hacia el, arriba o abajo
-C 0x8139 La rampa de 0x81AD: el dibujo de verdad
-L 0x8144 retira_la_pieza   Se va subiendo y apartandose de la nave, cambiando de dibujo, hasta salir por arriba
-C 0x8147 El bit 4 del contador: alterna el dibujo
-C 0x8153 Del paso 2 en adelante, sin alternar
-C 0x8162 Diez cuadros por paso
-C 0x8169 Ocho puntos mas arriba
-C 0x816B Por encima de la Y 0x10 se acaba
-C 0x8178 0xE204: hacia donde esta la nave
-C 0x817E El byte 32 dice hasta donde puede irse
-C 0x8188 Ocho a la derecha
-C 0x818A Ocho a la derecha
-C 0x818B Con tope por la derecha
-C 0x8199 U ocho a la izquierda
-C 0x819B El byte 16: hasta donde llega
-C 0x819C Con tope
-L 0x81A2 apaga_la_pieza   La ranura y sus dos marcas, a cero
-D 0x81AD 0x81D5 rampa_81AD  Cuarenta bytes que lee 0x8139: una cuesta abajo (0x27, 0x26, 0x25, ...) y detras una cuesta arriba.
+L 0x8100 run_six_pieces   The six slots at 0xE790: each with its mover routine according to its type
+C 0x8104 Six slots
+C 0x810B Sixteen bytes: the next slot
+L 0x8113 piece_step   Types 3 and up: 3 withdraws, and the others turn towards the drawing that is due to them
+C 0x8116 Below type 3 it does nothing
+C 0x8119 Type 3 withdraws
+C 0x811F The R register: five to eight frames per step
+C 0x812A Byte 10 is the current drawing and 11 the one it wants to reach
+C 0x8135 One step towards it, up or down
+C 0x8139 The ramp at 0x81AD: the real drawing
+L 0x8144 withdraw_piece   It keeps rising and moving away from the ship, changing drawing, until it leaves through the top
+C 0x8147 Bit 4 of the counter: alternates the drawing
+C 0x8153 From step 2 onwards, without alternating
+C 0x8162 Ten frames per step
+C 0x8169 Eight points higher
+C 0x816B Above Y 0x10 it is over
+C 0x8178 0xE204: towards where the ship is
+C 0x817E Byte 32 says how far it can go
+C 0x8188 Eight to the right
+C 0x818A Eight to the right
+C 0x818B With a limit on the right
+C 0x8199 Or eight to the left
+C 0x819B Byte 16: how far it gets
+C 0x819C With a limit
+L 0x81A2 switch_off_piece   The slot and its two marks, zeroed
+D 0x81AD 0x81D5 ramp_81AD  Forty bytes read by 0x8139: a downward slope (0x27, 0x26, 0x25, ...) followed by an upward slope.
 F 0x81AD 16
-L 0x81D5 apunta_las_dos_torretas   Las dos piezas de 0xE790 y 0xE7C0 miran hacia la nave: el angulo elige el dibujo de la torreta
-L 0x81E0 apunta_una_torreta   Mide hacia donde esta la nave y, con el angulo, saca de la tabla el dibujo que le toca a cada torreta
-C 0x81E5 La posicion de la pieza
-C 0x81EB El banco 1 mide el angulo hasta la nave
-C 0x81F1 El byte 32: la segunda torreta
-C 0x81F6 El bit 6 del dibujo: si esta girada, no apunta
-C 0x81FC La tabla de 0x8250
-C 0x81FF El dibujo de la torreta
-C 0x8202 Se guarda el dibujo
-L 0x820E apunta_la_otra   Lo mismo para la torreta del byte 16, con la tabla de 0x8270
-C 0x8219 La tabla de 0x8270
-L 0x822B esta_en_angulo   Por encima de la Y 0x40, y con el dibujo entre 0x0A y 0x1E, la torreta puede apuntar
-C 0x822E Por encima de la Y 0x40 no
-C 0x8232 Y el dibujo tiene que caer entre 0x0A y 0x1E
-L 0x8238 dibujo_del_angulo   El angulo de 0xEC18 partido por ocho indexa la tabla, y el registro R le suma un pellizco de menos uno a uno
-C 0x8238 0xEC18: el angulo hasta la nave
-C 0x823B Partido por ocho: treinta y dos pasos
-C 0x8243 El registro R otra vez: menos uno, cero o uno de temblor
-C 0x8245 La tabla, indexada por el angulo
-D 0x8250 0x8270 dibujos_de_la_torreta_A  Treinta y dos dibujos, uno por cada octavo de angulo: los que ensena la torreta de 0xE7C0 segun hacia donde apunte. Los lee 0x81FC.
+L 0x81D5 aim_both_turrets   The two pieces at 0xE790 and 0xE7C0 look towards the ship: the angle chooses the turret's drawing
+L 0x81E0 aim_one_turret   Measures where the ship is and, with the angle, takes from the table the drawing due to each turret
+C 0x81E5 The position of the piece
+C 0x81EB Bank 1 measures the angle to the ship
+C 0x81F1 Byte 32: the second turret
+C 0x81F6 Bit 6 of the drawing: if it is turned, it does not aim
+C 0x81FC The table at 0x8250
+C 0x81FF The turret's drawing
+C 0x8202 The drawing is stored
+L 0x820E aim_the_other   The same for the turret of byte 16, with the table at 0x8270
+C 0x8219 The table at 0x8270
+L 0x822B is_in_angle   Above Y 0x40, and with the drawing between 0x0A and 0x1E, the turret can aim
+C 0x822E Above Y 0x40, no
+C 0x8232 And the drawing has to fall between 0x0A and 0x1E
+L 0x8238 angle_drawing   The angle at 0xEC18 divided by eight indexes the table, and the R register adds a nudge of minus one to one
+C 0x8238 0xEC18: the angle to the ship
+C 0x823B Divided by eight: thirty-two steps
+C 0x8243 The R register again: minus one, zero or one of jitter
+C 0x8245 The table, indexed by the angle
+D 0x8250 0x8270 turret_drawings_A  Thirty-two drawings, one per eighth of angle: the ones the turret at 0xE7C0 shows depending on where it points. Read by 0x81FC.
 F 0x8250 16
-D 0x8270 0x8290 dibujos_de_la_torreta_B  Los otros treinta y dos, los de la torreta del byte 16. Los lee 0x8219.
+D 0x8270 0x8290 turret_drawings_B  The other thirty-two, those of the turret of byte 16. Read by 0x8219.
 F 0x8270 16
-L 0x8290 borra_al_jefe   0xEC00 a cero: lo que sigue borra en vez de pintar
-L 0x8293 pinta_al_jefe   0xEC00 a uno: lo que sigue pinta
-L 0x8295 dibuja_las_seis_piezas   Con el banco 10 puesto, coloca las torretas y luego dibuja las seis ranuras de 0xE790
-C 0x8299 Banco 10 en 0xA000: ahi estan los dibujos
-C 0x82A6 Devuelto el 3
-C 0x82B3 Seis ranuras
-C 0x82B9 Dieciseis bytes: la siguiente
-L 0x82C2 borra_una_pieza   0xEC00 a cero y a borrar
-L 0x82C6 dibuja_una_pieza   Saca del banco 10 el ancho, el alto y los caracteres del dibujo, y lo pinta o lo borra
-C 0x82C9 Por debajo del tipo 3 no hay nada
-C 0x82CC El tipo 3 usa la tabla de 0xAAA6; los demas, la de 0xAAB0
-C 0x82D5 Banco 10 en 0xA000
-C 0x82E5 El ancho y el alto
-C 0x82EB Donde cae
-C 0x82F1 0xEC00 decide: borrar o pintar
-C 0x82FE Devuelto el 3
-C 0x8300 Devuelto el banco 3
-C 0x8303 Devuelto el 3
-L 0x8308 coloca_las_torretas   A las dos piezas de 0xE790 y 0xE7C0 les calcula donde caen sus dos torretas
-L 0x8313 coloca_las_dos_torretas_de_una   El ancho del dibujo por ocho da el desplazamiento en X, y la tabla de 0x8377 el de Y
-C 0x831B La tabla de 0xAAA6: el tamano de cada dibujo
-C 0x8324 El ancho por ocho
-C 0x832A El byte 16: la primera torreta
-C 0x8331 Y el byte 32: la segunda
-C 0x8339 La tabla de 0x8377: cuanto se corre en Y
-C 0x833C La tabla de 0x8377
-C 0x833F El desplazamiento en Y
-L 0x834F coloca_la_primera_torreta   Igual, pero restando: esta va al otro lado
-C 0x834F La tabla de 0xAAB0
-C 0x835A El ancho por ocho
-C 0x835D En negativo: la torreta va al otro lado
-C 0x8365 La tabla de 0x8377
-D 0x8377 0x839F desplazamiento_de_la_torreta  Cuarenta bytes, uno por dibujo: cuanto se corre en Y la torreta respecto al centro de la pieza. Los leen 0x8339 y 0x8365.
+L 0x8290 erase_boss   0xEC00 to zero: what follows erases instead of painting
+L 0x8293 paint_boss   0xEC00 to one: what follows paints
+L 0x8295 draw_six_pieces   With bank 10 in place, positions the turrets and then draws the six slots at 0xE790
+C 0x8299 Bank 10 at 0xA000: the drawings are there
+C 0x82A6 Bank 3 put back
+C 0x82B3 Six slots
+C 0x82B9 Sixteen bytes: the next one
+L 0x82C2 erase_one_piece   0xEC00 to zero, and erase
+L 0x82C6 draw_one_piece   Takes from bank 10 the width, the height and the characters of the drawing, and paints or erases it
+C 0x82C9 Below type 3 there is nothing
+C 0x82CC Type 3 uses the table at 0xAAA6; the others, the one at 0xAAB0
+C 0x82D5 Bank 10 at 0xA000
+C 0x82E5 The width and the height
+C 0x82EB Where it lands
+C 0x82F1 0xEC00 decides: erase or paint
+C 0x82FE Bank 3 put back
+C 0x8300 Bank 3 put back
+C 0x8303 Bank 3 put back
+L 0x8308 place_turrets   For the two pieces at 0xE790 and 0xE7C0, works out where their two turrets go
+L 0x8313 place_both_turrets_of_one   The drawing's width times eight gives the X offset, and the table at 0x8377 the Y one
+C 0x831B The table at 0xAAA6: the size of each drawing
+C 0x8324 The width times eight
+C 0x832A Byte 16: the first turret
+C 0x8331 And byte 32: the second
+C 0x8339 The table at 0x8377: how far it shifts in Y
+C 0x833C The table at 0x8377
+C 0x833F The offset in Y
+L 0x834F place_first_turret   The same, but subtracting: this one goes on the other side
+C 0x834F The table at 0xAAB0
+C 0x835A The width times eight
+C 0x835D Negative: the turret goes on the other side
+C 0x8365 The table at 0x8377
+D 0x8377 0x839F turret_offset  Forty bytes, one per drawing: how far the turret shifts in Y relative to the centre of the piece. Read by 0x8339 and 0x8365.
 F 0x8377 10
-L 0x839F corre_y_dibuja_el_jefe   Un paso del jefe y su dibujo
-C 0x839F Un paso y su dibujo
-L 0x83A5 corre_y_dibuja_el_jefe_2   Lo mismo con la otra pareja de rutinas
-L 0x83AB arranca_o_acaba_el_jefe   En el paso 0 monta la primera pieza, y a partir de ahi espera a que 0xE780 se apague
-C 0x83B4 Monta la ficha de la pieza
-C 0x83B7 Tipo 4
-C 0x83BE 0xF0 en la Y
-C 0x83C2 Y 0x3C cuadros
-C 0x83CB Con 0xE780 a cero, el jefe se acabo
-L 0x83D1 paso_del_jefe   En el paso 0 calcula cuanto dura y cada cuantos cuadros suelta pieza, todo desde la dificultad
-C 0x83DA La dificultad mas 0x14...
-C 0x83E0 ...por 0x1E: los cuadros que dura el jefe
-C 0x83E8 Y 0x3C menos dos veces la dificultad: los cuadros entre pieza y pieza
-C 0x83EB Los cuadros entre pieza y pieza
-C 0x83F7 0xE158 a cero
-C 0x83F9 0xE15B, 0xE15C, 0xE15D y 0xE15E a cero
-L 0x8405 suelta_una_pieza   Baja la cuenta larga y, cada tantos cuadros, busca hueco entre las ocho ranuras y monta una pieza
-C 0x8405 0xE153: los cuadros que le quedan al jefe
-C 0x8411 0xE156: los cuadros hasta la pieza siguiente
-C 0x841A Ocho ranuras
-L 0x8426 monta_la_ficha_de_la_pieza   Copia los once bytes de 0x844D y le pone la Y que diga la tabla de 0x8458
-C 0x8426 Los once bytes de 0x844D
-C 0x8430 0xE159: cual de las cuatro alturas
-C 0x8435 La tabla de 0x8458: las cuatro alturas
-C 0x843D Ocho bytes mas de ficha
-C 0x8441 Ocho bytes mas de ficha
-C 0x8444 Ocho bytes mas
-D 0x844D 0x8458 ficha_de_la_pieza  Los once bytes de arranque de una pieza del jefe, que 0x8426 copia tal cual a la ranura libre.
+L 0x839F run_and_draw_boss   One step of the boss and its drawing
+C 0x839F One step and its drawing
+L 0x83A5 run_and_draw_boss_2   The same with the other pair of routines
+L 0x83AB start_or_end_boss   On step 0 sets up the first piece, and from then on waits for 0xE780 to switch off
+C 0x83B4 Sets up the piece's card
+C 0x83B7 Type 4
+C 0x83BE 0xF0 in Y
+C 0x83C2 And 0x3C frames
+C 0x83CB With 0xE780 at zero, the boss is over
+L 0x83D1 boss_step   On step 0 works out how long it lasts and how often it releases a piece, all from the difficulty
+C 0x83DA The difficulty plus 0x14...
+C 0x83E0 ...times 0x1E: the frames the boss lasts
+C 0x83E8 And 0x3C minus twice the difficulty: the frames between one piece and the next
+C 0x83EB The frames between one piece and the next
+C 0x83F7 0xE158 to zero
+C 0x83F9 0xE15B, 0xE15C, 0xE15D and 0xE15E to zero
+L 0x8405 release_a_piece   Decrements the long count and, every so many frames, looks for a free slot among the eight and sets up a piece
+C 0x8405 0xE153: the frames the boss has left
+C 0x8411 0xE156: the frames until the next piece
+C 0x841A Eight slots
+L 0x8426 set_up_piece_card   Copies the eleven bytes of 0x844D and gives it the Y that the table at 0x8458 says
+C 0x8426 The eleven bytes of 0x844D
+C 0x8430 0xE159: which of the four heights
+C 0x8435 The table at 0x8458: the four heights
+C 0x843D Eight more bytes of card
+C 0x8441 Eight more bytes of card
+C 0x8444 Eight more bytes
+D 0x844D 0x8458 piece_card  The eleven starting bytes of a boss piece, which 0x8426 copies as is to the free slot.
 F 0x844D 11
-D 0x8458 0x845C alturas_de_la_pieza  Las cuatro alturas por las que puede salir una pieza del jefe: 0x08, 0x34, 0x60 y 0x8C. Las lee 0x8435 con (0xE159).
+D 0x8458 0x845C piece_heights  The four heights at which a boss piece can come out: 0x08, 0x34, 0x60 and 0x8C. Read by 0x8435 with (0xE159).
 F 0x8458 4
-L 0x845C mira_si_se_acabo_el_jefe   Cuando no queda ninguna pieza viva ni ninguna explosion, el jefe se da por muerto
-C 0x845C Ocho ranuras de pieza
-L 0x8469 elige_altura_de_la_pieza   El registro R elige una de las cuatro alturas, saltandose la de la vez anterior y las que ya tengan dos piezas
-C 0x8469 0xE158: la altura de la vez anterior
-C 0x846D Cuatro intentos
-C 0x846F El registro R: una de las cuatro alturas
-C 0x8474 La misma que la anterior, no
-C 0x8477 0xE15B: cuantas piezas hay ya en esa altura
-C 0x847D Dos por altura como mucho
-C 0x8481 Se apunta la altura elegida
-C 0x8488 Se apunta la altura elegida
-L 0x8492 hay_alguna_libre   Devuelve en HL la primera ranura de pieza que este libre
-C 0x8498 Con el primer byte a cero, la ranura esta libre
-L 0x849F hay_alguna_viva   Sale con NZ si queda alguna pieza viva
-C 0x84A5 Con el primer byte distinto de cero, queda alguna viva
-L 0x84AC hay_alguna_explosion   Y lo mismo con las cuatro ranuras de explosion de 0xE800
-C 0x84B2 Cuatro
-C 0x84B4 Con el primer byte distinto de cero, queda alguna explosion
-L 0x84BB corre_una_pieza   Una sola
-L 0x84C0 corre_las_ocho_piezas   Las ocho ranuras de 0xE780
-C 0x84C0 Ocho ranuras
-C 0x84CC Dieciseis bytes: la siguiente
-C 0x84CF Dieciseis bytes: la siguiente
-C 0x84D1 0xE159 cuenta las ranuras
-L 0x84D9 paso_de_una_pieza   Segun el byte 1: entrando, andando, o ya dentro; el byte 14 en 4 la manda por otro camino
-C 0x84E1 El paso 1 es el de andar
-C 0x84E8 Y el 0: entrando por el borde
-C 0x84EB Hasta pasar la X 0xE1, sigue entrando
-L 0x84EE paso_siguiente_de_la_pieza   El byte 1 sube
-L 0x84F2 anda_la_pieza   Baja el contador del byte 10; al agotarse, apaga el dibujo y pasa al paso siguiente
-C 0x84FF Se mueve, se acerca y dispara
-C 0x8505 El byte 14 en 4 lleva otro motor
-C 0x8507 El byte 14 en 4 lleva otro motor
-C 0x8509 Se mueve y dispara
-L 0x8521 libera_la_altura   La pieza se apaga y su altura vuelve a quedar libre en 0xE15B
-C 0x8521 El byte 14 dice de que altura era
-L 0x852F persigue_la_fila_de_la_nave   Cada ocho cuadros se acerca a la FILA de la nave, sin salirse de la banda que le toca por altura; a menos de 0x11 se queda quieta
-C 0x852F Uno de cada ocho cuadros
-C 0x8535 0xE204, la fila de la nave, menos la suya
-C 0x853E A menos de 0x11 ya esta a su altura
-C 0x8547 Dos puntos hacia abajo
-C 0x8551 La tabla de 0x857B: el suelo de su banda
-C 0x8554 El byte 14 dice en que banda va
-C 0x8555 Con tope
-C 0x8560 O dos puntos hacia arriba
-C 0x856A Y la de 0x857F: el techo de su banda
-C 0x856D El techo de su banda
-C 0x856E Con tope
-D 0x857B 0x857F suelo_de_la_banda  Hasta que fila puede bajar la pieza, una por banda: 0x0B, 0x37, 0x63 y 0x8F. Los lee 0x8551. Con los cuatro techos de 0x857F salen cuatro carriles de once puntos separados 0x2C.
+L 0x845C check_boss_over   When no piece is left alive and no explosion either, the boss is considered dead
+C 0x845C Eight piece slots
+L 0x8469 choose_piece_height   The R register chooses one of the four heights, skipping the one from the previous time and those that already have two pieces
+C 0x8469 0xE158: the height from the previous time
+C 0x846D Four attempts
+C 0x846F The R register: one of the four heights
+C 0x8474 Not the same as the previous one
+C 0x8477 0xE15B: how many pieces there already are at that height
+C 0x847D Two per height at most
+C 0x8481 The chosen height is noted down
+C 0x8488 The chosen height is noted down
+L 0x8492 any_free   Returns in HL the first piece slot that is free
+C 0x8498 With the first byte at zero, the slot is free
+L 0x849F any_alive   Returns NZ if any piece is still alive
+C 0x84A5 With the first byte non-zero, one is still alive
+L 0x84AC any_explosion   And the same with the four explosion slots at 0xE800
+C 0x84B2 Four
+C 0x84B4 With the first byte non-zero, an explosion is still left
+L 0x84BB run_one_piece   Just one
+L 0x84C0 run_eight_pieces   The eight slots at 0xE780
+C 0x84C0 Eight slots
+C 0x84CC Sixteen bytes: the next one
+C 0x84CF Sixteen bytes: the next one
+C 0x84D1 0xE159 counts the slots
+L 0x84D9 one_piece_step   According to byte 1: entering, moving, or already inside; byte 14 at 4 sends it another way
+C 0x84E1 Step 1 is the moving one
+C 0x84E8 And 0: entering from the edge
+C 0x84EB Until it passes X 0xE1, it keeps entering
+L 0x84EE next_piece_step   Byte 1 goes up
+L 0x84F2 walk_piece   Decrements the counter in byte 10; when it runs out, turns off the drawing and moves on to the next step
+C 0x84FF It moves, closes in and fires
+C 0x8505 Byte 14 at 4 has another mover routine
+C 0x8507 Byte 14 at 4 has another mover routine
+C 0x8509 It moves and fires
+L 0x8521 free_height   The piece switches off and its height is free again in 0xE15B
+C 0x8521 Byte 14 says which height it was at
+L 0x852F chase_ship_row   Every eight frames it closes in on the ship's ROW, without leaving the band its height gives it; within 0x11 it stays still
+C 0x852F One in every eight frames
+C 0x8535 0xE204, the ship's row, minus its own
+C 0x853E Within 0x11 it is already at its height
+C 0x8547 Two points down
+C 0x8551 The table at 0x857B: the floor of its band
+C 0x8554 Byte 14 says which band it is in
+C 0x8555 With a limit
+C 0x8560 Or two points up
+C 0x856A And the one at 0x857F: the ceiling of its band
+C 0x856D The ceiling of its band
+C 0x856E With a limit
+D 0x857B 0x857F band_floor  How far down (to which row) the piece can go, one per band: 0x0B, 0x37, 0x63 and 0x8F. Read by 0x8551. With the four ceilings at 0x857F they make four lanes of eleven points, 0x2C apart.
 F 0x857B 4
-D 0x857F 0x8583 techo_de_la_banda  Los cuatro techos: 0x00, 0x2C, 0x58 y 0x84. Los lee 0x856A.
+D 0x857F 0x8583 band_ceiling  The four ceilings: 0x00, 0x2C, 0x58 and 0x84. Read by 0x856A.
 F 0x857F 4
-L 0x8583 persigue_la_columna_de_la_nave   Cada cuatro cuadros se acerca a la COLUMNA de la nave; el margen sale de la dificultad, y al salirse por la izquierda la pieza se va
-C 0x8583 Uno de cada cuatro cuadros
-C 0x858A La dificultad por cuatro, restada de 0x60: cuanto se queda por delante
-C 0x858D La columna de la pieza, menos ese margen
-C 0x858E 0xE206 es la columna de la nave
-C 0x85A5 A menos de 0x11 ya esta en su columna
-C 0x85AE Dos puntos a la derecha
-C 0x85B4 Con tope en la columna 0xF0
-C 0x85BC O dos a la izquierda, y al salirse por ese borde la pieza se va
-L 0x85C6 persigue_deprisa_la_fila   Igual pero cada dos cuadros y de cuatro en cuatro puntos, entre las filas 0x00 y 0x90
-C 0x85C6 Uno de cada dos cuadros
-C 0x85CA La fila de la nave
-C 0x85CB 0xE204: la fila de la nave
-C 0x85DD Cuatro puntos hacia abajo
-C 0x85E4 Con tope en la fila 0x90
-C 0x85EC O cuatro hacia arriba, con tope en la fila 0
-L 0x85FB persigue_deprisa_la_columna   Cada dos cuadros se acerca a la columna de la nave de cuatro en cuatro, quedandose 0x40 por delante
-C 0x85FB Uno de cada dos cuadros
-C 0x8603 0x40 por delante de la nave
-C 0x8612 A menos de 0x11 ya esta en su columna
-C 0x861B Cuatro puntos a la derecha
-C 0x8629 O cuatro a la izquierda, y al salirse se va
-L 0x8633 suma_de_a_la_fila   Suma DE a la palabra de 16 bits de (IX+2, IX+3): la fila de la pieza, con su parte decimal.
-C 0x8633 El byte bajo...
-C 0x863A ...y el alto con el acarreo
-L 0x8642 corre_la_pieza_un_punto   Entra a 0x8645 con DE = 0x0100: un punto a la izquierda.
-L 0x8645 resta_de_a_la_columna   Resta DE a la palabra de 16 bits de (IX+4, IX+5): la columna de la pieza, con su parte decimal.
-C 0x8645 El byte bajo...
-C 0x864C ...y el alto con el acarreo
-L 0x8654 la_pieza_dispara   Cada tantos cuadros -menos cuantos mas dificil- suelta tres disparos del tipo 0x0B, si caben en la pantalla
-C 0x8657 El byte 7 es el paso del disparo
-C 0x8661 Con diez objetos o mas en pantalla no dispara
-C 0x8668 Diez cuadros de aviso
-L 0x8670 paso_siguiente_del_disparo   El byte 7 sube
-C 0x8674 Los diez cuadros, y entonces dispara
-C 0x8681 Y otros diez para volver al dibujo de siempre
-C 0x868C 0x22 menos dos veces la dificultad: los cuadros hasta la tanda siguiente
-L 0x8698 suelta_tres_disparos   Tres del tipo 0x0B, uno detras de otro
-C 0x8698 Tres
-L 0x86A7 suelta_uno   Sale ocho a la derecha y ocho por encima de la pieza
-C 0x86A7 Ocho a la derecha
-C 0x86AD Y ocho por encima
-C 0x86B6 Tipo 0x0B
-L 0x86C0 dibuja_una_pieza_sola
-L 0x86C6 dibuja_las_ocho_piezas   Las ocho ranuras de 0xE780
-C 0x86C6 Ocho ranuras
-C 0x86D1 Dieciseis bytes: la siguiente
-C 0x86D4 El bit 0 del byte 1
-C 0x86D5 Con el primer byte a cero, no hay pieza
-L 0x86D9 dibuja_la_pieza   Cuatro por cuatro caracteres, con uno de los dos dibujos de 0x86F1 y 0x8701 segun el byte 1
-C 0x86E2 El byte 1 elige entre los dos dibujos
-C 0x86EB Cuatro por cuatro caracteres
-D 0x86F1 0x8701 caracteres_86F1  Dieciseis caracteres que lee 0x86E2.
+L 0x8583 chase_ship_column   Every four frames it closes in on the ship's COLUMN; the margin comes from the difficulty, and when it goes off on the left the piece leaves
+C 0x8583 One in every four frames
+C 0x858A The difficulty times four, subtracted from 0x60: how far ahead it stays
+C 0x858D The piece's column, minus that margin
+C 0x858E 0xE206 is the ship's column
+C 0x85A5 Within 0x11 it is already at its column
+C 0x85AE Two points to the right
+C 0x85B4 With a limit at column 0xF0
+C 0x85BC Or two to the left, and when it goes off that edge the piece leaves
+L 0x85C6 chase_row_fast   The same but every two frames and four points at a time, between rows 0x00 and 0x90
+C 0x85C6 One in every two frames
+C 0x85CA The ship's row
+C 0x85CB 0xE204: the ship's row
+C 0x85DD Four points down
+C 0x85E4 With a limit at row 0x90
+C 0x85EC Or four up, with a limit at row 0
+L 0x85FB chase_column_fast   Every two frames it closes in on the ship's column four points at a time, staying 0x40 ahead
+C 0x85FB One in every two frames
+C 0x8603 0x40 ahead of the ship
+C 0x8612 Within 0x11 it is already at its column
+C 0x861B Four points to the right
+C 0x8629 Or four to the left, and when it goes off it leaves
+L 0x8633 add_de_to_row   Adds DE to the 16-bit word at (IX+2, IX+3): the piece's row, with its fractional part.
+C 0x8633 The low byte...
+C 0x863A ...and the high one with the carry
+L 0x8642 shift_piece_one_point   Enters 0x8645 with DE = 0x0100: one point to the left.
+L 0x8645 sub_de_from_column   Subtracts DE from the 16-bit word at (IX+4, IX+5): the piece's column, with its fractional part.
+C 0x8645 The low byte...
+C 0x864C ...and the high one with the carry
+L 0x8654 piece_fires   Every so many frames (fewer the harder it is) fires three type 0x0B shots, if they fit on the screen
+C 0x8657 Byte 7 is the shot's step
+C 0x8661 With ten or more objects on screen it does not fire
+C 0x8668 Ten frames of warning
+L 0x8670 next_shot_step   Byte 7 goes up
+C 0x8674 The ten frames, and then it fires
+C 0x8681 And another ten to go back to the usual drawing
+C 0x868C 0x22 minus twice the difficulty: the frames until the next batch
+L 0x8698 release_three_shots   Three of type 0x0B, one after another
+C 0x8698 Three
+L 0x86A7 release_one   It comes out eight to the right of the piece and eight above it
+C 0x86A7 Eight to the right
+C 0x86AD And eight above
+C 0x86B6 Type 0x0B
+L 0x86C0 draw_single_piece
+L 0x86C6 draw_eight_pieces   The eight slots at 0xE780
+C 0x86C6 Eight slots
+C 0x86D1 Sixteen bytes: the next one
+C 0x86D4 Bit 0 of byte 1
+C 0x86D5 With the first byte at zero, there is no piece
+L 0x86D9 draw_piece   Four by four characters, with one of the two drawings at 0x86F1 and 0x8701 according to byte 1
+C 0x86E2 Byte 1 chooses between the two drawings
+C 0x86EB Four by four characters
+D 0x86F1 0x8701 characters_86F1  Sixteen characters read by 0x86E2.
 F 0x86F1 4
-D 0x8701 0x8711 caracteres_8701  Dieciseis caracteres que lee 0x86E7.
+D 0x8701 0x8711 characters_8701  Sixteen characters read by 0x86E7.
 F 0x8701 4
-L 0x8711 posicion_de_la_ficha   Saca de la ficha la X y la Y
-C 0x8711 Los bytes 3 y 5
-L 0x8719 despacha_el_paso_del_jefe_3   Cuatro pasos, contados en 0xE190
-C 0x8719 Con la pantalla parada, no
-D 0x8724 0x872C tabla_del_despachador_8721  Cuatro palabras pegadas detras del `call 0x4067` de 0x8721.
+L 0x8711 card_position   Takes the X and the Y from the card
+C 0x8711 Bytes 3 and 5
+L 0x8719 dispatch_boss_step_3   Four steps, counted in 0xE190
+C 0x8719 Not with the screen stopped
+D 0x8724 0x872C dispatcher_table_8721  Four words glued right behind the `call 0x4067` at 0x8721.
 F 0x8724 w2
-L 0x872C monta_este_jefe   0x258 cuadros, los diez bytes de 0x8748 a la ranura y dos caracteres en la pantalla
-C 0x872C 0x258 cuadros
-C 0x8732 Los diez bytes de arranque
-C 0x8735 Los diez bytes de arranque
-L 0x8743 paso_siguiente_de_este_jefe   0xE190 + 1
-D 0x8748 0x8752 tabla_8748  Diez bytes que lee 0x8732.
+L 0x872C set_up_this_boss   0x258 frames, the ten bytes of 0x8748 into the slot and two characters on the screen
+C 0x872C 0x258 frames
+C 0x8732 The ten starting bytes
+C 0x8735 The ten starting bytes
+L 0x8743 next_step_of_this_boss   0xE190 + 1
+D 0x8748 0x8752 table_8748  Ten bytes read by 0x8732.
 F 0x8748 10
-B 0x8752 EL JEFE QUE ESCUPE DISPAROS: OTRA VEZ EL REGISTRO R
-B 0x8752 Este jefe suelta un disparo cada dos cuadros mientras le dura la cuenta,
-B 0x8752 y la direccion NO se calcula: se saca de la tabla de 0x87AF, dieciseis
-B 0x8752 parejas de velocidad, con el indice puesto por cinco bits del registro R.
-B 0x8752 Ademas, un bit del contador de cuadros le da la vuelta al signo, asi que
-B 0x8752 el abanico sale a los dos lados.
-L 0x8752 este_jefe_dispara   Cada dos cuadros suelta un disparo del tipo 0x10 con una de las dieciseis velocidades de 0x87AF
-C 0x8752 0xE789: hasta que no este montado, no dispara
-C 0x8758 0xE153: los cuadros que le quedan
-C 0x8767 Uno de cada dos cuadros
-C 0x8769 El registro R: una de las dieciseis parejas
-C 0x8779 Y un bit del contador le da la vuelta
-C 0x8783 0xEC12: la velocidad vertical
-C 0x8786 Y 0xF900 en Y
-C 0x878C Tipo 0x10
-L 0x8793 cobra_el_jefe   Cien puntos y cambia los dos caracteres
-C 0x8793 Cien puntos
-L 0x879E se_acaba_la_cuenta   Cambia los caracteres y deja 0x5A cuadros
-C 0x87A6 0x5A cuadros
-D 0x87AF 0x87CF velocidades_del_abanico  Dieciseis parejas de velocidad de 16 bits que 0x876D indexa con cinco bits del registro R: las direcciones con las que este jefe escupe disparos.
+B 0x8752 THE BOSS THAT SPITS SHOTS: THE R REGISTER AGAIN
+B 0x8752 This boss fires a shot every two frames for as long as its count lasts,
+B 0x8752 and the direction is NOT calculated: it is taken from the table at
+B 0x8752 0x87AF, sixteen speed pairs, with the index set by five bits of the R
+B 0x8752 register. On top of that, a bit of the frame counter flips the sign, so
+B 0x8752 the fan comes out on both sides.
+L 0x8752 this_boss_fires   Every two frames fires a type 0x10 shot with one of the sixteen speeds at 0x87AF
+C 0x8752 0xE789: until it is set up, it does not fire
+C 0x8758 0xE153: the frames it has left
+C 0x8767 One in every two frames
+C 0x8769 The R register: one of the sixteen pairs
+C 0x8779 And a bit of the counter flips it
+C 0x8783 0xEC12: the vertical speed
+C 0x8786 And 0xF900 in Y
+C 0x878C Type 0x10
+L 0x8793 score_boss   A hundred points, and the two characters change
+C 0x8793 A hundred points
+L 0x879E count_runs_out   Changes the characters and leaves 0x5A frames
+C 0x87A6 0x5A frames
+D 0x87AF 0x87CF fan_speeds  Sixteen pairs of 16-bit speeds that 0x876D indexes with five bits of the R register: the directions in which this boss spits shots.
 F 0x87AF w2
-L 0x87CF escribe_dos_caracteres   Deja D y E en dos casillas del mapa, una encima de la otra
-C 0x87CF Dos casillas del mapa, una encima de la otra
-C 0x87D3 0x20: la fila de abajo
-L 0x87D9 espera_a_que_se_vaya   Al agotarse la cuenta, apaga 0xE1A0 y pasa al paso siguiente
-C 0x87D9 0xE153: los cuadros que faltan
-C 0x87DF 0xE1A0 a cero
-L 0x87E5 espera_al_banco_10   Llama al banco 3 y, cuando 0xE1A3 se pone, da el jefe por muerto
-C 0x87E5 El banco 3 monta el final
-C 0x87E8 0xE1A3: hasta que no se ponga, no
-L 0x87F3 despacha_el_paso_del_jefe_4   Seis pasos, contados en 0xE190
-D 0x87F9 0x8805 tabla_del_despachador_87F6  Seis palabras pegadas detras del `call 0x4067` de 0x87F6.
+L 0x87CF write_two_characters   Puts D and E into two map cells, one above the other
+C 0x87CF Two map cells, one above the other
+C 0x87D3 0x20: the row below
+L 0x87D9 wait_until_gone   When the count runs out, clears 0xE1A0 and moves on to the next step
+C 0x87D9 0xE153: the frames remaining
+C 0x87DF 0xE1A0 to zero
+L 0x87E5 wait_for_bank_10   Calls bank 3 and, when 0xE1A3 gets set, considers the boss dead
+C 0x87E5 Bank 3 sets up the ending
+C 0x87E8 0xE1A3: not until it is set
+L 0x87F3 dispatch_boss_step_4   Six steps, counted in 0xE190
+D 0x87F9 0x8805 dispatcher_table_87F6  Six words glued right behind the `call 0x4067` at 0x87F6.
 F 0x87F9 w2
-L 0x8805 monta_las_dos_piezas   Los 0x1D bytes de 0x8812 a 0xE780: las fichas de arranque de dos piezas seguidas
-D 0x8812 0x882F tabla_8812  Veintinueve bytes que lee 0x8808.
+L 0x8805 set_up_two_pieces   The 0x1D bytes of 0x8812 to 0xE780: the starting cards of two pieces in a row
+D 0x8812 0x882F table_8812  Twenty-nine bytes read by 0x8808.
 F 0x8812 16
-L 0x882F espera_a_la_distancia_178   Pasada la distancia 0x178, deja 0x1E0 cuadros y monta la ficha de 0x884D en 0xE9A0
-C 0x8835 La distancia 0x178
-C 0x883A 0x1E0 cuadros
-C 0x8840 Los cinco bytes de arranque
-D 0x884D 0x8852 tabla_884D  Cinco bytes que lee 0x8840.
+L 0x882F wait_for_distance_178   Once past distance 0x178, leaves 0x1E0 frames and sets up the card at 0x884D in 0xE9A0
+C 0x8835 Distance 0x178
+C 0x883A 0x1E0 frames
+C 0x8840 The five starting bytes
+D 0x884D 0x8852 table_884D  Five bytes read by 0x8840.
 F 0x884D 5
-L 0x8852 espera_a_que_la_nave_suba   Sigue hasta que se acaba la cuenta, o hasta que la nave pasa de la Y 0xC8, y entonces suelta el limite
-C 0x8855 0xE153: los cuadros que quedan
-C 0x8860 O que la nave pase de la columna 0xC8
-C 0x8867 O que el submodo se ponga
-C 0x886C 0xE9A0 pasa al paso 2
-C 0x8876 El desplazamiento llega hasta 0x19F
-C 0x8879 El desplazamiento hasta 0x19F
-C 0x887C Al paso siguiente
-L 0x887E arranca_la_cuenta_larga   0xEC1B a cero y otros 0x1E0 cuadros
-L 0x8888 paso_siguiente_del_jefe   0xE190 + 1
-L 0x888D suelta_lo_del_guion   En los pasos con columna nueva mira el guion de 0x88F8 y, al agotarse todo, apaga el aviso
-C 0x8890 Solo en los pasos con columna
-C 0x8897 Y solo en los pasos con columna nueva
-C 0x889C 0xE126: si no queda ningun objeto vivo, se acaba ya
-C 0x889F Sin objetos vivos, se acaba ya
-L 0x88AC acaba_este_jefe   0xE1A0 a cero y 0xE114 a uno
-C 0x88AC 0xE1A0 a cero y 0xE114 a uno
-L 0x88B8 espera_al_banco_3   Cuando 0xE1A3 se pone, borra los 0x180 bytes de objetos y da el jefe por muerto
-C 0x88B8 El banco 3 monta el final
-C 0x88C0 Los 0x180 bytes de objetos, a cero
-C 0x88CD 0xE150 a uno: el jefe se acabo
-L 0x88D3 mira_el_guion_del_jefe   Recorre la tabla de tres en tres buscando la distancia exacta; cuando cuadra, suelta un objeto del tipo 0x11
-C 0x88D6 La distancia recorrida
-C 0x88DE Tres bytes por renglon
-C 0x88E6 La X y el dibujo
-C 0x88EC Sale por la Y 0xF8
-C 0x88F0 Tipo 0x11
-D 0x88F8 0x890B tabla_88F8  Diecinueve bytes que lee 0x88D3, en grupos de tres y con 0xFF al final.
+L 0x8852 wait_for_ship_to_rise   Carries on until the count runs out, or until the ship passes Y 0xC8, and then releases the limit
+C 0x8855 0xE153: the frames remaining
+C 0x8860 Or until the ship passes column 0xC8
+C 0x8867 Or until the submode gets set
+C 0x886C 0xE9A0 moves to step 2
+C 0x8876 The offset goes up to 0x19F
+C 0x8879 The offset up to 0x19F
+C 0x887C To the next step
+L 0x887E start_long_count   0xEC1B to zero and another 0x1E0 frames
+L 0x8888 next_boss_step   0xE190 + 1
+L 0x888D release_from_script   On the steps with a new column it checks the script at 0x88F8 and, when everything is used up, clears the flag
+C 0x8890 Only on the steps with a column
+C 0x8897 And only on the steps with a new column
+C 0x889C 0xE126: if no object is left alive, it ends right away
+C 0x889F With no live objects, it ends right away
+L 0x88AC end_this_boss   0xE1A0 to zero and 0xE114 to one
+C 0x88AC 0xE1A0 to zero and 0xE114 to one
+L 0x88B8 wait_for_bank_3   When 0xE1A3 gets set, clears the 0x180 bytes of objects and considers the boss dead
+C 0x88B8 Bank 3 sets up the ending
+C 0x88C0 The 0x180 bytes of objects, zeroed
+C 0x88CD 0xE150 to one: the boss is over
+L 0x88D3 check_boss_script   Walks the table three bytes at a time looking for the exact distance; when it matches, releases a type 0x11 object
+C 0x88D6 The distance travelled
+C 0x88DE Three bytes per entry
+C 0x88E6 The X and the drawing
+C 0x88EC It comes out at Y 0xF8
+C 0x88F0 Type 0x11
+D 0x88F8 0x890B table_88F8  Nineteen bytes read by 0x88D3, in groups of three and with 0xFF at the end.
 F 0x88F8 3
-L 0x890B corre_la_pieza_de_e9a0   La sube ocho puntos por paso de scroll y, en el paso 2, le va cambiando el dibujo cada 0x20 cuadros
-C 0x8914 Solo en los pasos con columna
-C 0x891B Ocho puntos mas arriba
-C 0x8921 Solo el paso 2 anima
-C 0x8927 0x20 cuadros por dibujo
-C 0x892C Seis dibujos y se acaba
-L 0x892F acaba_la_pieza_de_e9a0   0xE9A0 al paso 3
-L 0x8935 dibuja_la_pieza_de_e9a0   En el paso 2, un rectangulo de cuatro por seis caracteres, sacado de la tabla de 0x8953 con el dibujo
-C 0x8938 Solo en el paso 2
-C 0x8941 Por veinticuatro: cuatro por seis caracteres
-C 0x8947 Cuatro de ancho por seis de alto
-D 0x8953 0x89E3 dibujos_de_la_pieza  Seis dibujos de cuatro por seis caracteres, uno por paso de la animacion. Los lee 0x894A con (0xE9A4).
+L 0x890B run_piece_at_e9a0   Raises it eight points per scroll step and, on step 2, changes its drawing every 0x20 frames
+C 0x8914 Only on the steps with a column
+C 0x891B Eight points higher
+C 0x8921 Only step 2 animates
+C 0x8927 0x20 frames per drawing
+C 0x892C Six drawings and it is over
+L 0x892F end_piece_at_e9a0   0xE9A0 to step 3
+L 0x8935 draw_piece_at_e9a0   On step 2, a rectangle of four by six characters, taken from the table at 0x8953 with the drawing
+C 0x8938 Only on step 2
+C 0x8941 Times twenty-four: four by six characters
+C 0x8947 Four wide by six high
+D 0x8953 0x89E3 piece_drawings  Six drawings of four by six characters, one per animation step. Read by 0x894A with (0xE9A4).
 F 0x8953 4
-L 0x89E3 borra_las_dos_piezas   Borra de la pantalla las dos ranuras de 0xE780 y 0xE790
-C 0x89E4 0xEC00 a cero: se borra
-C 0x89F7 El byte 12 puesto: la pieza esta reventada
-L 0x89FD revienta_esta_pieza_2   Borra la pieza y monta la explosion a un lado o a otro segun el bit 0 del byte 1
-C 0x8A0A El bit 0 del byte 1: a la izquierda o a la derecha
-C 0x8A1B Y 0x10 mas abajo
-C 0x8A1D Y el banco 1 la monta
-C 0x8A1E Diez mas abajo
-L 0x8A21 pinta_las_dos_piezas   0xEC00 a uno y a pintar las dos ranuras
-L 0x8A36 pinta_o_borra_la_pieza   La tabla de 0x8B4C da el desplazamiento y el tamano del rectangulo; 0xEC00 decide si se pinta o se borra
-C 0x8A39 La tabla de 0x8B4C, indexada por el dibujo
-C 0x8A40 El desplazamiento en X...
-C 0x8A46 ...y en Y
-C 0x8A4D Y el ancho y el alto
-C 0x8A52 0xEC00 decide: borrar o pintar
-C 0x8A55 La posicion de la pieza
-C 0x8A56 La posicion de la pieza
-L 0x8A5C corre_las_dos_piezas   Un paso para cada una de las dos ranuras
-L 0x8A67 paso_de_esta_pieza   Se mueve, dispara, y cada 0x10 cuadros cambia de dibujo con la tabla de 0x8A93
-C 0x8A75 0x10 cuadros por dibujo
-C 0x8A80 La tabla de 0x8A93: donde cae cada dibujo
-C 0x8A83 La tabla de 0x8A93
-D 0x8A93 0x8AAF salida_del_disparo  Catorce parejas (dx, dy) con signo, una por dibujo: por donde le sale el disparo a la pieza segun hacia donde este mirando. Las leen 0x8A80 de este banco y 0x769F del banco 1.
+L 0x89E3 erase_two_pieces   Erases from the screen the two slots at 0xE780 and 0xE790
+C 0x89E4 0xEC00 to zero: erase
+C 0x89F7 Byte 12 set: the piece is blown up
+L 0x89FD blow_up_this_piece_2   Erases the piece and sets up the explosion on one side or the other according to bit 0 of byte 1
+C 0x8A0A Bit 0 of byte 1: to the left or to the right
+C 0x8A1B And 0x10 further down
+C 0x8A1D And bank 1 sets it up
+C 0x8A1E Ten further down
+L 0x8A21 paint_two_pieces   0xEC00 to one, and paint the two slots
+L 0x8A36 paint_or_erase_piece   The table at 0x8B4C gives the offset and the size of the rectangle; 0xEC00 decides whether it is painted or erased
+C 0x8A39 The table at 0x8B4C, indexed by the drawing
+C 0x8A40 The offset in X...
+C 0x8A46 ...and in Y
+C 0x8A4D And the width and the height
+C 0x8A52 0xEC00 decides: erase or paint
+C 0x8A55 The position of the piece
+C 0x8A56 The position of the piece
+L 0x8A5C run_two_pieces   One step for each of the two slots
+L 0x8A67 this_piece_step   Moves, fires, and every 0x10 frames changes drawing using the table at 0x8A93
+C 0x8A75 0x10 frames per drawing
+C 0x8A80 The table at 0x8A93: where each drawing lands
+C 0x8A83 The table at 0x8A93
+D 0x8A93 0x8AAF shot_origin  Fourteen signed (dx, dy) pairs, one per drawing: where the piece's shot comes out depending on which way it is facing. Read by 0x8A80 in this bank and 0x769F in bank 1.
 F 0x8A93 2
-L 0x8AAF gira_la_pieza   Cada seis cuadros da un paso hacia el dibujo que quiere alcanzar, uno arriba o uno abajo
-C 0x8AB3 Seis cuadros por paso
-C 0x8AB7 El byte 10 es el dibujo de ahora y el 11 el que persigue
-C 0x8ABE Un paso hacia el
-L 0x8AC9 sube_la_pieza   En los pasos con columna nueva sube ocho puntos; al llegar a cero se da por reventada
-C 0x8AC9 Solo en los pasos con columna
-C 0x8AD1 Ocho puntos mas arriba
-C 0x8AD7 Al llegar a cero, el byte 12 a dos
-L 0x8ADC hacia_donde_mira   Mide el angulo hasta la nave y de ahi saca el dibujo al que tiene que girar, mas un temblor del registro R
-C 0x8ADF 0x38 por debajo de la pieza
-C 0x8AE5 El banco 1 mide el angulo
-C 0x8AEB El bit 0 del byte 1: una de las dos tablas
-C 0x8AF3 Fuera del cuarto de vuelta que alcanza, se queda como esta
-C 0x8AFB La tabla de 0x8B3C
-C 0x8B06 El registro R: menos uno, cero o uno de temblor
-C 0x8B08 Cuatro bits del angulo
-L 0x8B15 hacia_donde_mira_la_otra   Lo mismo con la tabla de 0x8B2C y el otro cuadrante
-C 0x8B15 El otro cuadrante
-C 0x8B17 Medio giro
-C 0x8B1F La tabla de 0x8B2C
-D 0x8B2C 0x8B3C tabla_8B2C  Dieciseis bytes que lee 0x8B1F.
+L 0x8AAF turn_piece   Every six frames takes a step towards the drawing it wants to reach, one up or one down
+C 0x8AB3 Six frames per step
+C 0x8AB7 Byte 10 is the current drawing and 11 the one it is chasing
+C 0x8ABE One step towards it
+L 0x8AC9 raise_piece   On the steps with a new column it rises eight points; on reaching zero it counts as blown up
+C 0x8AC9 Only on the steps with a column
+C 0x8AD1 Eight points higher
+C 0x8AD7 On reaching zero, byte 12 to two
+L 0x8ADC where_it_faces   Measures the angle to the ship and from it gets the drawing it has to turn to, plus a jitter from the R register
+C 0x8ADF 0x38 below the piece
+C 0x8AE5 Bank 1 measures the angle
+C 0x8AEB Bit 0 of byte 1: one of the two tables
+C 0x8AF3 Outside the quarter turn it can reach, it stays as it is
+C 0x8AFB The table at 0x8B3C
+C 0x8B06 The R register: minus one, zero or one of jitter
+C 0x8B08 Four bits of the angle
+L 0x8B15 where_the_other_faces   The same with the table at 0x8B2C and the other quadrant
+C 0x8B15 The other quadrant
+C 0x8B17 Half a turn
+C 0x8B1F The table at 0x8B2C
+D 0x8B2C 0x8B3C table_8B2C  Sixteen bytes read by 0x8B1F.
 F 0x8B2C 16
-D 0x8B3C 0x8B4C tabla_8B3C  Dieciseis bytes que lee 0x8AFB.
+D 0x8B3C 0x8B4C table_8B3C  Sixteen bytes read by 0x8AFB.
 F 0x8B3C 16
-D 0x8B4C 0x8CE4 tabla_8B4C  Lo que lee 0x8A39 con `ld hl,0x8B4C`, seguido hasta el codigo de al lado.
+D 0x8B4C 0x8CE4 table_8B4C  What 0x8A39 reads with `ld hl,0x8B4C`, running on up to the code next to it.
 F 0x8B4C 16
-L 0x8CE4 corre_y_dibuja_el_jefe_3   Un paso de este jefe y su dibujo
-L 0x8CEA paso_del_jefe_3   En el paso 0 calcula lo que dura y cada cuantos cuadros suelta pieza, y luego las va soltando
-C 0x8CF3 0x258 cuadros
-C 0x8CF9 0x48 menos dos veces la dificultad: los cuadros entre pieza y pieza
-C 0x8CFC 0x48 menos dos veces la dificultad
-L 0x8D0A suelta_una_pieza_3   Cada tantos cuadros busca hueco entre las ocho ranuras y copia ahi los diez bytes de 0x8D2F
-C 0x8D0A 0xE153: los cuadros que le quedan al jefe
-C 0x8D16 0xE156: los cuadros hasta la pieza siguiente
-C 0x8D1F Ocho ranuras
-C 0x8D25 Los diez bytes de arranque
-D 0x8D2F 0x8D39 ficha_de_la_pieza_3  Los diez bytes de arranque de una pieza de este jefe, que 0x8D25 copia tal cual a la ranura libre.
+L 0x8CE4 run_and_draw_boss_3   One step of this boss and its drawing
+L 0x8CEA boss_step_3   On step 0 works out how long it lasts and how often it releases a piece, and then releases them
+C 0x8CF3 0x258 frames
+C 0x8CF9 0x48 minus twice the difficulty: the frames between one piece and the next
+C 0x8CFC 0x48 minus twice the difficulty
+L 0x8D0A release_a_piece_3   Every so many frames looks for a free slot among the eight and copies the ten bytes of 0x8D2F there
+C 0x8D0A 0xE153: the frames the boss has left
+C 0x8D16 0xE156: the frames until the next piece
+C 0x8D1F Eight slots
+C 0x8D25 The ten starting bytes
+D 0x8D2F 0x8D39 piece_card_3  The ten starting bytes of a piece of this boss, which 0x8D25 copies as is to the free slot.
 F 0x8D2F 10
-L 0x8D39 mira_si_se_acabo_el_jefe_3   Cuando no queda ninguna pieza ni ninguna explosion, el jefe se da por muerto
-C 0x8D39 Ocho ranuras de pieza
-L 0x8D46 corre_las_ocho_piezas_3   Las ocho ranuras de 0xE780, cada una por su paso
-C 0x8D4A Ocho ranuras
-C 0x8D50 Dieciseis bytes: la siguiente
-C 0x8D53 Dieciseis bytes: la siguiente
-C 0x8D55 Dieciseis bytes
-L 0x8D59 paso_de_la_pieza_3   Doce salidas, una por paso, en la tabla de 0x8D64
-D 0x8D64 0x8D7C tabla_del_despachador_8D61  Doce palabras pegadas detras del `call 0x4067` de 0x8D61.
+L 0x8D39 check_boss_over_3   When no piece and no explosion are left, the boss is considered dead
+C 0x8D39 Eight piece slots
+L 0x8D46 run_eight_pieces_3   The eight slots at 0xE780, each through its own step
+C 0x8D4A Eight slots
+C 0x8D50 Sixteen bytes: the next one
+C 0x8D53 Sixteen bytes: the next one
+C 0x8D55 Sixteen bytes
+L 0x8D59 piece_step_3   Twelve exits, one per step, in the table at 0x8D64
+D 0x8D64 0x8D7C dispatcher_table_8D61  Twelve words glued right behind the `call 0x4067` at 0x8D61.
 F 0x8D64 w2
-B 0x8D7C EL RECORRIDO DE LA PIEZA, ESCRITO PASO A PASO
-B 0x8D7C Esta pieza no persigue a nadie: hace un recorrido fijo, escrito como doce
-B 0x8D7C pasos. Cada uno le suma una velocidad constante -dos bytes con signo- y
-B 0x8D7C espera a que llegue a una coordenada exacta; cuando llega, pasa al paso
-B 0x8D7C siguiente. El unico que mira a la nave es el 0x0A, que elige hacia que
-B 0x8D7C lado va antes de seguir.
-L 0x8D7C paso_0_dos_a_la_izquierda   Dos a la izquierda hasta la X 0xE6
-L 0x8D87 paso_1_en_diagonal   Dos a la izquierda y dos abajo hasta la Y 0x30
-C 0x8D87 Dos a la izquierda y dos abajo
-C 0x8D8A Dos a la izquierda y dos abajo
-C 0x8D8D La Y 0x30
-L 0x8D93 paso_2_dos_a_la_izquierda   Hasta la X 0x98
-L 0x8D9E paso_3_en_diagonal_arriba   Dos a la izquierda y dos arriba hasta la Y 0x18
-C 0x8D9E Dos a la izquierda y dos arriba
-C 0x8DA1 Dos a la izquierda y dos arriba
-C 0x8DA4 La Y 0x18
-L 0x8DAA paso_4_dos_a_la_izquierda   Hasta la X 0x66
-L 0x8DB5 paso_5_en_diagonal   Hasta la Y 0x30
-C 0x8DB5 Dos a la izquierda y dos abajo
-C 0x8DB8 Dos a la izquierda y dos abajo
-C 0x8DBB La Y 0x30
-L 0x8DC1 paso_6_dos_a_la_izquierda   Hasta la X 0x18
-L 0x8DCC paso_7_en_diagonal_arriba   Hasta la X 0x08
-L 0x8DD5 paso_siguiente_del_recorrido   El byte 1 sube
-L 0x8DD9 paso_8_dos_abajo   Hasta la Y 0x78
-C 0x8DD9 Dos abajo
-C 0x8DDC Dos abajo
-C 0x8DDF La Y 0x78
-L 0x8DE5 paso_9_dos_a_la_derecha   Hasta la X 0xE0
-L 0x8DF0 paso_10_hacia_la_nave   Se acerca a la fila de la nave; a menos de 0x11 o fuera del tramo 0x30-0x88, pasa al siguiente
-C 0x8DF0 0xE204: la fila de la nave
-C 0x8DF9 A menos de 0x11 ya esta encima
-C 0x8DFE Dos a la izquierda...
-C 0x8E03 ...o dos a la derecha
-C 0x8E06 Dos a un lado o al otro
-L 0x8E14 paso_11_se_va   Dos a la izquierda hasta pasar la X 0xF0, y la ranura se libera
-C 0x8E14 Dos a la izquierda
-L 0x8E22 suma_a_los_campos_3_y_5   Suma D al byte (IX+3) y E al (IX+5), y devuelve en D lo que quedo en el primero.
-C 0x8E22 Los bytes 3 y 5: la X y la Y
-C 0x8E24 Tres bytes mas alla: la X
-C 0x8E25 Se le suma D
-L 0x8E32 recorre_los_ocho   Las ocho fichas de dieciseis bytes desde 0xE780
-C 0x8E35 Ocho fichas
-C 0x8E3D Dieciseis bytes: la siguiente
-C 0x8E40 0x10: la fila de abajo
-L 0x8E45 dibuja_la_pieza_parpadeando   Cuatro por tres caracteres, alternando cada cuatro cuadros entre los dos dibujos
-C 0x8E4B Un bit del contador: los dos dibujos se alternan
-C 0x8E59 Cuatro de ancho por tres de alto
-D 0x8E5F 0x8E6B caracteres_8E5F  Doce bytes que lee 0x8E50.
+B 0x8D7C THE PIECE'S ROUTE, WRITTEN OUT STEP BY STEP
+B 0x8D7C This piece does not chase anybody: it follows a fixed route, written as
+B 0x8D7C twelve steps. Each one adds a constant speed (two signed bytes) and
+B 0x8D7C waits for it to reach an exact coordinate; when it gets there, it moves
+B 0x8D7C on to the next step. The only one that looks at the ship is 0x0A, which
+B 0x8D7C chooses which way to go before carrying on.
+L 0x8D7C step_0_two_left   Two to the left until X 0xE6
+L 0x8D87 step_1_diagonal   Two to the left and two down until Y 0x30
+C 0x8D87 Two to the left and two down
+C 0x8D8A Two to the left and two down
+C 0x8D8D Y 0x30
+L 0x8D93 step_2_two_left   Until X 0x98
+L 0x8D9E step_3_diagonal_up   Two to the left and two up until Y 0x18
+C 0x8D9E Two to the left and two up
+C 0x8DA1 Two to the left and two up
+C 0x8DA4 Y 0x18
+L 0x8DAA step_4_two_left   Until X 0x66
+L 0x8DB5 step_5_diagonal   Until Y 0x30
+C 0x8DB5 Two to the left and two down
+C 0x8DB8 Two to the left and two down
+C 0x8DBB Y 0x30
+L 0x8DC1 step_6_two_left   Until X 0x18
+L 0x8DCC step_7_diagonal_up   Until X 0x08
+L 0x8DD5 next_route_step   Byte 1 goes up
+L 0x8DD9 step_8_two_down   Until Y 0x78
+C 0x8DD9 Two down
+C 0x8DDC Two down
+C 0x8DDF Y 0x78
+L 0x8DE5 step_9_two_right   Until X 0xE0
+L 0x8DF0 step_10_towards_ship   Closes in on the ship's row; within 0x11, or outside the range 0x30-0x88, moves on to the next one
+C 0x8DF0 0xE204: the ship's row
+C 0x8DF9 Within 0x11 it is already on top of it
+C 0x8DFE Two to the left...
+C 0x8E03 ...or two to the right
+C 0x8E06 Two to one side or the other
+L 0x8E14 step_11_leaves   Two to the left until it passes X 0xF0, and the slot is freed
+C 0x8E14 Two to the left
+L 0x8E22 add_to_fields_3_and_5   Adds D to byte (IX+3) and E to (IX+5), and returns in D what was left in the first one.
+C 0x8E22 Bytes 3 and 5: the X and the Y
+C 0x8E24 Three bytes further on: the X
+C 0x8E25 D is added to it
+L 0x8E32 walk_the_eight   The eight cards of sixteen bytes from 0xE780
+C 0x8E35 Eight cards
+C 0x8E3D Sixteen bytes: the next one
+C 0x8E40 0x10: the row below
+L 0x8E45 draw_piece_blinking   Four by three characters, alternating every four frames between the two drawings
+C 0x8E4B A bit of the counter: the two drawings alternate
+C 0x8E59 Four wide by three high
+D 0x8E5F 0x8E6B characters_8E5F  Twelve bytes read by 0x8E50.
 F 0x8E5F 4
-D 0x8E6B 0x8E77 caracteres_8E6B  Doce bytes que lee 0x8E55.
+D 0x8E6B 0x8E77 characters_8E6B  Twelve bytes read by 0x8E55.
 F 0x8E6B 4
-L 0x8E77 monta_las_cinco_piezas   Enciende 0xE1B0 y monta las cinco ranuras de 0xEB00 con las posiciones de 0x8EBA; el ritmo sale de la dificultad
-C 0x8E7E 0xF8 en 0xE1B2
-C 0x8E80 0x5C menos cuatro veces la dificultad: los cuadros entre pasos
-C 0x8E83 La tabla de 0x8A93
-C 0x8E84 La tabla de 0x8A93
-C 0x8E95 Cinco piezas
-C 0x8E9F La X y la Y de la tabla
-C 0x8EA8 Diez
-C 0x8EAF Y tres
-C 0x8EB2 0x20 bytes en total: la ranura siguiente
-D 0x8EBA 0x8EC4 posiciones_de_las_cinco  Cinco parejas (X, Y) con las que arrancan las cinco piezas de 0xEB00. Las lee 0x8E8E.
+L 0x8E77 set_up_five_pieces   Switches on 0xE1B0 and sets up the five slots at 0xEB00 with the positions at 0x8EBA; the pace comes from the difficulty
+C 0x8E7E 0xF8 into 0xE1B2
+C 0x8E80 0x5C minus four times the difficulty: the frames between steps
+C 0x8E83 The table at 0x8A93
+C 0x8E84 The table at 0x8A93
+C 0x8E95 Five pieces
+C 0x8E9F The X and the Y from the table
+C 0x8EA8 Ten
+C 0x8EAF And three
+C 0x8EB2 0x20 bytes in total: the next slot
+D 0x8EBA 0x8EC4 positions_of_the_five  Five (X, Y) pairs with which the five pieces at 0xEB00 start. Read by 0x8E8E.
 F 0x8EBA 2
-L 0x8EC4 corre_las_cinco_piezas   Las corre con el scroll, les da un paso a cada una y las anima
-C 0x8EC4 Sin 0xE1B0 no hay nada
-L 0x8ED6 corre_el_grupo   En los pasos con columna, ocho puntos a la izquierda
-C 0x8ED6 Solo en los pasos con columna
-C 0x8EDF Ocho puntos a la izquierda
-L 0x8EE3 recorre_las_cinco   Las cinco ranuras de 0xEB00, de 0x20 en 0x20 bytes
-C 0x8EE6 Cinco
-C 0x8EF4 Treinta y dos bytes: la siguiente
-C 0x8EF7 Cinco piezas
-C 0x8EF8 Cinco piezas
-L 0x8EFB paso_de_una_de_las_cinco   La corre con el scroll y, si es del tipo 0x15, le cambia el dibujo cada cuatro cuadros
-C 0x8F08 Solo el tipo 0x15 se anima
-C 0x8F0F Cuatro cuadros por dibujo
-C 0x8F1A Pasado el dibujo 0x7C, vuelve a empezar
-L 0x8F24 corre_esta_pieza   Ocho puntos a la izquierda; al salirse por el borde, la ranura se libera
-C 0x8F24 Seis bytes mas alla: la columna
-C 0x8F2D Y de vuelta al principio de la ficha
-L 0x8F37 anima_las_cinco   Cada tantos cuadros -los que diga 0xE1B5- le da un paso a cada una de las cinco
-C 0x8F37 Con la pantalla parada, no
-C 0x8F3C 0xE1B4: los cuadros que faltan
-C 0x8F48 Cinco piezas
-C 0x8F56 Treinta y dos bytes: la siguiente
-L 0x8F5D suelta_la_pieza   Si la ranura esta en el paso 1 y por debajo de la Y 0x30, busca hueco en 0xE500 y monta ahi un objeto que cae
-C 0x8F5D Solo las que van por el paso 1
-C 0x8F64 Su X y su Y
-C 0x8F69 Por encima de la Y 0x30, no
-C 0x8F70 La ranura pasa al paso 1
-C 0x8F7A 0x18 por encima
-C 0x8F7C 0x18 por encima
-C 0x8F7D Ahi cae
-C 0x8F88 Velocidad 0xFC
-C 0x8F8B Las dos ultimas llevan el dibujo 5, y las demas el 4
-C 0x8F96 Dieciseis bytes mas alla, la marca de vivo
-L 0x8F9D hay_hueco_en_e500   Devuelve en HL la primera de las diez ranuras de 0xE500 que este libre; con acarreo, no hay
-C 0x8FA0 Diez ranuras
-C 0x8FA5 Treinta y dos bytes: la siguiente
-C 0x8FA7 Treinta y dos bytes: la siguiente
-C 0x8FA8 Treinta y dos bytes
-L 0x8FB0 apunta_las_casillas_de_las_cinco   A cada una de las cinco le calcula la casilla del mapa donde cae
-C 0x8FB8 Cinco
-C 0x8FC6 Treinta y dos bytes: la siguiente
-C 0x8FC9 Treinta y dos bytes: la siguiente
-C 0x8FCA Treinta y dos bytes
-L 0x8FCD casilla_de_una_de_las_cinco   La posicion pasa a casilla de mapa, y la tercera pieza guarda ademas la fila de abajo
-C 0x8FD4 Su X y su Y
-C 0x8FDA El banco 0 convierte posicion en casilla
-C 0x8FDF Se guarda 0x18 bytes mas alla
-C 0x8FE1 0x18 bytes mas alla
-C 0x8FE2 Ahi se guarda la casilla
-C 0x8FEF La tercera lleva ademas la fila de abajo
-C 0x8FF5 0x1E: la fila de abajo del mapa
-C 0x8FF8 0x1E: la fila de abajo
-L 0x8FFE dibuja_las_cinco   Escribe en el mapa los caracteres de cada una de las cinco
-C 0x9006 Cinco
-C 0x9014 Treinta y dos bytes: la siguiente
-L 0x901B dibuja_una_de_las_cinco   Las que van por el paso 1 llevan pareja de caracteres de la tabla de 0x905C; las demas, uno solo
-C 0x901F La casilla, 0x1E bytes mas alla
-C 0x9026 Solo el paso 1 lleva dos caracteres
-C 0x902C Por cuatro: dos parejas por pieza
-C 0x902D Por cuatro: dos parejas
-C 0x903A La tercera pinta ademas la fila de abajo
-C 0x903D La tercera lleva la fila de abajo
-C 0x903F 0x1E: la fila de abajo
-L 0x904C dibuja_uno_solo   Un caracter, sacado de la tabla que empieza en 0x8FE4
-C 0x904C 0x13 bytes atras: el dibujo
-C 0x9051 La tabla que empieza en 0x8FE4
-D 0x905C 0x9074 caracteres_905C  Veinticuatro bytes que lee 0x902E, en parejas.
+L 0x8EC4 run_five_pieces   Moves them with the scroll, gives each one a step and animates them
+C 0x8EC4 Without 0xE1B0 there is nothing
+L 0x8ED6 shift_group   On the steps with a column, eight points to the left
+C 0x8ED6 Only on the steps with a column
+C 0x8EDF Eight points to the left
+L 0x8EE3 walk_the_five   The five slots at 0xEB00, 0x20 bytes apart
+C 0x8EE6 Five
+C 0x8EF4 Thirty-two bytes: the next one
+C 0x8EF7 Five pieces
+C 0x8EF8 Five pieces
+L 0x8EFB step_of_one_of_five   Moves it with the scroll and, if it is type 0x15, changes its drawing every four frames
+C 0x8F08 Only type 0x15 is animated
+C 0x8F0F Four frames per drawing
+C 0x8F1A Past drawing 0x7C, it starts again
+L 0x8F24 shift_this_piece   Eight points to the left; when it goes off the edge, the slot is freed
+C 0x8F24 Six bytes further on: the column
+C 0x8F2D And back to the start of the card
+L 0x8F37 animate_the_five   Every so many frames (as many as 0xE1B5 says) gives a step to each of the five
+C 0x8F37 Not with the screen stopped
+C 0x8F3C 0xE1B4: the frames remaining
+C 0x8F48 Five pieces
+C 0x8F56 Thirty-two bytes: the next one
+L 0x8F5D drop_from_piece   If the slot is on step 1 and below Y 0x30, looks for a free slot in 0xE500 and sets up a falling object there
+C 0x8F5D Only the ones on step 1
+C 0x8F64 Its X and its Y
+C 0x8F69 Not above Y 0x30
+C 0x8F70 The slot moves to step 1
+C 0x8F7A 0x18 above
+C 0x8F7C 0x18 above
+C 0x8F7D That is where it falls
+C 0x8F88 Speed 0xFC
+C 0x8F8B The last two have drawing 5, and the rest drawing 4
+C 0x8F96 Sixteen bytes further on, the alive mark
+L 0x8F9D free_slot_in_e500   Returns in HL the first of the ten slots at 0xE500 that is free; with carry, there is none
+C 0x8FA0 Ten slots
+C 0x8FA5 Thirty-two bytes: the next one
+C 0x8FA7 Thirty-two bytes: the next one
+C 0x8FA8 Thirty-two bytes
+L 0x8FB0 note_cells_of_the_five   For each of the five, works out the map cell where it lands
+C 0x8FB8 Five
+C 0x8FC6 Thirty-two bytes: the next one
+C 0x8FC9 Thirty-two bytes: the next one
+C 0x8FCA Thirty-two bytes
+L 0x8FCD cell_of_one_of_five   The position becomes a map cell, and the third piece also stores the row below
+C 0x8FD4 Its X and its Y
+C 0x8FDA Bank 0 converts position into cell
+C 0x8FDF It is stored 0x18 bytes further on
+C 0x8FE1 0x18 bytes further on
+C 0x8FE2 The cell is stored there
+C 0x8FEF The third one also carries the row below
+C 0x8FF5 0x1E: the row below in the map
+C 0x8FF8 0x1E: the row below
+L 0x8FFE draw_the_five   Writes the characters of each of the five into the map
+C 0x9006 Five
+C 0x9014 Thirty-two bytes: the next one
+L 0x901B draw_one_of_five   The ones on step 1 get a pair of characters from the table at 0x905C; the others, just one
+C 0x901F The cell, 0x1E bytes further on
+C 0x9026 Only step 1 has two characters
+C 0x902C Times four: two pairs per piece
+C 0x902D Times four: two pairs
+C 0x903A The third one also paints the row below
+C 0x903D The third one carries the row below
+C 0x903F 0x1E: the row below
+L 0x904C draw_just_one   One character, taken from the table that starts at 0x8FE4
+C 0x904C 0x13 bytes back: the drawing
+C 0x9051 The table that starts at 0x8FE4
+D 0x905C 0x9074 characters_905C  Twenty-four bytes read by 0x902E, in pairs.
 F 0x905C 4
-L 0x9074 borra_las_cinco   Devuelve al mapa lo que habia debajo de cada una de las cinco piezas
-C 0x907C Cinco
-C 0x908A Treinta y dos bytes: la siguiente
-L 0x9091 borra_una_de_las_cinco   Copia de vuelta los dos caracteres guardados, y la tercera ademas los de la fila de abajo
-C 0x9094 La casilla, 0x1E bytes mas alla
-C 0x9096 0x1E bytes mas alla: la casilla
-C 0x9097 Doce bytes atras
-C 0x90A3 La tercera lleva ademas la fila de abajo
-C 0x90A9 0x1E: la fila de abajo del mapa
-C 0x90AB 0x1E: la fila de abajo
-C 0x90AC 0x1E: la fila de abajo
-L 0x90B5 suelta_los_enemigos   Va sacando enemigos mientras el guion tenga renglones para esta distancia
-C 0x90BE 0xE108: por que renglon del guion va
-L 0x90C1 suelta_los_enemigos_con_columna   Lo mismo, pero solo en los pasos que meten columna nueva
-C 0x90C1 Solo en los pasos con columna
-C 0x90C6 0xF8 en 0xEC04
-L 0x90D1 mira_el_guion_de_enemigos   Consulta el guion de 0x9262 y, si toca, saca un enemigo del tipo 1 en la fila y con la variante que diga
-C 0x90D4 El guion de 0x9262
-C 0x90DE Se avanza al renglon siguiente
-C 0x90E0 El byte se guarda entero en 0xE122
-C 0x90E3 Los cinco bits bajos por ocho: la columna
-C 0x90E9 Y la fila, de 0xEC04
-C 0x90EE Los bits 6 y 7: la variante
-C 0x90F9 Tipo 1
-L 0x9100 renglon_del_guion   Saca de la tabla de HL la lista de la fase y compara la distancia recorrida con el renglon que toca
-C 0x9101 La lista que le toca a la fase
-C 0x9109 Por tres: tres bytes por renglon
-C 0x910F La distancia del renglon...
-C 0x9113 ...y el byte de datos
-C 0x9117 DCOMPR: contra la distancia recorrida
-L 0x9119 apunta_el_canon   Mide el angulo hasta la nave y con el elige el dibujo del canon, sacado de la tabla de 0x9205 segun la fase
-C 0x911D La posicion del enemigo
-C 0x9123 El banco 1 mide el angulo
-C 0x9129 Por encima de 0x80, el angulo se refleja
-C 0x9132 Cinco tramos de 0x15
-C 0x9134 Cinco tramos de 0x15
-C 0x9136 Cinco tramos
-C 0x9141 La tabla de 0x9205
-C 0x9147 Y dentro de ella, la fila de la fase
-C 0x914A Y dentro, la fila de la fase
-C 0x915C El bit 1 del byte 23 elige el arco de tiro
-L 0x9168 este_enemigo_dispara   Con la nave dentro de su arco y sin otro disparo en marcha, suelta uno y recalcula la espera
-C 0x9168 0xE110: los cuadros que faltan para disparar
-C 0x916C 0xE112: si ya hay un disparo saliendo, se espera un cuadro
-C 0x9178 La posicion del enemigo, y el banco 1 monta el disparo
-L 0x9181 espera_hasta_el_disparo_siguiente   La espera sale de la rampa de 0x91C5, mas la dificultad y la vuelta, con suelo en 0x0C cuadros
-C 0x9184 En la primera vuelta la dificultad se topa en 2
-C 0x9193 Por cuatro: cuatro valores por escalon
-C 0x9198 El byte 24 va rotando entre los cuatro
-C 0x91A3 Con el escudo en 3, cuatro cuadros menos
-C 0x91AE La vuelta partida por cuatro tambien resta
-C 0x91BB Nunca menos de doce cuadros
-D 0x91C5 0x91D1 espera_entre_disparos  Tres escalones de cuatro valores: los cuadros que un enemigo espera entre disparo y disparo, segun la dificultad y por que sitio de la rueda vaya. Los lee 0x9181, que ademas les resta la vuelta y les pone un suelo de doce.
+L 0x9074 erase_the_five   Puts back into the map what was under each of the five pieces
+C 0x907C Five
+C 0x908A Thirty-two bytes: the next one
+L 0x9091 erase_one_of_five   Copies back the two saved characters, and the third one also those of the row below
+C 0x9094 The cell, 0x1E bytes further on
+C 0x9096 0x1E bytes further on: the cell
+C 0x9097 Twelve bytes back
+C 0x90A3 The third one also carries the row below
+C 0x90A9 0x1E: the row below in the map
+C 0x90AB 0x1E: the row below
+C 0x90AC 0x1E: the row below
+L 0x90B5 release_enemies   Keeps releasing enemies while the script has entries for this distance
+C 0x90BE 0xE108: which script entry it is on
+L 0x90C1 release_enemies_on_column   The same, but only on the steps that bring in a new column
+C 0x90C1 Only on the steps with a column
+C 0x90C6 0xF8 into 0xEC04
+L 0x90D1 check_enemy_script   Checks the script at 0x9262 and, when it is time, releases a type 1 enemy in the row and with the variant it says
+C 0x90D4 The script at 0x9262
+C 0x90DE Move on to the next entry
+C 0x90E0 The whole byte is stored in 0xE122
+C 0x90E3 The low five bits times eight: the column
+C 0x90E9 And the row, from 0xEC04
+C 0x90EE Bits 6 and 7: the variant
+C 0x90F9 Type 1
+L 0x9100 script_entry   Takes the stage's list from the table at HL and compares the distance travelled with the current entry
+C 0x9101 The list for this stage
+C 0x9109 Times three: three bytes per entry
+C 0x910F The entry's distance...
+C 0x9113 ...and the data byte
+C 0x9117 DCOMPR: against the distance travelled
+L 0x9119 aim_cannon   Measures the angle to the ship and uses it to choose the cannon's drawing, taken from the table at 0x9205 according to the stage
+C 0x911D The enemy's position
+C 0x9123 Bank 1 measures the angle
+C 0x9129 Above 0x80, the angle is mirrored
+C 0x9132 Five ranges of 0x15
+C 0x9134 Five ranges of 0x15
+C 0x9136 Five ranges
+C 0x9141 The table at 0x9205
+C 0x9147 And within it, the stage's row
+C 0x914A And within, the stage's row
+C 0x915C Bit 1 of byte 23 chooses the firing arc
+L 0x9168 this_enemy_fires   With the ship inside its arc and no other shot under way, fires one and recalculates the wait
+C 0x9168 0xE110: the frames left before firing
+C 0x916C 0xE112: if a shot is already coming out, it waits a frame
+C 0x9178 The enemy's position, and bank 1 sets up the shot
+L 0x9181 wait_until_next_shot   The wait comes from the ramp at 0x91C5, plus the difficulty and the loop, with a floor of 0x0C frames
+C 0x9184 On the first loop the difficulty is capped at 2
+C 0x9193 Times four: four values per step
+C 0x9198 Byte 24 rotates among the four
+C 0x91A3 With the shield at 3, four frames fewer
+C 0x91AE The loop divided by four also subtracts
+C 0x91BB Never fewer than twelve frames
+D 0x91C5 0x91D1 wait_between_shots  Three steps of four values: the frames an enemy waits between one shot and the next, according to the difficulty and where on the wheel it is. Read by 0x9181, which also subtracts the loop from them and gives them a floor of twelve.
 F 0x91C5 4
 F 0x91C5 4
-D 0x91D1 0x9205 tabla_91D1  Cincuenta y dos bytes que p00:48CB mete en BC con `ld bc,0x91D1`. Ojo: con el reparto por defecto en 0x8000 esta el banco 2, pero 0x48CB corre con el reparto 4/5/6, o sea que lo que lee de verdad es el banco 5. Aqui queda como dato de este banco porque nadie mas lo apunta.
+D 0x91D1 0x9205 table_91D1  Fifty-two bytes that p00:48CB loads into BC with `ld bc,0x91D1`. Note: with the default layout bank 2 is at 0x8000, but 0x48CB runs with the 4/5/6 layout, so what it really reads is bank 5. It stays here as data of this bank because nothing else points to it.
 F 0x91D1 4
-D 0x9205 0x9235 dibujos_del_canon  Cuatro filas -una por fase- de doce dibujos: el que ensena el canon segun el tramo de angulo en el que este la nave. Los lee 0x9141.
+D 0x9205 0x9235 cannon_drawings  Four rows (one per stage) of twelve drawings: the one the cannon shows depending on the angle range the ship is in. Read by 0x9141.
 F 0x9205 16
 F 0x9205 12
-L 0x9235 dispara_sin_apuntar   Cuando la cuenta llega a cero suelta el disparo y calcula la velocidad con la rutina del banco 1
-C 0x9235 0xE110: los cuadros que faltan
-C 0x9239 0xE112: si ya hay uno saliendo, se espera
-C 0x9245 La posicion, y el banco 1 lo monta
-L 0x9251 se_corre_con_el_scroll_ocho   En los pasos con columna nueva se corre ocho puntos a la izquierda; al salirse por el borde, la ranura se libera y sale con acarreo
-C 0x9251 Solo en los pasos con columna
-C 0x9259 Ocho puntos
-C 0x925F Y al pasarse, la ranura se apaga
-D 0x9264 0x9510 tabla_9264  Palabras que 0x90D4 indexa con 0x47AE (0x927C, 0x92B4, 0x933A, 0x9366, ...) y, detras, lo que apuntan.
+L 0x9235 fire_without_aiming   When the count reaches zero fires the shot and works out the speed with the bank 1 routine
+C 0x9235 0xE110: the frames remaining
+C 0x9239 0xE112: if one is already coming out, it waits
+C 0x9245 The position, and bank 1 sets it up
+L 0x9251 move_with_scroll_eight   On the steps with a new column it moves eight points to the left; when it goes off the edge, the slot is freed and it returns with carry
+C 0x9251 Only on the steps with a column
+C 0x9259 Eight points
+C 0x925F And when it goes past, the slot is switched off
+D 0x9264 0x9510 table_9264  Words that 0x90D4 indexes with 0x47AE (0x927C, 0x92B4, 0x933A, 0x9366, ...) and, after them, what they point to.
 F 0x9264 w2
-L 0x9510 pon_la_velocidad_a_cero   Las dos velocidades del objeto, a cero
-C 0x9513 Las dos velocidades a cero
-L 0x9519 pon_la_aceleracion_al_reves   Complemento a dos de la aceleracion vertical y a guardarla
-L 0x9522 pon_la_aceleracion_vertical   Los bytes 23 y 24
-D 0x9529 0x9530 fragmento_muerto  Siete bytes que son `ld (ix+0x19),e / ld (ix+0x1A),d / ret`. Nadie llega: ni un salto ni una tabla apuntan a 0x9529.
+L 0x9510 zero_speed   The object's two speeds, zeroed
+C 0x9513 Both speeds to zero
+L 0x9519 set_negated_acceleration   Two's complement of the vertical acceleration, and store it
+L 0x9522 set_vertical_acceleration   Bytes 23 and 24
+D 0x9529 0x9530 dead_fragment  Seven bytes that are `ld (ix+0x19),e / ld (ix+0x1A),d / ret`. Nothing reaches them: neither a jump nor a table points to 0x9529.
 F 0x9529 7
-L 0x9530 pon_la_aceleracion_horizontal   Los bytes 25 y 26; si viene en negativo, se le da la vuelta
-L 0x953C suma_la_aceleracion_vertical   Los bytes 23 y 24 se le suman a la velocidad de los bytes 7 y 8
-C 0x953C La velocidad vertical...
-C 0x9542 ...mas su aceleracion
-L 0x9550 suma_la_aceleracion_horizontal   Y lo mismo con los bytes 25 y 26 sobre los 9 y 10
-C 0x9550 La velocidad horizontal...
-C 0x9556 ...mas su aceleracion
-L 0x9564 compara_velocidad_y_aceleracion   La velocidad vertical, en valor absoluto, contra la aceleracion horizontal
-C 0x9564 La velocidad vertical, en valor absoluto
-C 0x956F Contra la aceleracion horizontal
-L 0x9577 pon_la_velocidad_horizontal_desde_la_aceleracion
-L 0x9580 cambia_el_signo_de_la_velocidad_horizontal
-C 0x9580 Los bytes 9 y 10, del reves
-L 0x9590 cambia_el_signo_de_la_velocidad_vertical
-C 0x9590 Los bytes 7 y 8, del reves
-C 0x9593 DCOMPR: contra la distancia recorrida
-L 0x95A0 uno_de_cada_treinta_y_dos   Los cinco bits bajos del contador de cuadros
-L 0x95A6 le_toca_moverse   Cada 0x20 cuadros baja el byte 28; al llegar a cero, sale con acarreo
-C 0x95A6 Uno de cada 0x20 cuadros
-C 0x95AB El byte 28 baja
-L 0x95B2 ha_llegado_al_final   Compara la distancia recorrida con el final del tramo; en la fase 1 con 0x10 de margen
-C 0x95B5 La fase 1 lleva 0x10 de margen
-C 0x95C5 DCOMPR: contra la distancia recorrida
-L 0x95D1 anima_en_redondo   Cada tantos cuadros -mascara en B- avanza el dibujo en redondo hasta C y lo saca de la tabla de HL
-C 0x95D1 La mascara de B: cada cuantos cuadros
-C 0x95D6 El byte 29: por que dibujo va
-C 0x95DA Al llegar a C, vuelta a empezar
-C 0x95DB Al llegar a C, vuelta a empezar
-C 0x95DD Se apunta el dibujo
-B 0x95EB LA ACELERACION HACIA LA NAVE SALE DE UNA TABLA DE 256 PALABRAS
-B 0x95EB Para que un objeto se vaya curvando hacia la nave hace falta la
-B 0x95EB aceleracion vertical y la horizontal, y aqui no se calculan: se miran. Se cogen las dos
-B 0x95EB diferencias en valor absoluto, se junta el nibble alto de una con el alto
-B 0x95EB de la otra en un solo byte, y ese byte -por dos- indexa la tabla de
-B 0x95EB 0x9657, que son 256 palabras. Se lee dos veces, cruzando los nibbles, y
-B 0x95EB con eso salen las dos componentes; el signo lo pone el complemento a dos.
-L 0x95EB apunta_la_aceleracion   Las dos diferencias hasta la nave, en valor absoluto, dan el indice de la tabla de 0x9657: de ahi salen las dos aceleraciones
-C 0x95ED 0xE206: la columna de la nave
-C 0x95F7 En negativo, se apunta el signo
-C 0x95FD Y 0xE204: su fila
-C 0x960B El nibble alto de una y el alto de la otra
-C 0x960C El nibble alto de la distancia en X
-C 0x960D Los cuatro bits altos
-C 0x961E La tabla de 0x9657, por dos
-C 0x9625 Y el signo, con el complemento a dos
-C 0x962A Los bytes 25 y 26: la aceleracion horizontal
-C 0x9631 Ahora al reves: los nibbles cruzados
-C 0x9632 Los nibbles cruzados
-C 0x9633 El nibble alto de una y el bajo de la otra
-C 0x9650 Y los bytes 23 y 24: la vertical
-D 0x9657 0x9857 aceleracion_hacia_la_nave  Doscientas cincuenta y seis palabras que 0x961E y 0x9644 indexan con los nibbles altos de las dos distancias a la nave: la aceleracion con la que un objeto se curva hacia ella. Con una sola tabla se sacan las dos componentes, leyendola dos veces con los nibbles cruzados.
+L 0x9530 set_horizontal_acceleration   Bytes 25 and 26; if it comes in negative, it is flipped
+L 0x953C add_vertical_acceleration   Bytes 23 and 24 are added to the speed in bytes 7 and 8
+C 0x953C The vertical speed...
+C 0x9542 ...plus its acceleration
+L 0x9550 add_horizontal_acceleration   And the same with bytes 25 and 26 on 9 and 10
+C 0x9550 The horizontal speed...
+C 0x9556 ...plus its acceleration
+L 0x9564 compare_speed_and_acceleration   The vertical speed, in absolute value, against the horizontal acceleration
+C 0x9564 The vertical speed, in absolute value
+C 0x956F Against the horizontal acceleration
+L 0x9577 set_horiz_speed_from_acceleration
+L 0x9580 negate_horizontal_speed
+C 0x9580 Bytes 9 and 10, with the sign flipped
+L 0x9590 negate_vertical_speed
+C 0x9590 Bytes 7 and 8, with the sign flipped
+C 0x9593 DCOMPR: against the distance travelled
+L 0x95A0 one_in_thirty_two   The low five bits of the frame counter
+L 0x95A6 time_to_move   Every 0x20 frames decrements byte 28; on reaching zero, returns with carry
+C 0x95A6 One in every 0x20 frames
+C 0x95AB Byte 28 goes down
+L 0x95B2 reached_the_end   Compares the distance travelled with the end of the range; on stage 1 with a margin of 0x10
+C 0x95B5 Stage 1 has a margin of 0x10
+C 0x95C5 DCOMPR: against the distance travelled
+L 0x95D1 animate_round_and_round   Every so many frames (mask in B) advances the drawing round and round up to C and takes it from the table at HL
+C 0x95D1 The mask in B: every how many frames
+C 0x95D6 Byte 29: which drawing it is on
+C 0x95DA On reaching C, start again
+C 0x95DB On reaching C, start again
+C 0x95DD The drawing is noted down
+B 0x95EB THE ACCELERATION TOWARDS THE SHIP COMES FROM A TABLE OF 256 WORDS
+B 0x95EB For an object to curve towards the ship it needs a vertical and a
+B 0x95EB horizontal acceleration, and here they are not calculated: they are looked
+B 0x95EB up. The two differences are taken in absolute value, the high nibble of
+B 0x95EB one is joined with the high nibble of the other in a single byte, and that
+B 0x95EB byte (times two) indexes the table at 0x9657, which is 256 words. It is
+B 0x95EB read twice, crossing the nibbles, and that gives the two components; the
+B 0x95EB sign is set by the two's complement.
+L 0x95EB aim_acceleration   The two differences to the ship, in absolute value, give the index into the table at 0x9657: the two accelerations come from there
+C 0x95ED 0xE206: the ship's column
+C 0x95F7 If negative, the sign is noted down
+C 0x95FD And 0xE204: its row
+C 0x960B The high nibble of one and the high nibble of the other
+C 0x960C The high nibble of the distance in X
+C 0x960D The four high bits
+C 0x961E The table at 0x9657, times two
+C 0x9625 And the sign, with the two's complement
+C 0x962A Bytes 25 and 26: the horizontal acceleration
+C 0x9631 Now the other way round: the nibbles crossed
+C 0x9632 The nibbles crossed
+C 0x9633 The high nibble of one and the low nibble of the other
+C 0x9650 And bytes 23 and 24: the vertical one
+D 0x9657 0x9857 acceleration_towards_ship  Two hundred and fifty-six words that 0x961E and 0x9644 index with the high nibbles of the two distances to the ship: the acceleration with which an object curves towards it. A single table gives both components, by reading it twice with the nibbles crossed.
 F 0x9657 16
 F 0x9657 w2
-B 0x9857 CHOCAR CON EL MAPA ES MIRAR QUE CARACTER HAY DEBAJO
-B 0x9857 No hay ninguna lista de paredes: para saber si algo choca con el terreno
-B 0x9857 se mira el CARACTER que el mapa tiene en esa casilla. Por debajo del 0x77
-B 0x9857 es fondo y no choca; de ahi para arriba, cada fase decide con que tramo
-B 0x9857 de caracteres se choca (0x9912, 0x991D, 0x9923 y 0x9929).
-L 0x9857 choca_con_el_mapa   Mira el caracter de la casilla y el de al lado; devuelve acarreo si alguno es pared
-C 0x9857 De la posicion sale la casilla del mapa
-C 0x985F Y la casilla de al lado, si no se sale de la fila
-C 0x9867 Por debajo del 0x77 es fondo
-C 0x986B En la fase 1 chocan solo dos caracteres
-C 0x9872 Y en la 3, un tramo entero
-L 0x9879 choca_con_el_mapa_2   Igual, pero solo la fase 4 tiene pared
-C 0x9879 De la posicion sale la casilla
-C 0x9886 El caracter de la casilla
-C 0x9889 Por debajo del 0x77 es fondo
-L 0x9897 choca_con_el_mapa_3   Igual, pero ninguna fase tiene pared: solo mira que no sea fondo
-C 0x9897 De la posicion sale la casilla
-C 0x98A4 El caracter de la casilla
-C 0x98A7 Por debajo del 0x77 es fondo
-L 0x98AC choca_con_el_mapa_del_objeto   Lo mismo tomando la posicion del objeto que apunte IX
-C 0x98AC La posicion del objeto
-C 0x98B2 De ahi sale la casilla del mapa
-C 0x98B5 El caracter de la casilla
-C 0x98B6 El caracter de la casilla
-L 0x98C9 choca_en_esta_casilla   La casilla ya viene en DE
-C 0x98C9 El caracter de la casilla
-C 0x98CC Por debajo del 0x77 es fondo
-L 0x98DA choca_la_nave   Mira las dos casillas por las que pasa la nave: la de su punto y la de al lado
-C 0x98DA 0xE200: la ficha de la nave
-C 0x98DE Ocho a la derecha de su X
-C 0x98E8 Los tres bits bajos de la Y: si esta a caballo de dos filas
-C 0x98EA Los tres bits bajos de la Y
-C 0x98EC A caballo de dos filas
-C 0x98FF La casilla del mapa
-C 0x9905 El caracter se guarda en C
-L 0x9912 pared_de_la_fase_1   Solo los caracteres 0xA2 y 0xA5
-C 0x9912 El caracter 0xA2...
-C 0x9917 ...y el 0xA5
-C 0x9919 El caracter 0xA5
-C 0x991A Ninguno mas
-L 0x991D pared_de_la_fase_4   Del 0xA1 al 0xBB
-L 0x9923 pared_de_la_fase_3   Del 0xA1 al 0xA5
-L 0x9929 pared_de_la_fase_5   Del 0xBA al 0xC5
-L 0x992F es_casilla_especial   En las fases 2, 7 y de la 9 en adelante hay caracteres que no son pared pero cuentan: devuelve cual en C
-C 0x992F 0xE061: la fase
-C 0x9932 La fase 2 lleva un grupo
-C 0x9940 Con el jefe en pantalla, no
-C 0x9945 El grupo 5: los caracteres 0x44 y 0x45
-C 0x994D Y el grupo 4: del 0x61 al 0x63
-B 0x9955 EL DIBUJO DE LA NAVE SALE DE LO QUE SE ESTA PULSANDO
-B 0x9955 La nave no tiene animacion: su dibujo es una funcion de los dos bits
-B 0x9955 bajos del mando -arriba y abajo-, que indexan una tabla de fichas de
-B 0x9955 cuatro bytes. Y hay tres tablas distintas segun con quien se juegue: la
-B 0x9955 normal, y otras dos que solo se usan si 0xF0F4 esta puesto, o sea si al
-B 0x9955 arrancar se encontro el otro cartucho de Konami en la maquina.
-L 0x9955 coloca_la_nave   Pone la ficha de sprite de la nave: la posicion, y el dibujo que le toque a lo que se este pulsando
-C 0x9955 Con la pantalla parada, no
-C 0x995A 0xE200 a cero o en negativo: no hay nave
-C 0x9962 Con explosion en marcha, la posicion sale de 0xE1D3
-C 0x9974 La velocidad del mando, los escalones y la posicion nueva
-C 0x997A Los topes de la pantalla
-C 0x997D La posicion nueva
-C 0x998C 0xF0F4: con el otro cartucho puesto, otras tablas
-C 0x9995 Y el bit 7 de 0xE002 elige entre las dos
-C 0x99A1 0xE200: el estado de la nave
-C 0x99AB 0xE009 es el mando; en pausa, 0xE10D
-C 0x99B8 Los dos bits bajos: arriba y abajo
-C 0x99C0 Por cuatro: cuatro bytes por ficha
-C 0x99CA Con la nave recien salida, parpadea cada cuatro cuadros
-C 0x99CD Un bit del contador: parpadea
-C 0x99CF Uno de cada cuatro cuadros
-C 0x99DC Los cuatro bytes de la ficha de sprite
-D 0x99E3 0x9A25 tabla_99E3  Sesenta y seis bytes que lee 0x9990.
+B 0x9857 COLLIDING WITH THE MAP MEANS LOOKING AT WHICH CHARACTER IS UNDERNEATH
+B 0x9857 There is no list of walls: to know whether something collides with the
+B 0x9857 terrain, the code looks at the CHARACTER the map has in that cell. Below
+B 0x9857 0x77 it is background and does not collide; from there up, each stage
+B 0x9857 decides which range of characters it collides with (0x9912, 0x991D,
+B 0x9857 0x9923 and 0x9929).
+L 0x9857 collides_with_map   Looks at the character in the cell and the one next to it; returns carry if either of them is wall
+C 0x9857 The map cell comes from the position
+C 0x985F And the cell next to it, if that does not go off the row
+C 0x9867 Below 0x77 it is background
+C 0x986B On stage 1 only two characters collide
+C 0x9872 And on stage 3, a whole range
+L 0x9879 collides_with_map_2   The same, but only stage 4 has walls
+C 0x9879 The cell comes from the position
+C 0x9886 The character in the cell
+C 0x9889 Below 0x77 it is background
+L 0x9897 collides_with_map_3   The same, but no stage has walls: it only checks that it is not background
+C 0x9897 The cell comes from the position
+C 0x98A4 The character in the cell
+C 0x98A7 Below 0x77 it is background
+L 0x98AC object_collides_with_map   The same, taking the position of the object IX points to
+C 0x98AC The object's position
+C 0x98B2 The map cell comes from there
+C 0x98B5 The character in the cell
+C 0x98B6 The character in the cell
+L 0x98C9 collides_at_this_cell   The cell already comes in DE
+C 0x98C9 The character in the cell
+C 0x98CC Below 0x77 it is background
+L 0x98DA ship_collides   Looks at the two cells the ship passes through: the one of its point and the one next to it
+C 0x98DA 0xE200: the ship's card
+C 0x98DE Eight to the right of its X
+C 0x98E8 The low three bits of Y: whether it straddles two rows
+C 0x98EA The low three bits of Y
+C 0x98EC Straddling two rows
+C 0x98FF The map cell
+C 0x9905 The character is kept in C
+L 0x9912 stage_1_wall   Only characters 0xA2 and 0xA5
+C 0x9912 Character 0xA2...
+C 0x9917 ...and 0xA5
+C 0x9919 Character 0xA5
+C 0x991A No others
+L 0x991D stage_4_wall   From 0xA1 to 0xBB
+L 0x9923 stage_3_wall   From 0xA1 to 0xA5
+L 0x9929 stage_5_wall   From 0xBA to 0xC5
+L 0x992F is_special_cell   On stages 2, 7 and from 9 onwards there are characters that are not walls but count: returns which one in C
+C 0x992F 0xE061: the stage
+C 0x9932 Stage 2 has one group
+C 0x9940 Not with the boss on screen
+C 0x9945 Group 5: characters 0x44 and 0x45
+C 0x994D And group 4: from 0x61 to 0x63
+B 0x9955 THE SHIP'S DRAWING COMES FROM WHAT IS BEING PRESSED
+B 0x9955 The ship has no animation: its drawing is a function of the two low bits
+B 0x9955 of the joystick (up and down), which index a table of four-byte cards.
+B 0x9955 And there are three different tables depending on what you are playing
+B 0x9955 with: the normal one, and two others that are only used if 0xF0F4 is
+B 0x9955 set, that is, if at start-up the other Konami cartridge was found in the
+B 0x9955 machine.
+L 0x9955 place_ship   Sets the ship's sprite card: the position, and the drawing that goes with whatever is being pressed
+C 0x9955 Not with the screen stopped
+C 0x995A 0xE200 at zero or negative: there is no ship
+C 0x9962 With an explosion under way, the position comes from 0xE1D3
+C 0x9974 The joystick speed, the steps and the new position
+C 0x997A The screen limits
+C 0x997D The new position
+C 0x998C 0xF0F4: with the other cartridge inserted, other tables
+C 0x9995 And bit 7 of 0xE002 chooses between the two
+C 0x99A1 0xE200: the ship's state
+C 0x99AB 0xE009 is the joystick; when paused, 0xE10D
+C 0x99B8 The two low bits: up and down
+C 0x99C0 Times four: four bytes per card
+C 0x99CA With the ship just out, it blinks every four frames
+C 0x99CD A bit of the counter: it blinks
+C 0x99CF One in every four frames
+C 0x99DC The four bytes of the sprite card
+D 0x99E3 0x9A25 table_99E3  Sixty-six bytes read by 0x9990.
 F 0x99E3 16
-D 0x9A25 0x9A67 tabla_9A25  Sesenta y seis bytes que lee 0x9999.
+D 0x9A25 0x9A67 table_9A25  Sixty-six bytes read by 0x9999.
 F 0x9A25 16
-D 0x9A67 0x9AAB tabla_9A67  Sesenta y ocho bytes que lee 0x999E.
+D 0x9A67 0x9AAB table_9A67  Sixty-eight bytes read by 0x999E.
 F 0x9A67 16
-L 0x9AAB topa_la_x_de_la_nave   La X se queda entre 0x08 y 0xD8
-C 0x9AAB Por la izquierda, 0x08
-C 0x9AB2 Y por la derecha, 0xD8
-L 0x9ABB topa_la_y_de_la_nave   La Y se queda entre 0x13 y 0xB5, salvo en las fases 2, 6 y de la 9 en adelante, que empiezan en 0x10
-C 0x9ABE Las fases 2, 6 y de la 9 en adelante llevan otro techo
-C 0x9AC1 Las fases 2, 6 y de la 9 en adelante
-C 0x9AD1 Por arriba, 0x13
-C 0x9AD8 Y por abajo, 0xB5
-C 0x9AE4 En las otras fases, el techo es 0x10
-L 0x9AEE suma_de_a_la_palabra   Suma DE a la palabra de 16 bits que hay en HL
-C 0x9AEE El byte bajo...
-C 0x9AF2 ...y el alto con el acarreo
-B 0x9AF6 LAS DIECISEIS DIRECCIONES DEL MANDO, EN UNA TABLA
-B 0x9AF6 Los cuatro bits de direccion del mando no se leen uno a uno: los dieciseis
-B 0x9AF6 valores posibles indexan la tabla de 0x9B0D, cuatro bytes cada uno, y de
-B 0x9AF6 ahi salen las dos velocidades de la nave ya hechas. Asi las diagonales no
-B 0x9AF6 cuestan ni una instruccion mas que las rectas.
-L 0x9AF6 velocidad_del_mando   Los cuatro bits de direccion indexan la tabla de 0x9B0D: de ahi salen las dos velocidades de la nave
-C 0x9AF6 Los cuatro bits de direccion
-C 0x9AFB Por cuatro: cuatro bytes por direccion
-C 0x9B05 La velocidad vertical...
-C 0x9B09 ...y la horizontal
-D 0x9B0D 0x9B4D velocidades_del_mando  Dieciseis fichas de cuatro bytes, una por cada combinacion de los cuatro bits de direccion del mando: las dos velocidades de 16 bits con las que se mueve la nave. Las lee 0x9AFD.
+L 0x9AAB clamp_ship_x   X stays between 0x08 and 0xD8
+C 0x9AAB On the left, 0x08
+C 0x9AB2 And on the right, 0xD8
+L 0x9ABB clamp_ship_y   Y stays between 0x13 and 0xB5, except on stages 2, 6 and from 9 onwards, which start at 0x10
+C 0x9ABE Stages 2, 6 and from 9 onwards have another ceiling
+C 0x9AC1 Stages 2, 6 and from 9 onwards
+C 0x9AD1 At the top, 0x13
+C 0x9AD8 And at the bottom, 0xB5
+C 0x9AE4 On the other stages, the ceiling is 0x10
+L 0x9AEE add_de_to_word   Adds DE to the 16-bit word at HL
+C 0x9AEE The low byte...
+C 0x9AF2 ...and the high one with the carry
+B 0x9AF6 THE SIXTEEN JOYSTICK DIRECTIONS, IN A TABLE
+B 0x9AF6 The four direction bits of the joystick are not read one by one: the
+B 0x9AF6 sixteen possible values index the table at 0x9B0D, four bytes each, and
+B 0x9AF6 out of it come the two speeds of the ship, ready-made. That way the
+B 0x9AF6 diagonals do not cost a single instruction more than the straight lines.
+L 0x9AF6 controller_speed   The four direction bits index the table at 0x9B0D: the ship's two speeds come from there
+C 0x9AF6 The four direction bits
+C 0x9AFB Times four: four bytes per direction
+C 0x9B05 The vertical speed...
+C 0x9B09 ...and the horizontal one
+D 0x9B0D 0x9B4D controller_speeds  Sixteen four-byte cards, one for each combination of the four direction bits of the joystick: the two 16-bit speeds the ship moves with. Read by 0x9AFD.
 F 0x9B0D 16
 F 0x9B0D 4
-B 0x9B4D LA VELOCIDAD DE LA NAVE ES UNA SUMA REPETIDA
-B 0x9B4D La mejora de velocidad no multiplica: coge la velocidad de una unidad y
-B 0x9B4D la SUMA a si misma tantas veces como escalones lleve (0xE202, topado en
-B 0x9B4D siete) mas tres. Ocho escalones de velocidad, y ni una multiplicacion.
-L 0x9B4D por_los_escalones_de_velocidad   Suma las dos velocidades a si mismas 3 + (0xE202) veces: eso es la mejora de velocidad
-C 0x9B4D 0xE202: los escalones de velocidad
-C 0x9B50 Siete como mucho
-C 0x9B57 Mas tres: la velocidad de partida
-C 0x9B5E La velocidad horizontal, sumada a si misma
-C 0x9B5F Los escalones mas tres
-C 0x9B68 Y la de Y
-C 0x9B69 Y la vertical
-C 0x9B6A La vertical, ya multiplicada
-L 0x9B70 acaba_la_partida   Copia 0xE130 a 0xE06B y apaga el aviso de 0xE05F
-L 0x9B7B mata_la_nave   Deja 0xFF en la nave y en sus dos opciones y pone los escalones de velocidad a cero
-C 0x9B81 Treinta y dos bytes: la ficha siguiente
-C 0x9B84 La nave y sus dos opciones
-C 0x9B8C 0xE202 a cero: se pierde la velocidad
-L 0x9B91 pasa_al_estado_siguiente_de_la_nave   Baja el contador y, al agotarse, sube el estado; pasado el 4 se acaba la partida
-C 0x9B94 0xE201: los cuadros que quedan en este estado
-C 0x9B99 Cuatro estados
-L 0x9B9D monta_la_ficha_de_la_nave   Saca de la tabla de 0x9BD2 los cuadros que dura el estado y la ficha de sprite de la nave y de sus dos opciones
-C 0x9B9D La tabla de 0x9BD2, indexada por el estado
-C 0x9BA5 Los cuadros que dura
-C 0x9BAC Los cuatro bytes de la ficha
-C 0x9BB4 Y las dos opciones, 0xE224 y 0xE244
-L 0x9BBD monta_la_opcion   La opcion va en la fila de la nave y en su columna mas el desplazamiento de la tabla
-C 0x9BBD La fila de la nave
-C 0x9BC3 Y su columna mas el desplazamiento
-C 0x9BC8 Seis bytes mas alla, el patron y el color
-D 0x9BD2 0x9BFB tabla_9BD2  Cuarenta y un bytes que lee 0x9B9D.
+B 0x9B4D THE SHIP'S SPEED IS A REPEATED SUM
+B 0x9B4D The speed upgrade does not multiply: it takes the speed of one unit and
+B 0x9B4D ADDS it to itself as many times as the steps it has (0xE202, capped at
+B 0x9B4D seven) plus three. Eight speed steps, and not a single multiplication.
+L 0x9B4D times_speed_steps   Adds the two speeds to themselves 3 + (0xE202) times: that is the speed upgrade
+C 0x9B4D 0xE202: the speed steps
+C 0x9B50 Seven at most
+C 0x9B57 Plus three: the starting speed
+C 0x9B5E The horizontal speed, added to itself
+C 0x9B5F The steps plus three
+C 0x9B68 And the Y one
+C 0x9B69 And the vertical one
+C 0x9B6A The vertical one, already multiplied
+L 0x9B70 end_game   Copies 0xE130 to 0xE06B and clears the flag at 0xE05F
+L 0x9B7B kill_ship   Leaves 0xFF in the ship and in its two options and sets the speed steps to zero
+C 0x9B81 Thirty-two bytes: the next card
+C 0x9B84 The ship and its two options
+C 0x9B8C 0xE202 to zero: the speed is lost
+L 0x9B91 next_ship_state   Decrements the counter and, when it runs out, increments the state; past 4 the game is over
+C 0x9B94 0xE201: the frames left in this state
+C 0x9B99 Four states
+L 0x9B9D set_up_ship_card   Takes from the table at 0x9BD2 the frames the state lasts and the sprite card of the ship and of its two options
+C 0x9B9D The table at 0x9BD2, indexed by the state
+C 0x9BA5 The frames it lasts
+C 0x9BAC The four bytes of the card
+C 0x9BB4 And the two options, 0xE224 and 0xE244
+L 0x9BBD set_up_the_option   The option goes on the ship's row and at its column plus the offset from the table
+C 0x9BBD The ship's row
+C 0x9BC3 And its column plus the offset
+C 0x9BC8 Six bytes further on, the pattern and the colour
+D 0x9BD2 0x9BFB table_9BD2  Forty-one bytes read by 0x9B9D.
 F 0x9BD2 16
-B 0x9BFB LA COLA DE LA OPCION SE RELLENA CON LA PILA
-B 0x9BFB Las opciones siguen a la nave con retraso: hay que guardar sus dieciseis
-B 0x9BFB ultimas posiciones. Al crearlas, esa cola se rellena de golpe con la
-B 0x9BFB posicion actual, y para eso el cartucho hace algo que no se ve todos los
-B 0x9BFB dias: apunta el PUNTERO DE PILA a la cola (`ld sp,hl`), da ocho `push bc`
-B 0x9BFB seguidos -dieciseis bytes en dieciseis instrucciones- y devuelve el SP,
-B 0x9BFB todo con las interrupciones cerradas para que nadie use la pila mientras.
-L 0x9BFB monta_una_opcion   Copia a la ficha de la opcion la posicion de la nave y rellena su cola de posiciones con `push`
-C 0x9BFB 0xE20B: cuantas opciones hay
-C 0x9BFF Con una, la posicion sale de la nave; con dos, de la primera opcion
-C 0x9C10 La X y la Y
-C 0x9C11 La X y la Y
-C 0x9C12 La Y
-C 0x9C23 El patron 0x44 y el color 0x0A
-C 0x9C25 El patron 0x44
-C 0x9C2F Se guarda el puntero de pila...
-C 0x9C36 ...se apunta a la cola...
-C 0x9C39 ...ocho `push`: dieciseis bytes de una tacada...
-C 0x9C3D ...y se devuelve
-L 0x9C41 corre_las_opciones   Cada dos cuadros mete la posicion de la nave en la cola y las opciones van saliendo por el otro extremo
-C 0x9C41 Con la pantalla parada, no
-C 0x9C4B Sin opciones, tampoco
-C 0x9C4E Sin opciones, no
-C 0x9C57 Con el mando quieto o en diagonal justa, la cola no avanza
-C 0x9C5A Los cuatro bits de direccion
-C 0x9C5C Con el mando quieto, la cola no avanza
-C 0x9C66 Con dos opciones, las dos
-C 0x9C67 Ni en diagonal justa
-L 0x9C74 corre_una_cola   Empuja la posicion nueva por delante y corre los dieciseis bytes de la cola
-C 0x9C7A La posicion nueva, por delante
-C 0x9C81 Catorce bytes: el resto de la cola
-C 0x9C86 Y la de hace dieciseis cuadros, al final
-C 0x9C87 0x3C bytes atras
-L 0x9C90 anima_las_opciones   Cada dos cuadros avanza el dibujo de las opciones, cuatro en redondo, de la tabla de 0x9CBA
-C 0x9C91 0xE182: uno de cada dos cuadros
-C 0x9C9C 0xE183: por que dibujo van
-C 0x9C9D Con dos opciones, las dos
-C 0x9CAF Cuatro dibujos en redondo
-D 0x9CBA 0x9CC2 dibujos_de_la_opcion  Cuatro parejas (patron, color) con las que parpadea la opcion. Las lee 0x9CA9.
+B 0x9BFB THE OPTION'S QUEUE IS FILLED USING THE STACK
+B 0x9BFB The options follow the ship with a delay: its last sixteen positions
+B 0x9BFB have to be kept. When they are created, that queue is filled in one go
+B 0x9BFB with the current position, and to do that the cartridge does something
+B 0x9BFB you do not see every day: it points the STACK POINTER at the queue
+B 0x9BFB (`ld sp,hl`), does eight `push bc` in a row (sixteen bytes in sixteen
+B 0x9BFB instructions) and restores SP, all with interrupts disabled so that
+B 0x9BFB nobody uses the stack in the meantime.
+L 0x9BFB set_up_one_option   Copies the ship's position into the option's card and fills its position queue with `push`
+C 0x9BFB 0xE20B: how many options there are
+C 0x9BFF With one, the position comes from the ship; with two, from the first option
+C 0x9C10 The X and the Y
+C 0x9C11 The X and the Y
+C 0x9C12 The Y
+C 0x9C23 Pattern 0x44 and colour 0x0A
+C 0x9C25 Pattern 0x44
+C 0x9C2F The stack pointer is saved...
+C 0x9C36 ...pointed at the queue...
+C 0x9C39 ...eight `push`: sixteen bytes in one go...
+C 0x9C3D ...and restored
+L 0x9C41 run_options   Every two frames pushes the ship's position into the queue, and the options come out at the other end
+C 0x9C41 Not with the screen stopped
+C 0x9C4B Nor without options
+C 0x9C4E Not without options
+C 0x9C57 With the joystick still or on an exact diagonal, the queue does not advance
+C 0x9C5A The four direction bits
+C 0x9C5C With the joystick still, the queue does not advance
+C 0x9C66 With two options, both
+C 0x9C67 Nor on an exact diagonal
+L 0x9C74 shift_one_queue   Pushes the new position in at the front and shifts the sixteen bytes of the queue
+C 0x9C7A The new position, at the front
+C 0x9C81 Fourteen bytes: the rest of the queue
+C 0x9C86 And the one from sixteen frames ago, at the end
+C 0x9C87 0x3C bytes back
+L 0x9C90 animate_options   Every two frames advances the options' drawing, four round and round, from the table at 0x9CBA
+C 0x9C91 0xE182: one in every two frames
+C 0x9C9C 0xE183: which drawing they are on
+C 0x9C9D With two options, both
+C 0x9CAF Four drawings round and round
+D 0x9CBA 0x9CC2 option_drawings  Four (pattern, colour) pairs the option blinks with. Read by 0x9CA9.
 F 0x9CBA 2
-L 0x9CC2 suelta_el_disparo   0xE180 a cero: el boton se ha soltado
-L 0x9CC5 mira_si_se_dispara   Con el boton recien pulsado, o mantenido quince cuadros, dispara la nave y sus dos opciones
-C 0x9CC5 Con la pantalla parada, no
-C 0x9CCA Ni con la nave muerta
-C 0x9CD2 El bit 4 de lo recien pulsado: el disparo
-C 0x9CD9 Y el bit 4 del mando: mantenido
-C 0x9CE2 Quince cuadros seguidos y se dispara solo
-L 0x9CE5 disparan_los_tres   La nave y sus dos opciones, de 0x20 en 0x20 bytes
-C 0x9CE8 0xE200: la nave
-C 0x9CEC Tres fichas
-C 0x9CEF La ficha que toque
-C 0x9CF7 Treinta y dos bytes: la siguiente
-C 0x9CFD Treinta y dos bytes: la siguiente
-L 0x9D05 dispara_esta_ficha   Cuatro armas, una por byte: el disparo de siempre, el doble, el laser y el misil
-C 0x9D09 El byte 12: el disparo normal
-C 0x9D10 El 13: el doble
-C 0x9D17 El 14: el laser
-C 0x9D1E Y el 15: el misil
-C 0x9D29 Las nueve ranuras de disparo de 0xE260
-C 0x9D2C Las nueve ranuras
-C 0x9D2F Sin hueco, no
-L 0x9D3A marca_que_no_cabe   0xE184 a uno: no queda hueco para el disparo doble
-L 0x9D3E marca_que_si_cabe   0xE184 a cero
-L 0x9D44 dispara_el_normal   Busca hueco entre las nueve ranuras y monta el disparo de siempre, ocho a la derecha y 0x10 por debajo
-C 0x9D44 Las nueve ranuras
-C 0x9D4D Dieciseis bytes: la de al lado
-C 0x9D50 Dieciseis bytes: la de al lado
-C 0x9D51 Y la de al lado tambien libre
-C 0x9D5C Ocho a la derecha y 0x10 mas abajo
-C 0x9D62 La Y, cuadrada a ocho
-C 0x9D65 Velocidad 0xF8: hacia arriba
-C 0x9D6A El sonido 1
-L 0x9D6F dispara_el_doble   El disparo doble, que sale hacia arriba con velocidad 0x18
-C 0x9D6F Sin hueco para el, no
-C 0x9D72 Sin hueco, no se dispara
-C 0x9D73 Sin hueco, no
-C 0x9D85 Velocidad 0x18 y color 0x0F
-C 0x9D8A El sonido 2
-L 0x9D8F dispara_el_laser   Monta el laser, que se queda pegado a la nave: guarda en su ficha el puntero a quien lo dispara
-C 0x9D96 Tipo 3: el laser
-C 0x9D9B Ocho a la derecha y 0x10 mas abajo
-C 0x9DA4 Velocidad 0xFC
-C 0x9DAB Se guarda de quien es el laser
-C 0x9DAD Se guarda de quien es
-C 0x9DAE Se guarda el puntero
-C 0x9DC9 El sonido 3
-D 0x9DCD 0x9DD0 tabla_9DCD  Tres bytes que lee 0x9DBD con `ld hl,0x9DCD`.
+L 0x9CC2 release_fire_button   0xE180 to zero: the button has been released
+L 0x9CC5 check_fire   With the button just pressed, or held for fifteen frames, the ship and its two options fire
+C 0x9CC5 Not with the screen stopped
+C 0x9CCA Nor with the ship dead
+C 0x9CD2 Bit 4 of what was just pressed: fire
+C 0x9CD9 And bit 4 of the joystick: held
+C 0x9CE2 Fifteen frames in a row and it fires by itself
+L 0x9CE5 all_three_fire   The ship and its two options, 0x20 bytes apart
+C 0x9CE8 0xE200: the ship
+C 0x9CEC Three cards
+C 0x9CEF The card in turn
+C 0x9CF7 Thirty-two bytes: the next one
+C 0x9CFD Thirty-two bytes: the next one
+L 0x9D05 fire_this_card   Four weapons, one per byte: the usual shot, the double, the laser and the missile
+C 0x9D09 Byte 12: the normal shot
+C 0x9D10 13: the double
+C 0x9D17 14: the laser
+C 0x9D1E And 15: the missile
+C 0x9D29 The nine shot slots at 0xE260
+C 0x9D2C The nine slots
+C 0x9D2F Not without a free slot
+L 0x9D3A flag_no_room   0xE184 to one: there is no free slot left for the double shot
+L 0x9D3E flag_room   0xE184 to zero
+L 0x9D44 fire_normal   Looks for a free slot among the nine and sets up the usual shot, eight to the right and 0x10 below
+C 0x9D44 The nine slots
+C 0x9D4D Sixteen bytes: the one next to it
+C 0x9D50 Sixteen bytes: the one next to it
+C 0x9D51 And the one next to it free as well
+C 0x9D5C Eight to the right and 0x10 further down
+C 0x9D62 The Y, aligned to eight
+C 0x9D65 Speed 0xF8: upwards
+C 0x9D6A Sound 1
+L 0x9D6F fire_double   The double shot, which goes upwards with speed 0x18
+C 0x9D6F Not without a free slot for it
+C 0x9D72 With no free slot, there is no shot
+C 0x9D73 Not without a free slot
+C 0x9D85 Speed 0x18 and colour 0x0F
+C 0x9D8A Sound 2
+L 0x9D8F fire_laser   Sets up the laser, which stays attached to the ship: stores in its card the pointer to whoever fires it
+C 0x9D96 Type 3: the laser
+C 0x9D9B Eight to the right and 0x10 further down
+C 0x9DA4 Speed 0xFC
+C 0x9DAB Whose laser it is gets stored
+C 0x9DAD Whose it is gets stored
+C 0x9DAE The pointer is stored
+C 0x9DC9 Sound 3
+D 0x9DCD 0x9DD0 table_9DCD  Three bytes read by 0x9DBD with `ld hl,0x9DCD`.
 F 0x9DCD 3
-L 0x9DD0 dispara_el_misil   El misil va a la tabla de 0x2C0, con una ranura por cada dos fichas
-C 0x9DD0 La tabla de misiles de 0xE2C0
-C 0x9DD6 Una ranura por cada dos fichas
-C 0x9DD8 Con el primer byte a cero, hay hueco
-C 0x9DE0 Tipo 4: el misil
-C 0x9DEA Patron 0x20 y color 0x0A
-L 0x9DF0 hay_hueco_en_esta_tabla   Devuelve el primer hueco de la tabla que traiga HL, saltando por la ficha que toque
-C 0x9DF0 El salto que toque
-C 0x9DF8 Con el primer byte a cero, la ranura esta libre
-L 0x9DFB pon_la_posicion_del_disparo   Le pone al disparo la posicion de quien lo dispara mas el desplazamiento de DE
-C 0x9DFB La X del que dispara
-C 0x9E02 Y su Y
-L 0x9E0A pon_la_x_cuadrada   La X del que dispara, cuadrada a cuatro y mas D
-C 0x9E0A La X del que dispara
-C 0x9E0E Cuadrada a cuatro
-L 0x9E14 corre_los_nueve_disparos   Las nueve ranuras de 0xE260, cada una por su tipo: cuatro salidas
-C 0x9E19 Nueve ranuras
-C 0x9E23 Se empuja 0x9E34: al volver, sigue por ahi
-D 0x9E2C 0x9E34 tabla_del_despachador_9E29  Cuatro palabras pegadas detras del `call 0x4067` de 0x9E29.
+L 0x9DD0 fire_missile   The missile goes to the table at 0x2C0, with one slot for every two cards
+C 0x9DD0 The missile table at 0xE2C0
+C 0x9DD6 One slot for every two cards
+C 0x9DD8 With the first byte at zero, there is a free slot
+C 0x9DE0 Type 4: the missile
+C 0x9DEA Pattern 0x20 and colour 0x0A
+L 0x9DF0 free_slot_in_this_table   Returns the first free slot of the table HL brings, jumping by whatever stride the card needs
+C 0x9DF0 The stride that applies
+C 0x9DF8 With the first byte at zero, the slot is free
+L 0x9DFB set_shot_position   Gives the shot the position of whoever fires it plus the offset in DE
+C 0x9DFB The shooter's X
+C 0x9E02 And its Y
+L 0x9E0A set_aligned_x   The shooter's X, aligned to four, plus D
+C 0x9E0A The shooter's X
+C 0x9E0E Aligned to four
+L 0x9E14 run_nine_shots   The nine slots at 0xE260, each through its type: four exits
+C 0x9E19 Nine slots
+C 0x9E23 0x9E34 is pushed: on return, execution carries on there
+D 0x9E2C 0x9E34 dispatcher_table_9E29  Four words glued right behind the `call 0x4067` at 0x9E29.
 F 0x9E2C w2
-L 0x9E34 disparo_siguiente   Dieciseis bytes y vuelta al bucle de las nueve ranuras
-C 0x9E34 Dieciseis bytes: la ranura siguiente
-C 0x9E37 La ranura siguiente
-L 0x9E3D corre_el_disparo_normal   Doce puntos a la derecha por cuadro; al salirse de la pantalla, se apaga
-C 0x9E42 0x0C00: doce puntos por cuadro
-C 0x9E45 Doce puntos a la derecha
-C 0x9E4B Al salirse, se apaga
-L 0x9E4F corre_el_disparo_doble   Seis puntos hacia arriba y doce a la derecha
-C 0x9E4F Se saca el retorno: el disparo no vuelve por aqui
-C 0x9E52 0x0600 hacia arriba
-C 0x9E55 La Y menos seis
-C 0x9E56 La Y menos seis
-C 0x9E57 Y avanza doce
-L 0x9E61 apaga_el_disparo   La ranura queda libre
-L 0x9E66 corre_el_laser   Se pega a quien lo dispara, va creciendo y se corta al llegar al mapa
-C 0x9E6F Los bytes 8 y 9: de quien es el laser
-C 0x9E78 Ocho a la derecha y 0x10 mas abajo
-C 0x9E81 Velocidad 0xFC
-C 0x9E8A Cuatro pasos de crecimiento
-C 0x9E8C El largo sube...
-C 0x9E8E ...y la cuenta baja
-L 0x9E96 el_laser_ya_esta_largo   El byte 1 sube: pasa a la fase siguiente
-L 0x9E9B el_laser_avanza   Corre 0x20 puntos y, si el largo llega a cero, se apaga
-C 0x9E9B 0x20 puntos a la derecha
-C 0x9EA3 Y si el largo llega a cero, se acabo
-L 0x9EAA el_laser_se_encoge   Corre y le quita cinco al largo; al agotarse, se va
-C 0x9EAA 0x20 puntos a la derecha
-C 0x9EAF Cinco de largo menos
-L 0x9EBB corre_el_laser_veinte   0x20 puntos a la derecha
-C 0x9EBB Cuatro bytes mas alla: la X
-C 0x9EBF 0x20 puntos
-L 0x9EC4 recorta_el_laser   Si el laser se sale de la pantalla por arriba, se le acorta el largo justo lo que sobra
-C 0x9EC4 El largo por ocho
-C 0x9EC7 El largo por ocho
-C 0x9ED2 Lo que se sale, en casillas
-C 0x9ED3 Lo que se sale, en casillas
-C 0x9ED4 En valor absoluto
-L 0x9EE0 corre_el_misil   Va pegado al suelo: mira el mapa delante y debajo, y sube o baja segun lo que encuentre
-C 0x9EE8 Ocho a la derecha: lo que tiene delante
-C 0x9EF3 Y ocho por debajo
-C 0x9EF4 Ocho por debajo
-C 0x9EF6 Ocho a la derecha
-C 0x9F07 Si tambien choca ahi, el misil se estrella
-L 0x9F0F sube_el_misil   El suelo sube: el misil trepa el escalon
-L 0x9F14 baja_el_misil   No hay suelo delante: el misil cae, mas deprisa si lleva la mejora doble
-C 0x9F14 0xE20F en dos: el misil mejorado cae mas rapido
-C 0x9F24 Dibujo 0x20: el misil cayendo
-C 0x9F35 Y avanza a la vez
-C 0x9F38 Y avanza a la vez
-C 0x9F39 La X sube
-L 0x9F49 anda_el_misil   Va pegado al suelo, con dibujo 0x1C
-C 0x9F49 Dibujo 0x1C: el misil rodando
-L 0x9F5A avanza_el_misil   Le suma DE a la X; si se sale de la pantalla, se apaga
-C 0x9F5A Le suma DE a la X
-C 0x9F65 Al salirse, se apaga
-L 0x9F6C posicion_del_misil   La X y la Y del misil, en HL
-L 0x9F73 parpadea_el_misil   El color alterna entre 0x0A y 0x0B cada dos cuadros
-C 0x9F73 Un bit del contador
-C 0x9F76 0x0A o 0x0B segun el cuadro
-C 0x9F78 Un bit del contador
-L 0x9F81 dibuja_los_disparos   0xEC1A a uno: los disparos se pintan
-L 0x9F85 borra_los_disparos   0xEC1A a cero: se borran
-C 0x9F8D Nueve ranuras
-C 0x9F90 Se empuja 0x9FA4: al volver, sigue por ahi
-D 0x9F9A 0x9FA4 tabla_del_despachador_9F97  Cinco palabras pegadas detras del `call 0x4067` de 0x9F97.
+L 0x9E34 next_shot   Sixteen bytes and back to the loop over the nine slots
+C 0x9E34 Sixteen bytes: the next slot
+C 0x9E37 The next slot
+L 0x9E3D run_normal_shot   Twelve points to the right per frame; when it goes off the screen, it switches off
+C 0x9E42 0x0C00: twelve points per frame
+C 0x9E45 Twelve points to the right
+C 0x9E4B When it goes off, it switches off
+L 0x9E4F run_double_shot   Six points up and twelve to the right
+C 0x9E4F The return address is popped: the shot does not come back through here
+C 0x9E52 0x0600 upwards
+C 0x9E55 Y minus six
+C 0x9E56 Y minus six
+C 0x9E57 And it advances twelve
+L 0x9E61 switch_off_shot   The slot is left free
+L 0x9E66 run_laser   Sticks to whoever fires it, keeps growing and is cut off on reaching the map
+C 0x9E6F Bytes 8 and 9: whose laser it is
+C 0x9E78 Eight to the right and 0x10 further down
+C 0x9E81 Speed 0xFC
+C 0x9E8A Four growth steps
+C 0x9E8C The length goes up...
+C 0x9E8E ...and the count goes down
+L 0x9E96 laser_full_length   Byte 1 goes up: it moves on to the next phase
+L 0x9E9B laser_advances   Moves 0x20 points and, if the length reaches zero, switches off
+C 0x9E9B 0x20 points to the right
+C 0x9EA3 And if the length reaches zero, it is over
+L 0x9EAA laser_shrinks   Moves and takes five off the length; when it runs out, it goes away
+C 0x9EAA 0x20 points to the right
+C 0x9EAF Five less length
+L 0x9EBB move_laser_0x20   0x20 points to the right
+C 0x9EBB Four bytes further on: the X
+C 0x9EBF 0x20 points
+L 0x9EC4 trim_laser   If the laser goes off the top of the screen, its length is shortened by exactly the excess
+C 0x9EC4 The length times eight
+C 0x9EC7 The length times eight
+C 0x9ED2 What sticks out, in cells
+C 0x9ED3 What sticks out, in cells
+C 0x9ED4 In absolute value
+L 0x9EE0 run_missile   Hugs the ground: looks at the map ahead and below, and goes up or down depending on what it finds
+C 0x9EE8 Eight to the right: what is ahead of it
+C 0x9EF3 And eight below
+C 0x9EF4 Eight below
+C 0x9EF6 Eight to the right
+C 0x9F07 If it also collides there, the missile crashes
+L 0x9F0F raise_missile   The ground rises: the missile climbs the step
+L 0x9F14 lower_missile   There is no ground ahead: the missile falls, faster if it has the double upgrade
+C 0x9F14 0xE20F at two: the upgraded missile falls faster
+C 0x9F24 Drawing 0x20: the missile falling
+C 0x9F35 And it advances at the same time
+C 0x9F38 And it advances at the same time
+C 0x9F39 X goes up
+L 0x9F49 walk_missile   Hugs the ground, with drawing 0x1C
+C 0x9F49 Drawing 0x1C: the missile rolling
+L 0x9F5A advance_missile   Adds DE to its X; if it goes off the screen, it switches off
+C 0x9F5A Adds DE to the X
+C 0x9F65 When it goes off, it switches off
+L 0x9F6C missile_position   The missile's X and Y, in HL
+L 0x9F73 blink_missile   The colour alternates between 0x0A and 0x0B every two frames
+C 0x9F73 A bit of the counter
+C 0x9F76 0x0A or 0x0B depending on the frame
+C 0x9F78 A bit of the counter
+L 0x9F81 draw_shots   0xEC1A to one: the shots are painted
+L 0x9F85 erase_shots   0xEC1A to zero: they are erased
+C 0x9F8D Nine slots
+C 0x9F90 0x9FA4 is pushed: on return, execution carries on there
+D 0x9F9A 0x9FA4 dispatcher_table_9F97  Five words glued right behind the `call 0x4067` at 0x9F97.
 F 0x9F9A w2
-D 0x9FA4 0x9FAC tabla_9FA4  Ocho bytes que 0x9F90 mete en BC con `ld bc,0x9FA4`.
+D 0x9FA4 0x9FAC table_9FA4  Eight bytes that 0x9F90 loads into BC with `ld bc,0x9FA4`.
 F 0x9FA4 8
-L 0x9FAC el_misil_no_choca   El misil no se mira contra el mapa: ya va pegado a el
-L 0x9FAD mira_si_el_disparo_choca   Solo al borrar: si el disparo ha dado en el mapa, se apaga; y si la casilla era de las especiales, se rompe
-C 0x9FAD 0xEC1A: esto solo se hace en el paso de borrado
-C 0x9FBC El misil se salta la casilla especial
-C 0x9FC8 Con el jefe en pantalla, el disparo se traga sin sonar
-C 0x9FD5 El sonido 6: el disparo ha chocado
-C 0x9FD7 El sonido 6
-L 0x9FDD rompe_la_casilla   La casilla especial se borra del mapa y suena lo que diga su grupo
-L 0x9FE6 mira_el_laser_contra_el_mapa   Solo al pintar: recorre las casillas que ocupa el laser y lo corta donde encuentre pared
-C 0x9FE6 Solo en el paso de pintado
-C 0x9FF1 La casilla del mapa donde empieza
-C 0x9FF5 El byte 12: cuantas casillas mide
+L 0x9FAC missile_skips_collision   The missile is not checked against the map: it is already stuck to it
+L 0x9FAD check_shot_collision   Only when erasing: if the shot has hit the map, it switches off; and if the cell was one of the special ones, it breaks
+C 0x9FAD 0xEC1A: this is only done in the erase pass
+C 0x9FBC The missile skips the special cell
+C 0x9FC8 With the boss on screen, the shot is swallowed without a sound
+C 0x9FD5 Sound 6: the shot has collided
+C 0x9FD7 Sound 6
+L 0x9FDD break_cell   The special cell is erased from the map and plays whatever sound its group says
+L 0x9FE6 check_laser_against_map   Only when painting: walks the cells the laser occupies and cuts it off where it finds a wall
+C 0x9FE6 Only in the paint pass
+C 0x9FF1 The map cell where it starts
+C 0x9FF5 Byte 12: how many cells long it is

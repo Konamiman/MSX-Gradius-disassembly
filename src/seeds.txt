@@ -1,0 +1,11 @@
+# Seeds that have to be given by hand to the whole-cartridge tracer
+# (tools/bank_tracer.py). Format:
+#
+#     pNN 0xADDR <bank at 0x6000> <bank at 0x8000> <bank at 0xA000>  # why
+#
+# Only the ones that CANNOT be deduced by following the flow go here: addresses
+# that the code pushes on the stack for someone else to return to, hooks, and
+# the like.
+
+p00 0x5506 1 2 3   # RETURN address of the game states: p00:52B7 does `ld hl,0x5506` and `push hl` right before the `call 0x4067` at p00:52C4, so the state that the table dispatches returns here and not to whoever called
+p02 0x8001 1 2 3   # execution gets here WITHOUT ANY JUMP: the instruction that starts at p01:7FFE (21 41) is completed by the first byte of this bank (80) and forms `ld hl,0x8041`, which takes up 0x7FFE-0x8000; the next instruction is this one. The whole-cartridge tracer cannot follow it because the instruction is split across two banks

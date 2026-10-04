@@ -29,12 +29,12 @@ exists to make sure the listing does not *lie* about what it reassembles.
 
 The commentary is finished to the standard of the series: **23.4% of the
 instructions carry a line comment** — 3,027 of 12,959 across the six banks that
-hold code — and **not one routine of the 1,540 is below 10%**. `make densidad`
-prints it bank by bank, and `tests/test_listado.py` keeps a per-bank ceiling of
+hold code — and **not one routine of the 1,540 is below 10%**. `make density`
+prints it bank by bank, and `tests/test_listing.py` keeps a per-bank ceiling of
 how many called routines still lack a name, so the number can only go down.
 
 The website under [docs/](docs/) is built from the same notes, and its twelve
-stage maps are drawn from the ROM by `tools/graficos.py` — no emulator captures
+stage maps are drawn from the ROM by `tools/graphics.py` — no emulator captures
 anywhere.
 
 ## The cartridge
@@ -42,7 +42,7 @@ anywhere.
 128 KB with the **Konami mapper WITHOUT SCC** (Konami4): sixteen 8 KB banks.
 There is no register for 0x4000-0x5FFF — bank 0 is fixed there — and the other
 three windows are selected by writing the bank number to 0x6000, 0x8000 and
-0xA000. `tools/reconocimiento.py` measures this on the bytes: not one write to
+0xA000. `tools/recon.py` measures this on the bytes: not one write to
 0x5000, 0x7000, 0x9000 or 0xB000 (the SCC mapper's registers), and every one of
 the 68 writes to the Konami4 registers carries a bank that matches the rule.
 
@@ -83,7 +83,7 @@ a six-character title, and its first three characters (stored reversed) are
 At the end of bank 3 (file offset 0x07FF5) there are eleven bytes: the title
 backwards, its length, the last two digits of the RC number in BCD, and 0xAA.
 Here that reads RC-742 and グラディウス — *Gradius*. **This is not our
-finding: Manuel Pazos (@ManuelPazosMSX) discovered it, and `tools/marca_konami.py`
+finding: Manuel Pazos (@ManuelPazosMSX) discovered it, and `tools/konami_mark.py`
 only reads what he showed was there.** Note that in a MegaROM the mark is *not*
 at the end of the file: 96 KB of data follow it.
 
@@ -93,7 +93,7 @@ The ROM is **not** distributed here. Put your own copy in the root as
 `nemesis.rom` (131,072 bytes exactly) and:
 
 ```sh
-make comprueba   # checks the sha256
+make check   # checks the sha256
 make             # trace -> listing -> byte-exact verify -> sanity -> tests
 ```
 
@@ -103,17 +103,17 @@ You need `python3`, `pasmo`, `z80dasm` and `make`.
 
 `make verify` proves the bytes come back. The rest catch what it cannot:
 
-- `tools/check_trace.py` and `tools/check_datos_como_codigo.py` — no byte
+- `tools/check_trace.py` and `tools/check_data_as_code.py` — no byte
   declared as data may come out as code. A listing that reads graphics as
   instructions still reassembles perfectly; only the *reading* is a lie.
-- `tools/check_bancos.py` — this project has **two** tracers: one that walks
+- `tools/check_bank_tracer.py` — this project has **two** tracers: one that walks
   the whole cartridge following the mapper, and one that walks a single bank
   from the entry points written down in `src/pNN.entries`. They have to mark
   exactly the same bytes as code. If they disagree, either an entry point is
   missing or one leads somewhere it should not.
-- `tools/check_entradas.py` — no entry point may fall inside a declared data
+- `tools/check_entries.py` — no entry point may fall inside a declared data
   range. The project contradicting itself.
-- `tools/presupuesto.py` — every byte of the cartridge is either traced code
+- `tools/budget.py` — every byte of the cartridge is either traced code
   or inside a data range with a name and an explanation. **100 %.**
 
 ## Layout

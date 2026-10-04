@@ -89,8 +89,8 @@ and 2 are the variant, and the top five are the row.
 
 ## The stages are not played in order, and four of them are bonus
 
-There are two ways out of a stage. `acaba_la_fase` (0x6D53) adds one to 0xE061;
-`salta_a_la_fase` (0x6FB9) writes a number straight into it, and **eight places
+There are two ways out of a stage. `end_stage` (0x6D53) adds one to 0xE061;
+`jump_to_stage` (0x6FB9) writes a number straight into it, and **eight places
 jump there, each with its own number**. Put them together and the running order
 is:
 
@@ -102,7 +102,7 @@ an end-of-stage routine six instructions long that puts the stage back to 3, 4,
 
 What opens them is the **target**. The finals of stages 2, 3, 4 and 7 test
 0xE1C0, and the only instruction in the whole 128 KB that makes that byte
-non-zero is 0xB130, inside `cierra_el_tramo`, which runs when the ship touches
+non-zero is 0xB130, inside `close_stretch`, which runs when the ship touches
 the target at the end of the stage. Touch it and you go to the bonus stage; miss
 it and the normal script carries on. Stage 1 has a target as well, and it leads
 to no bonus.
@@ -129,7 +129,7 @@ anywhere near, so the comparison always fails and stage 12 simply restarts at
 
 0x44E7 watches the GRAPH key and, with the screen stopped, 0x50C9 collects
 letters into 0xE1E8 until RETURN. Typing them while playing does nothing.
-Measured in openMSX with `tools/omsx_claves.tcl`: paused, 0xE1E8 fills with
+Measured in openMSX with `tools/omsx_cheats.tcl`: paused, 0xE1E8 fills with
 `4F 50 54 49 4F 4E` and on RETURN 0xE20B goes from 00 to 02.
 
 Besides the seven usual words there are twelve more, one per stage, all women's

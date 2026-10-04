@@ -1,7 +1,7 @@
 # El cartucho
 
 **RC-742**, 128 KB, dieciséis bancos de 8 KB, con el mapper de Konami **sin
-SCC** (Konami4). `tools/reconocimiento.py` lo mide sobre los bytes en vez de
+SCC** (Konami4). `tools/recon.py` lo mide sobre los bytes en vez de
 darlo por supuesto: no hay ni una escritura a 0x5000, 0x7000, 0x9000 ni 0xB000,
 que son los registros del otro mapper de Konami, el que lleva SCC.
 
@@ -97,5 +97,5 @@ guardados dos veces.
 Al final del banco 3, en el offset 0x07FFF del volcado, están el código de
 cartucho **RC-742** y ocho caracteres en katakana que se leen **グラディウス**,
 *Gradius*. Es la firma que Konami escondía en sus cartuchos, y quien la
-descubrió y la documentó fue **Manuel Pazos**. `make marca` la vuelve a leer de
+descubrió y la documentó fue **Manuel Pazos**. `make mark` la vuelve a leer de
 la ROM.
