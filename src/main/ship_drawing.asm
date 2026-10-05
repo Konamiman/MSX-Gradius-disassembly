@@ -12,7 +12,7 @@
 ; The ship has no animation: its drawing is a function of the two low bits
 ; of the joystick (up and down), which index a table of four-byte cards.
 ; And there are three different tables depending on what you are playing
-; with: the normal one, and two others that are only used if 0xF0F4 is
+; with: the normal one, and two others that are only used if TWINBEE_FOUND is
 ; set, that is, if at start-up the other Konami cartridge was found in the
 ; machine.
 ; ----------------------------------------------------------------------
@@ -24,7 +24,7 @@ place_ship:		; Sets the ship's sprite card: the position, and the drawing that g
 	or a
 	ret z
 	jp m,next_ship_state
-	ld a,(ENDING)		; With an explosion under way, the position comes from 0xE1D3
+	ld a,(ENDING)		; With an explosion under way, the position comes from ENDING_SHIP_Y
 	and a
 	jr z,L_9974
 	ld de,(ENDING_SHIP_Y)
@@ -45,19 +45,19 @@ L_9974:
 L_998C:
 	ld a,(TWINBEE_FOUND)	; With the other cartridge inserted, other tables
 	or a
-	ld hl,099e3h
+	ld hl,ship_cards_normal-2
 	jr z,L_99A1
 	ld a,(GAME_FLAGS)	; And bit 7 chooses between the two
 	add a,a
-	ld hl,09a25h
+	ld hl,ship_cards_twinbee_player_1
 	jr nc,L_99A1
-	ld hl,09a67h
+	ld hl,ship_cards_twinbee_player_2
 L_99A1:
 	ld a,(SHIP)		; The ship's state
 	call get_word
 	ex de,hl
 	ld de,SHIP+7
-	ld bc,CONTROLLER	; The joystick; when paused, 0xE10D
+	ld bc,CONTROLLER	; The joystick; when paused, PAUSE_JOYSTICK
 	ld a,(PAUSE_COUNT)
 	rra
 	jr nc,L_99B7
@@ -95,16 +95,16 @@ L_99DC:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_99E3 (part): Sixty-six bytes read by 0x9990.
-table_99E3_99E5:
+; DATA ship_cards_normal (part): Sixty-six bytes read by 0x9990.
+ship_cards_normal:
 	defb 0EBh,99h,0F7h,99h,0Fh,9Ah,00h,0Fh,04h,08h,10h,0Fh,14h,05h,08h,0Fh
 	defb 0Ch,08h,00h,0Fh,3Ch,06h,00h,0Fh,3Ch,06h,08h,0Fh,34h,06h,00h,0Fh
 	defb 40h,09h,00h,0Fh,40h,09h,08h,0Fh,38h,09h,00h,0Fh,2Ch,0Fh,00h,0Fh
 	defb 2Ch,0Fh,08h,0Fh,24h,0Fh,00h,0Fh,30h,07h,00h,0Fh,30h,07h,08h,0Fh
 
 ; ----------------------------------------------------------------------
-; DATA table_9A25: Sixty-six bytes read by 0x9999.
-table_9A25:
+; DATA ship_cards_twinbee_player_1: Sixty-six bytes read by 0x9999.
+ship_cards_twinbee_player_1:
 	defb 28h,07h,2Dh,9Ah,39h,9Ah,51h,9Ah,00h,07h,04h,0Bh,00h,07h,04h,0Bh
 	defb 00h,07h,04h,0Bh,08h,07h,3Ch,0Bh,08h,07h,3Ch,0Bh,08h,07h,34h,0Bh
 	defb 08h,07h,40h,0Fh,08h,07h,40h,0Fh,08h,07h,38h,0Fh,08h,07h,2Ch,0Bh
@@ -112,8 +112,8 @@ table_9A25:
 	defb 08h,07h
 
 ; ----------------------------------------------------------------------
-; DATA table_9A67: Sixty-eight bytes read by 0x999E.
-table_9A67:
+; DATA ship_cards_twinbee_player_2: Sixty-eight bytes read by 0x999E.
+ship_cards_twinbee_player_2:
 	defb 28h,0Fh,6Fh,9Ah,7Bh,9Ah,93h,9Ah,00h,0Dh,04h,0Bh,00h,0Dh,04h,0Bh
 	defb 00h,0Dh,04h,0Bh,08h,0Dh,3Ch,0Bh,08h,0Dh,3Ch,0Bh,08h,0Dh,34h,0Bh
 	defb 08h,0Dh,40h,0Fh,08h,0Dh,40h,0Fh,08h,0Dh,38h,0Fh,08h,0Dh,2Ch,0Bh

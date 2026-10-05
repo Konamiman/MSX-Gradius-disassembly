@@ -5,16 +5,17 @@
 	include "bios.inc"
 	include "variables.inc"
 
-	public build_mirror,load_entries,load_stage_graphics
+	include "scenery_symbols.inc"
+	public build_mirror,load_entries,load_stage_graphics,stage_positions
 	extrn add_a_to_de,add_a_to_hl,decompress,dump_to_vram,get_word,load_stage_font
 
 ; ----------------------------------------------------------------------
 ; THE GRAPHICS OF EACH STAGE
 ; The cartridge does not store the screens already drawn: it stores
 ; compressed blocks in banks 4, 5 and 6, and when a stage starts it
-; decompresses them into VRAM. With the graphics in place, 0x4348 ALSO
-; makes the flipped characters: 0x43F2 reverses the bits of each byte
-; (horizontal mirror) and 0x43C6 reverses the order of the eight bytes
+; decompresses them into VRAM. With the graphics in place, build_mirror ALSO
+; makes the flipped characters: flip_bits reverses the bits of each byte
+; (horizontal mirror) and flip_bytes reverses the order of the eight bytes
 ; (vertical mirror). That way a drawing and its reflection take up a
 ; single block in the ROM.
 ; ----------------------------------------------------------------------
@@ -38,14 +39,14 @@ load_stage_graphics:		; Maps banks 4, 5 and 6, decompresses what is due for the 
 	ei
 	call load_stage_characters
 	ld hl,01800h		; The block at 0x86BB to VRAM 0x1800: the sprite patterns
-	ld de,086bbh
+	ld de,stage_graphics_blocks
 	call decompress
 	ld a,(STAGE)		; The stage times six: two groups of three bytes in the table at 0x42AD
 	add a,a
 	ld b,a
 	add a,a
 	add a,b
-	ld hl,042adh
+	ld hl,graphics_per_stage-6
 	call add_a_to_hl
 	ld b,002h		; Two blocks per stage
 decompress_both_blocks:		; For each group: the source in DE and, in C, the character where it starts; the VRAM address comes from C times eight plus 0x1800
@@ -72,14 +73,14 @@ decompress_both_blocks:		; For each group: the source in DE and, in C, the chara
 	cp 005h			; Stage 5 also gets the block at 0x8FCB at VRAM 0x1D00
 	jr nz,L_428A
 	ld hl,01d00h
-	ld de,08fcbh
+	ld de,graphics_1D00
 	call decompress
 L_428A:
 	ld a,(TWINBEE_FOUND)	; And with it set, one more at 0x1800
 	or a
 	jr z,restore_usual_layout
 	ld hl,01800h
-	ld de,09963h
+	ld de,graphics_names_1800
 	call decompress
 restore_usual_layout:		; Banks 1, 2 and 3 in their three slots, and the RAM copy up to date
 	di			; The usual layout is restored: banks 1, 2 and 3
@@ -126,30 +127,30 @@ graphics_per_stage:
 empty_block:
 	defb 00h
 load_stage_characters:		; The entries at 0x932D and the ones due for the stage, plus the two batches of mirrors
-	ld ix,0932dh		; The entries at 0x932D: the ones every stage gets
+	ld ix,common_records	; The entries at common_records: the ones every stage gets
 	call load_entries
 	ld a,(STAGE)
-	ld hl,092e3h		; And the table at 0x92E3, indexed by the stage
+	ld hl,record_lists_A	; And the table at record_lists_A, indexed by the stage
 	call get_word
 	push de
 	pop ix
 	call load_entries
 	xor a
 	ld (MIRROR_KIND),a	; To zero: the batch that is flipped by bits
-	ld hl,092fbh
+	ld hl,record_lists_B
 	call walk_entries
 	ld hl,MIRROR_KIND
 	inc (hl)		; And to one: the one that is flipped by bytes
-	ld hl,09313h
+	ld hl,record_lists_C
 	call walk_entries
 	ld a,(TWINBEE_FOUND)	; That part is only loaded if this is set
 	or a
 	ret z
-	ld ix,0938eh
+	ld ix,extra_records_1
 	call load_entries
 	ld a,(STAGE)
 	cp 009h			; From the ninth stage onwards, one more set
-	ld ix,0939bh
+	ld ix,extra_records_2
 	call nc,load_entries
 	ret
 walk_entries:		; Takes from the table in HL the list due for the stage and walks it
@@ -178,7 +179,7 @@ build_mirror:		; For each four-byte entry: unpacks it, flips it and uploads it t
 	ld de,00004h		; Four bytes per entry
 	add ix,de
 	jr build_mirror
-load_entries:		; Walks six-byte entries and passes the patterns and colours of each one to 0x49B9.
+load_entries:		; Walks six-byte entries and passes the patterns and colours of each one to decompress.
 	ld a,(ix+000h)
 	and a
 	ret z
@@ -218,7 +219,7 @@ decompress_patterns_and_colours:		; The character times eight plus the third: th
 	call decompress
 	pop ix
 	ret
-flip_bytes:		; VERTICAL mirror: reverses the order of the character's eight bytes, in the two buffers at 0xE300 and 0xE700
+flip_bytes:		; VERTICAL mirror: reverses the order of the character's eight bytes, in the two buffers at MIRROR_PATTERNS and MIRROR_COLOURS
 	ld hl,MIRROR_PATTERNS	; The pattern buffer...
 	ld de,MIRROR_PATTERNS+7
 	call L_43D5
@@ -259,7 +260,7 @@ L_43FB:
 	djnz L_43FB
 	ld (hl),a
 	inc hl
-	dec de			; As many bytes as 0xE101 says
+	dec de			; As many bytes as MIRROR_BYTES says
 	ld a,d
 	or e
 	jr nz,L_43F9
@@ -274,7 +275,7 @@ upload_mirror:		; Bits 3, 4 and 5 of the second byte say which thirds the flippe
 	bit 5,(ix+002h)		; And bit 5: the first one
 	ld de,00000h
 	ret z
-upload_mirror_to_vram:		; The flipped character goes back to VRAM: the patterns from 0xE300 and the colours from 0xE700
+upload_mirror_to_vram:		; The flipped character goes back to VRAM: the patterns from MIRROR_PATTERNS and the colours from MIRROR_COLOURS
 	push ix
 	ld l,(ix+001h)		; The second byte of the entry is the destination character
 	ld h,000h
@@ -296,7 +297,7 @@ upload_mirror_to_vram:		; The flipped character goes back to VRAM: the patterns 
 	call dump_to_vram
 	pop ix
 	ret
-download_character_to_ram:		; The character to be flipped is brought from VRAM to 0xE300 and 0xE700: to make the mirror you have to read what was already uploaded
+download_character_to_ram:		; The character to be flipped is brought from VRAM to 0xE300 and MIRROR_COLOURS: to make the mirror you have to read what was already uploaded
 	ld bc,(MIRROR_BYTES)
 	ld l,(ix+000h)		; The first byte of the entry: the source character
 	ld h,000h
@@ -335,7 +336,7 @@ L_448F:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA stage_positions: Rows of six bytes that 0x41CA copies to 0xE101 with
+; DATA stage_positions: Rows of six bytes that 0x41CA copies to MIRROR_BYTES with
 ;   the base 0x4499, again six bytes ahead of where the range starts.
 stage_positions:
 	defb 80h,00h,0A0h,01h,9Fh,01h

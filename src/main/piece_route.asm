@@ -11,7 +11,9 @@
 	public step_10_towards_ship,step_11_leaves,step_1_diagonal,step_2_two_left,step_3_diagonal_up,step_4_two_left
 	public step_5_diagonal,step_6_two_left,step_7_diagonal_up,step_8_two_down,step_9_two_right,time_to_move
 	public wait_until_next_shot,walk_the_eight,zero_speed
-	extrn card_position,mark_boss_dead
+	extrn add_a_to_de,add_a_to_hl,card_position,cell_to_ram_address,change_sign,copy_rectangle
+	extrn enemy_shoots,get_word,mark_boss_dead,measure_distance_to_ship,set_horizontal_speed,set_vertical_speed
+	extrn shot_speed,spawn_object,turn_off_object
 
 ; ----------------------------------------------------------------------
 ; THE PIECE'S ROUTE, WRITTEN OUT STEP BY STEP
@@ -131,7 +133,7 @@ add_to_fields_3_and_5:		; Adds D to byte (IX+3) and E to (IX+5), and returns in 
 	add a,e
 	ld (hl),a
 	ret
-walk_the_eight:		; The eight cards of sixteen bytes from 0xE780
+walk_the_eight:		; The eight cards of sixteen bytes from BOSS_PIECES
 	ld hl,BOSS_PIECES
 	ld b,008h		; Eight cards
 L_8E37:
@@ -151,13 +153,13 @@ draw_piece_blinking:		; Four by three characters, alternating every four frames 
 	call card_position
 	ld a,(FRAME_COUNT)	; A bit of the counter: the two drawings alternate
 	and 004h
-	ld hl,08e5fh
+	ld hl,characters_8E5F
 	jr z,L_8E58
-	ld hl,08e6bh
+	ld hl,characters_8E6B
 L_8E58:
 	ex de,hl
 	ld bc,00403h		; Four wide by three high
-	jp 0490ch
+	jp copy_rectangle
 
 ; ----------------------------------------------------------------------
 ; DATA characters_8E5F: Twelve bytes read by 0x8E50.
@@ -172,15 +174,15 @@ characters_8E6B:
 	defb 00h,0BAh,0BBh,00h
 	defb 0C2h,0C3h,0C4h,0C5h
 	defb 00h,0C0h,0C1h,00h
-set_up_five_pieces:		; Switches on 0xE1B0 and sets up the five slots at 0xEB00 with the positions at 0x8EBA; the pace comes from the difficulty
+set_up_five_pieces:		; Switches on FIVE_PIECES_ON and sets up the five slots at MID_BOSS_PIECES with the positions at positions_of_the_five; the pace comes from the difficulty
 	ld hl,FIVE_PIECES_ON
 	ld (hl),001h
 	inc l
 	inc l
-	ld (hl),0f8h		; 0xF8 into 0xE1B2
+	ld (hl),0f8h		; 0xF8 into FIVE_PIECES_X
 	ld a,(DIFFICULTY)	; 0x5C minus four times the difficulty: the frames between steps
-	add a,a			; The table at 0x8A93
-	add a,a			; The table at 0x8A93
+	add a,a			; The table at shot_origin
+	add a,a			; The table at shot_origin
 	sub 05ch
 	neg
 	inc l
@@ -188,7 +190,7 @@ set_up_five_pieces:		; Switches on 0xE1B0 and sets up the five slots at 0xEB00 w
 	ld (hl),a
 	inc l
 	ld (hl),a
-	ld hl,08ebah
+	ld hl,positions_of_the_five
 	ld de,MID_BOSS_PIECES
 	exx
 	ld b,005h		; Five pieces
@@ -221,7 +223,7 @@ L_8E97:
 
 ; ----------------------------------------------------------------------
 ; DATA positions_of_the_five: Five (X, Y) pairs with which the five pieces at
-;   0xEB00 start. Read by 0x8E8E.
+;   MID_BOSS_PIECES start. Read by 0x8E8E.
 positions_of_the_five:
 	defb 4Ch,0F0h
 	defb 54h,0F0h
@@ -246,7 +248,7 @@ shift_group:		; On the steps with a column, eight points to the left
 	sub 008h		; Eight points to the left
 	ld (hl),a
 	ret
-walk_the_five:		; The five slots at 0xEB00, 0x20 bytes apart
+walk_the_five:		; The five slots at MID_BOSS_PIECES, 0x20 bytes apart
 	ld hl,MID_BOSS_PIECES
 	ld a,005h		; Five
 	ld (FIVE_PIECES_LOOP),a
@@ -331,7 +333,7 @@ L_8F4D:
 	add hl,de
 	jr nz,L_8F4D
 	ret
-drop_from_piece:		; If the slot is on step 1 and below Y 0x30, looks for a free slot in 0xE500 and sets up a falling object there
+drop_from_piece:		; If the slot is on step 1 and below Y 0x30, looks for a free slot in ENEMY_SHOTS and sets up a falling object there
 	ld a,(hl)		; Only the ones on step 1
 	dec a
 	ret nz
@@ -379,7 +381,7 @@ L_8F95:
 	ld l,a
 	ld (hl),001h
 	ret
-free_slot_in_e500:		; Returns in HL the first of the ten slots at 0xE500 that is free; with carry, there is none
+free_slot_in_e500:		; Returns in HL the first of the ten slots at ENEMY_SHOTS that is free; with carry, there is none
 	ld hl,ENEMY_SHOTS
 	ld b,00ah		; Ten slots
 L_8FA2:
@@ -425,7 +427,7 @@ cell_of_one_of_five:		; The position becomes a map cell, and the third piece als
 	ld d,(hl)
 	push hl
 	ex de,hl
-	call 0571bh		; Bank 0 converts position into cell
+	call cell_to_ram_address	; Bank 0 converts position into cell
 	ex de,hl
 	pop hl
 	ld a,018h		; It is stored 0x18 bytes further on
@@ -466,7 +468,7 @@ L_900B:
 	add hl,de
 	jr nz,L_900B
 	ret
-draw_one_of_five:		; The ones on step 1 get a pair of characters from the table at 0x905C; the others, just one
+draw_one_of_five:		; The ones on step 1 get a pair of characters from the table at characters_905C; the others, just one
 	ld a,(hl)
 	or a
 	ret z
@@ -482,7 +484,7 @@ draw_one_of_five:		; The ones on step 1 get a pair of characters from the table 
 	ld a,(FIVE_PIECES_LOOP)
 	add a,a			; Times four: two pairs per piece
 	add a,a			; Times four: two pairs
-	ld hl,0905ch
+	ld hl,characters_905C
 	add a,l
 	ld l,a
 	jr nc,L_9036
@@ -574,13 +576,13 @@ release_enemies:		; Keeps releasing enemies while the script has entries for thi
 	jr z,release_enemies
 	ret c
 	ld hl,ENEMY_SCRIPT_ROW
-	inc (hl)		; 0xE108: which script entry it is on
+	inc (hl)		; ENEMY_SCRIPT_ROW: which script entry it is on
 	jr release_enemies
 release_enemies_on_column:		; The same, but only on the steps that bring in a new column
 	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
 	ret z
-	ld a,0f8h		; 0xF8 into 0xEC04
+	ld a,0f8h		; 0xF8 into ENTRY_X
 	ld (ENTRY_X),a
 L_90CB:
 	call check_enemy_script
@@ -588,7 +590,7 @@ L_90CB:
 	ret
 check_enemy_script:		; Checks the script at 0x9262 and, when it is time, releases a type 1 enemy in the row and with the variant it says
 	ld a,(ENEMY_SCRIPT_ROW)
-	ld hl,09262h		; The script at 0x9262
+	ld hl,enemy_scripts_per_stage-2	; The script at 0x9262
 	call script_entry
 	ret nz
 	ld hl,ENEMY_SCRIPT_ROW
@@ -612,18 +614,18 @@ check_enemy_script:		; Checks the script at 0x9262 and, when it is time, release
 L_90F8:
 	ld c,a
 	ld a,001h		; Type 1
-	call 06a72h
+	call spawn_object
 	xor a
 	ret
 script_entry:		; Takes the stage's list from the table at HL and compares the distance travelled with the current entry
 	push af
 	ld a,(STAGE)		; The list for this stage
-	call 047aeh
+	call get_word
 	pop af
 	ld c,a
 	add a,a			; Times three: three bytes per entry
 	add a,c
-	call 04062h
+	call add_a_to_de
 	ex de,hl
 	ld e,(hl)		; The entry's distance...
 	inc hl
@@ -633,12 +635,12 @@ script_entry:		; Takes the stage's list from the table at HL and compares the di
 	ld hl,(DISTANCE)
 	rst 20h			; DCOMPR: against the distance travelled
 	ret
-aim_cannon:		; Measures the angle to the ship and uses it to choose the cannon's drawing, taken from the table at 0x9205 according to the stage
+aim_cannon:		; Measures the angle to the ship and uses it to choose the cannon's drawing, taken from the table at cannon_drawings according to the stage
 	call move_with_scroll_eight
 	ret c
 	ld e,(ix+004h)		; The enemy's position
 	ld d,(ix+006h)
-	call 066d5h		; Bank 1 measures the angle
+	call measure_distance_to_ship	; Bank 1 measures the angle
 	ld a,(SHIP_ANGLE)
 	cp 080h			; Above 0x80, the angle is mirrored
 	jr c,L_912F
@@ -657,11 +659,11 @@ L_9139:
 	ld e,a
 	add a,a
 	add a,e
-	ld hl,09205h		; The table at 0x9205
-	call 0405dh
+	ld hl,cannon_drawings	; The table at cannon_drawings
+	call add_a_to_hl
 	ld a,(STAGE)		; And within it, the stage's row
 	dec a			; And within, the stage's row
-	call 0405dh
+	call add_a_to_hl
 	ld a,(hl)
 	add a,c
 	ld (ix+00ch),a
@@ -677,7 +679,7 @@ L_9163:
 	cp 060h
 	ret c
 this_enemy_fires:		; With the ship inside its arc and no other shot under way, fires one and recalculates the wait
-	dec (ix+010h)		; 0xE110: the frames left before firing
+	dec (ix+010h)		; ENEMY_SHOT_SPEED: the frames left before firing
 	ret nz
 	ld hl,NEW_SHOT		; If a shot is already coming out, it waits a frame
 	ld a,(hl)
@@ -688,9 +690,9 @@ this_enemy_fires:		; With the ship inside its arc and no other shot under way, f
 L_9178:
 	ld e,(ix+004h)		; The enemy's position, and bank 1 sets up the shot
 	ld d,(ix+006h)
-	call 06613h
-wait_until_next_shot:		; The wait comes from the ramp at 0x91C5, plus the difficulty and the loop, with a floor of 0x0C frames
-	ld hl,091c5h
+	call enemy_shoots
+wait_until_next_shot:		; The wait comes from the ramp at wait_between_shots, plus the difficulty and the loop, with a floor of 0x0C frames
+	ld hl,wait_between_shots
 	ld a,(STAGES_PLAYED)	; On the first loop the difficulty is capped at 2
 	dec a
 	ld a,(DIFFICULTY)
@@ -701,11 +703,11 @@ wait_until_next_shot:		; The wait comes from the ramp at 0x91C5, plus the diffic
 L_9193:
 	add a,a			; Times four: four values per step
 	add a,a
-	call 0405dh
+	call add_a_to_hl
 	ld a,(ix+018h)		; Byte 24 rotates among the four
 	inc (ix+018h)
 	and 003h
-	call 0405dh
+	call add_a_to_hl
 	ld a,(SHIP)		; With the shield at 3, four frames fewer
 	cp 003h
 	ld a,(hl)
@@ -732,7 +734,7 @@ L_91C1:
 ; ----------------------------------------------------------------------
 ; DATA wait_between_shots: Three steps of four values: the frames an enemy
 ;   waits between one shot and the next, according to the difficulty and where
-;   on the wheel it is. Read by 0x9181, which also subtracts the loop from
+;   on the wheel it is. Read by wait_until_next_shot, which also subtracts the loop from
 ;   them and gives them a floor of twelve.
 wait_between_shots:
 	defb 60h,60h,60h,0C0h
@@ -769,7 +771,7 @@ cannon_drawings:
 	defb 00h,15h,15h,00h,39h,00h,1Bh,2Dh,15h,15h,15h,15h
 	defb 1Bh,1Bh,1Bh,1Bh,39h,00h,1Bh,1Bh,1Bh,1Bh,1Bh,1Bh
 fire_without_aiming:		; When the count reaches zero fires the shot and works out the speed with the bank 1 routine
-	dec (ix+010h)		; 0xE110: the frames remaining
+	dec (ix+010h)		; ENEMY_SHOT_SPEED: the frames remaining
 	ret nz
 L_9239:
 	ld hl,NEW_SHOT		; If one is already coming out, it waits
@@ -781,8 +783,8 @@ L_9239:
 L_9245:
 	ld e,(ix+004h)		; The position, and bank 1 sets it up
 	ld d,(ix+006h)
-	call 06613h
-	jp 06b84h
+	call enemy_shoots
+	jp shot_speed
 move_with_scroll_eight:		; On the steps with a new column it moves eight points to the left; when it goes off the edge, the slot is freed and it returns with carry
 	ld a,(NEW_COLUMN)	; Only on the steps with a column
 	and a
@@ -791,20 +793,20 @@ move_with_scroll_eight:		; On the steps with a new column it moves eight points 
 	sub 008h		; Eight points
 	ld (ix+006h),a
 	ret nc
-	call 05fa5h		; And when it goes past, the slot is switched off
+	call turn_off_object	; And when it goes past, the slot is switched off
 	scf
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_9264: Words that 0x90D4 indexes with 0x47AE (0x927C, 0x92B4,
+; DATA enemy_scripts_per_stage: Words that 0x90D4 indexes with get_word (0x927C, 0x92B4,
 ;   0x933A, 0x9366, ...) and, after them, what they point to.
-table_9264:
-	defw 927Ch,92B4h
-	defw 933Ah,9366h
-	defw 9389h,93B5h
-	defw 93B7h,93E6h
-	defw 9445h,9492h
-	defw 94D9h,94F9h
+enemy_scripts_per_stage:
+	defw enemy_scripts_per_stage+18h,enemy_scripts_per_stage+50h
+	defw enemy_scripts_per_stage+0D6h,enemy_scripts_per_stage+102h
+	defw enemy_scripts_per_stage+125h,enemy_scripts_per_stage+151h
+	defw enemy_scripts_per_stage+153h,enemy_scripts_per_stage+182h
+	defw enemy_scripts_per_stage+1E1h,enemy_scripts_per_stage+22Eh
+	defw enemy_scripts_per_stage+275h,enemy_scripts_per_stage+295h
 	defw 008Eh,9021h
 	defw 2100h,0092h
 	defw 0AE21h,1200h
@@ -974,12 +976,12 @@ zero_speed:		; The object's two speeds, zeroed
 	xor a
 	ld d,a
 	ld e,a
-	call 06cc6h		; Both speeds to zero
-	jp 06cbfh
+	call set_horizontal_speed	; Both speeds to zero
+	jp set_vertical_speed
 set_negated_acceleration:		; Two's complement of the vertical acceleration, and store it
 	ld e,(ix+017h)
 	ld d,(ix+018h)
-	call 06729h
+	call change_sign
 set_vertical_acceleration:		; Bytes 23 and 24
 	ld (ix+017h),e
 	ld (ix+018h),d
@@ -993,7 +995,7 @@ dead_fragment:
 set_horizontal_acceleration:		; Bytes 25 and 26; if it comes in negative, it is flipped
 	ld a,d
 	or a
-	call m,06729h
+	call m,change_sign
 L_9535:
 	ld (ix+019h),e
 	ld (ix+01ah),d
@@ -1021,7 +1023,7 @@ compare_speed_and_acceleration:		; The vertical speed, in absolute value, agains
 	ld d,(ix+008h)
 	ld a,d
 	or a
-	call m,06729h
+	call m,change_sign
 	ld l,(ix+019h)		; Against the horizontal acceleration
 	ld h,(ix+01ah)
 	rst 20h
@@ -1029,18 +1031,18 @@ compare_speed_and_acceleration:		; The vertical speed, in absolute value, agains
 set_horiz_speed_from_acceleration:
 	ld e,(ix+019h)
 	ld d,(ix+01ah)
-	jp 06cbfh
+	jp set_vertical_speed
 negate_horizontal_speed:
 	ld e,(ix+009h)		; Bytes 9 and 10, with the sign flipped
 	ld d,(ix+00ah)
-	call 06729h
+	call change_sign
 	ld (ix+009h),e
 	ld (ix+00ah),d
 	ret
 negate_vertical_speed:
 	ld e,(ix+007h)		; Bytes 7 and 8, with the sign flipped
 	ld d,(ix+008h)		; DCOMPR: against the distance travelled
-	call 06729h
+	call change_sign
 	ld (ix+007h),e
 	ld (ix+008h),d
 	ret

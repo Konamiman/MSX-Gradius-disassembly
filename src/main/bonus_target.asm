@@ -5,19 +5,19 @@
 	include "variables.inc"
 
 	public check_stretch_target,run_four_at_e880
-	extrn blow_up_everything,release_fan
+	extrn blow_up_everything,check_if_sound,release_fan
 
 ; ----------------------------------------------------------------------
 ; THE TARGET THAT CLOSES THE STRETCH AND OPENS THE BONUS STAGE
 ; Five stages (1, 2, 3, 4 and 7) have a distance written into them at which
 ; a target appears: it is not one of the usual objects, but three loose
-; bytes at 0xE1C1..0xE1C3 (type, row and column) that move with the
+; bytes at TARGET..0xE1C3 (type, row and column) that move with the
 ; scroll. If the ship passes over it, with a margin of 0x10 in both
 ; directions, everything on screen blows up, the scroll stops at a limit of
 ; the stage's own, the script line is erased and sound 0xCD plays.
 ; AND IT IS ALSO THE DOOR TO THE BONUS STAGES. 0xB130 is the ONLY thing in
-; the 128 KB that makes 0xE1C0 non-zero, and p01:0x6D66, 0x6DA7, 0x6E15 and
-; 0x6F19 (the finals of stages 2, 3, 4 and 7) look at exactly that byte:
+; the 128 KB that makes SCROLL_MODE non-zero, and p01:end_of_stage_2, end_of_stage_3, end_of_stage_4 and
+; end_of_stage_7 (the finals of stages 2, 3, 4 and 7) look at exactly that byte:
 ; with the screen stopped they jump to stages 9, 10, 11 and 12, and
 ; otherwise they carry on with their normal script. So touching the target
 ; at the end of those four stages is what opens the interlude. The target
@@ -33,10 +33,10 @@ check_stretch_target:		; With the screen stopped, counts up to 0x40 and releases
 	ld hl,STOP_TIMER	; The frames left
 	dec (hl)
 	ret nz
-	ld a,002h		; 0xE1C0 to two and sound 0x41
+	ld a,002h		; SCROLL_MODE to two and sound 0x41
 	ld (SCROLL_MODE),a
 	ld a,041h
-	jp 049deh
+	jp check_if_sound
 L_B05C:
 	call spawn_target_if_due
 	ld a,(TARGET)		; Only if the target is in place
@@ -97,7 +97,7 @@ stage_7_target:		; At 0x177, along row 0x38
 	rst 20h
 	ret nz
 	ld e,038h
-set_target:		; Type, row and column in 0xE1C1, 0xE1C2 and 0xE1C3
+set_target:		; Type, row and column in TARGET, 0xE1C2 and 0xE1C3
 	ld c,001h
 L_B0C1:
 	ld hl,TARGET
@@ -166,7 +166,7 @@ close_stretch:		; Stops the scroll at its limit, erases the script line, blows e
 	ld (SCROLL_LIMIT),hl	; How far the scroll goes
 	ld a,040h		; 0x40 frames stopped
 	ld (STOP_TIMER),a
-	ld a,001h		; 0xE1C0 to one: the screen stops, and the bonus stage hangs off this
+	ld a,001h		; SCROLL_MODE to one: the screen stops, and the bonus stage hangs off this
 	ld (SCROLL_MODE),a
 	ld hl,00000h		; The script line, to zero
 	ld (STAGE_SCRIPT_ROW),hl
@@ -174,8 +174,8 @@ close_stretch:		; Stops the scroll at its limit, erases the script line, blows e
 	ld (TARGET),a
 	call blow_up_everything	; And everything on screen, blown up
 	ld a,0cdh		; Sound 0xCD
-	jp 049deh
-run_four_at_e880:		; The four eight-byte cards at 0xE880, one by one
+	jp check_if_sound
+run_four_at_e880:		; The four eight-byte cards at TURRETS, one by one
 	ld ix,TURRETS
 	ld b,004h		; Four cards
 L_B14B:

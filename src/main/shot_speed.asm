@@ -5,17 +5,17 @@
 	include "variables.inc"
 
 	public aim_from_where_it_is,dispatch_by_stage,finish_type_0F,finish_type_1,finish_type_11,finish_type_7
-	public finish_with_aim,finish_with_slow_aim,L_6B96,set_both_speeds,set_horizontal_speed,set_vertical_speed
-	public shot_speed
-	extrn aim_at_ship,check_which_music_plays,end_of_stage_1,end_of_stage_10,end_of_stage_11,end_of_stage_12
-	extrn end_of_stage_2,end_of_stage_3,end_of_stage_4,end_of_stage_5,end_of_stage_6,end_of_stage_7
-	extrn end_of_stage_8,end_of_stage_9,wait_until_next_shot
+	public finish_with_aim,finish_with_slow_aim,L_6B96,records_by_type,set_both_speeds,set_horizontal_speed
+	public set_vertical_speed,shot_speed
+	extrn aim_at_ship,check_which_music_plays,dispatcher,end_of_stage_1,end_of_stage_10,end_of_stage_11
+	extrn end_of_stage_12,end_of_stage_2,end_of_stage_3,end_of_stage_4,end_of_stage_5,end_of_stage_6
+	extrn end_of_stage_7,end_of_stage_8,end_of_stage_9,wait_until_next_shot
 
 ; ----------------------------------------------------------------------
 ; THE SPEED OF THE SHOTS: DIFFICULTY PLUS R REGISTER
 ; The speed a shot comes out with is neither fixed nor truly random: it
-; takes from the table at 0x6B97 the value that belongs to the difficulty
-; (0xE111, twelve steps from 0x80 to 0x1C, that is, the harder the faster)
+; takes from the table at speeds_by_difficulty the value that belongs to the difficulty
+; (DIFFICULTY, twelve steps from 0x80 to 0x1C, that is, the harder the faster)
 ; and ADDS to it whatever three bits of the Z80's R register say, the
 ; memory refresh one. It is the third time this cartridge uses R as a
 ; number generator: the other two are the background stars and the
@@ -24,7 +24,7 @@
 shot_speed:		; The speed step the difficulty says, plus zero to seven from the R register
 	push hl
 	ld a,(DIFFICULTY)
-	ld hl,06b97h
+	ld hl,speeds_by_difficulty
 	add a,l
 	ld l,a
 	jr nc,L_6B90
@@ -39,7 +39,7 @@ L_6B96:
 
 ; ----------------------------------------------------------------------
 ; DATA speeds_by_difficulty: Twelve speed steps, one per difficulty level
-;   (0xE111), going downhill: 0x80, 0x70, 0x68, 0x60, 0x48, 0x40, 0x38, 0x30,
+;   (DIFFICULTY), going downhill: 0x80, 0x70, 0x68, 0x60, 0x48, 0x40, 0x38, 0x30,
 ;   0x28, 0x24, 0x20 and 0x1C. The lower the number, the faster the shot goes.
 ;   Read by 0x6B88, which also adds three bits of the R register to them.
 speeds_by_difficulty:
@@ -82,14 +82,14 @@ records_by_type:
 	defb 00h,0A0h,06h,01h
 	defb 00h,0D0h,07h,05h
 	defb 00h,0E8h,07h,01h
-finish_type_1:		; Gives it the speed halved and the drawing that bits 5 and 6 of 0xE122 say
+finish_type_1:		; Gives it the speed halved and the drawing that bits 5 and 6 of ENEMY_SCRIPT_BYTE say
 	call wait_until_next_shot
 	sra a			; Halved, keeping the sign
 	ld (ix+010h),a
 	ld a,(ENEMY_SCRIPT_BYTE)
 	ld c,a
 	xor a
-	bit 5,c			; Bit 5 of 0xE122...
+	bit 5,c			; Bit 5 of ENEMY_SCRIPT_BYTE...
 	jr z,L_6C36
 	ld a,002h
 L_6C36:
@@ -127,7 +127,7 @@ aim_from_where_it_is:		; With the object's position, works out the two speeds to
 	call set_vertical_speed
 	ld de,(AIM_HSPEED)	; ...and the horizontal one
 	jr set_horizontal_speed
-finish_type_0F:		; Copies the speeds from 0xE142 and 0xE144, and gives it six to eight of counter with the R register
+finish_type_0F:		; Copies the speeds from ENEMY_WAVE_VSPEED and ENEMY_WAVE_HSPEED, and gives it six to eight of counter with the R register
 	ld hl,(ENEMY_WAVE_VSPEED)	; The speed the background carries
 	ld (ix+007h),l
 	ld (ix+008h),h
@@ -147,7 +147,7 @@ L_6C96:
 	add a,006h
 	ld (ix+00dh),a
 	ret
-finish_type_11:		; The drawing comes from 0xEC1B and it carries no speed
+finish_type_11:		; The drawing comes from TYPE11_DRAWING and it carries no speed
 	ld a,(TYPE11_DRAWING)
 	ld (ix+00ch),a		; The drawing, from byte 12
 	ld de,00000h
@@ -169,12 +169,12 @@ dispatch_by_stage:		; Twelve exits, one per stage
 	call check_which_music_plays
 	ld a,(STAGE)
 	dec a
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_6CD4: Twelve words stuck right after the `call 0x4067`
+; DATA end_of_stage_routines: Twelve words stuck right after the `call dispatcher`
 ;   at 0x6CD4.
-dispatcher_table_6CD4:
+end_of_stage_routines:
 	defw end_of_stage_1	; 0
 	defw end_of_stage_2	; 1
 	defw end_of_stage_3	; 2

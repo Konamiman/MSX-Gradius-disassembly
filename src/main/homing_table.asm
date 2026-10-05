@@ -5,6 +5,7 @@
 	include "variables.inc"
 
 	public aim_acceleration
+	extrn change_sign
 
 ; ----------------------------------------------------------------------
 ; THE ACCELERATION TOWARDS THE SHIP COMES FROM A TABLE OF 256 WORDS
@@ -12,11 +13,11 @@
 ; horizontal acceleration, and here they are not calculated: they are looked
 ; up. The two differences are taken in absolute value, the high nibble of
 ; one is joined with the high nibble of the other in a single byte, and that
-; byte (times two) indexes the table at 0x9657, which is 256 words. It is
+; byte (times two) indexes the table at acceleration_towards_ship, which is 256 words. It is
 ; read twice, crossing the nibbles, and that gives the two components; the
 ; sign is set by the two's complement.
 ; ----------------------------------------------------------------------
-aim_acceleration:		; The two differences to the ship, in absolute value, give the index into the table at 0x9657: the two accelerations come from there
+aim_acceleration:		; The two differences to the ship, in absolute value, give the index into the table at acceleration_towards_ship: the two accelerations come from there
 	ld b,000h
 	ld a,(SHIP_COLUMN)	; The ship's column
 	ld d,a
@@ -51,13 +52,13 @@ L_960A:
 	sla e
 	rl d
 	push hl
-	ld hl,09657h		; The table at 0x9657, times two
+	ld hl,acceleration_towards_ship	; The table at acceleration_towards_ship, times two
 	add hl,de
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
 	bit 0,b			; And the sign, with the two's complement
-	call z,06729h
+	call z,change_sign
 	ld (ix+019h),e		; Bytes 25 and 26: the horizontal acceleration
 	ld (ix+01ah),d
 	pop hl
@@ -75,13 +76,13 @@ L_960A:
 	ld d,000h
 	sla e
 	rl d
-	ld hl,09657h
+	ld hl,acceleration_towards_ship
 	add hl,de
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
 	bit 0,c
-	call z,06729h
+	call z,change_sign
 	ld (ix+017h),e		; And bytes 23 and 24: the vertical one
 	ld (ix+018h),d
 	ret

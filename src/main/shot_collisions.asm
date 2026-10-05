@@ -7,22 +7,24 @@
 	public blow_up_enemy,blow_up_everything,check_background_collisions,check_boss_collisions,check_collisions,check_option_collision
 	public check_ship_enemy_collision,check_ship_enemy_collision_2,check_ship_map_collision,check_ship_shot_collision,check_stage_5_collisions,dispatch_boss_drawing
 	public dispatch_boss_step,dispatch_boss_step_2,L_721C,set_up_background_explosion
-	extrn add_to_score,blow_up_core,core_enters,core_waits,dispatch_boss_step_3,dispatch_boss_step_4
+	extrn add_a_to_de,add_a_to_hl,add_to_score,award_ship,blow_up_core,cell_to_ram_address
+	extrn check_if_sound,core_enters,core_waits,dispatch_boss_step_3,dispatch_boss_step_4,dispatcher
 	extrn draw_boss,draw_eight_pieces,draw_single_piece,end_boss,erase_background_objects,erase_boss
-	extrn erase_one_piece,erase_two_pieces,kill_ship,paint_boss,paint_two_pieces,run_and_draw_boss
-	extrn run_and_draw_boss_2,run_and_draw_boss_3,save_under_e780,save_under_the_eight,ship_collides,stage_5_boss_step
-	extrn start_erasing_boss,turn_off_object,type_1E_splits_in_three,wait_until_nobody_left,walk_the_eight
+	extrn erase_one_piece,erase_two_pieces,get_word,kill_ship,paint_boss,paint_two_pieces
+	extrn refresh_meter,run_and_draw_boss,run_and_draw_boss_2,run_and_draw_boss_3,save_under_e780,save_under_the_eight
+	extrn ship_collides,shot_origin,stage_5_boss_step,start_erasing_boss,turn_off_object,type_1E_splits_in_three
+	extrn wait_until_nobody_left,walk_the_eight
 
 ; ----------------------------------------------------------------------
 ; THE COLLISIONS BETWEEN THE SHIP'S SHOTS AND THE ENEMIES
 ; Every frame the two lists are crossed: for each live enemy whose bit 1
-; of byte 27 is set, the ship's NINE shots are walked (0xE260, records of
+; of byte 27 is set, the ship's NINE shots are walked (SHOTS, records of
 ; 0x10 bytes) to see whether any of them falls inside its box. The box is
 ; not square: 0x12 wide by 0x20 high, and the type 3 shot (the laser) is
 ; measured another way, with the height taken from its own record times
 ; eight.
 ; ----------------------------------------------------------------------
-check_collisions:		; The twelve enemies at 0xE300 against the ship's nine shots
+check_collisions:		; The twelve enemies at OBJECTS against the ship's nine shots
 	ld b,00ch		; Twelve enemies
 	ld ix,OBJECTS
 L_721C:
@@ -133,10 +135,10 @@ L_72CF:
 blow_up_enemy:		; Plays whatever the table at 0x730F says for that type, and the object becomes a type 0x15 explosion
 	ld d,000h
 	ld e,(ix+000h)
-	ld hl,0730Fh		; The table at 0x730F: which sound each type carries
+	ld hl,blow_up_sound_per_type-1	; The table at 0x730F: which sound each type carries
 	add hl,de
 	ld a,(hl)
-	call 049deh
+	call check_if_sound
 	ld bc,01578h		; Type 0x15, drawing 0x78
 	ld a,(ix+000h)
 	cp 00dh			; Type 0x0D carries another drawing
@@ -158,15 +160,15 @@ L_7300:
 	ret
 just_play_sound:		; The ones that withstand the hit only play sound 6
 	ld a,006h
-	call 049deh
+	call check_if_sound
 	scf
 L_730F:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_730F (part): Thirty-two bytes read by 0x72D7 with the base
+; DATA blow_up_sound_per_type (part): Thirty-two bytes read by 0x72D7 with the base
 ;   0x730F.
-table_730F_7310:
+blow_up_sound_per_type:
 	defb 0Ah,08h,08h,08h,0Ah,0Ah,08h,08h,08h,08h,08h,08h,09h,0Dh,0Dh,0Dh
 	defb 0Dh,0Dh,0Dh,0Dh,0Dh,0Dh,0Dh,0Dh,0Dh,0Dh,0Dh,0Bh,0Dh,0Dh,0Dh
 check_ship_map_collision:		; Asks bank 2; if it collides, the ship dies
@@ -176,7 +178,7 @@ check_ship_map_collision:		; Asks bank 2; if it collides, the ship dies
 	call ship_collides
 	ret nc
 	jp ship_has_died
-check_ship_shot_collision:		; The ten at 0xE500 against the ship, with a two by two box
+check_ship_shot_collision:		; The ten at ENEMY_SHOTS against the ship, with a two by two box
 	ld a,(SHIP)
 	inc a
 	ret z
@@ -189,7 +191,7 @@ check_ship_shot_collision:		; The ten at 0xE500 against the ship, with a two by 
 	ld (ix+000h),a
 	ld (ix+01bh),a
 	jp ship_has_died
-any_on_top:		; Walks the slots looking for one whose box catches the point (0xE204+4, 0xE206+1)
+any_on_top:		; Walks the slots looking for one whose box catches the point (SHIP_ROW+4, SHIP_COLUMN+1)
 	ld a,(SHIP_ROW)		; The ship's row plus four
 	add a,004h
 	ld e,a
@@ -231,7 +233,7 @@ L_738C:
 	jr nz,L_736A
 	xor a
 	ret
-check_ship_enemy_collision:		; With the shield below 2, the ten at 0xE500 can kill it
+check_ship_enemy_collision:		; With the shield below 2, the ten at ENEMY_SHOTS can kill it
 	ld a,(SHIP)		; Below two: no shield
 	cp 002h
 	ret m
@@ -277,11 +279,11 @@ switch_off_slot:		; Leaves the slot free
 	ld (ix+000h),a		; The slot is left free
 	ld (ix+01bh),a
 	ret
-ship_dies:		; 0xE200 to one and 0xE201 to zero: the ship is done for
+ship_dies:		; SHIP to one and SHIP_TIMER to zero: the ship is done for
 	ld hl,00001h
 	ld (SHIP),hl		; And the ship is done for
 	call switch_off_slot
-	jp 0a153h
+	jp refresh_meter
 remove_shield_and_score:		; Lowers the shield and, depending on the type, blows up the enemy or collects its points
 	call lower_shield
 	ld a,(ix+000h)
@@ -293,7 +295,7 @@ remove_shield_and_score:		; Lowers the shield and, depending on the type, blows 
 	cp 009h
 	ret c
 	jp score_enemy
-lower_shield:		; 0xE201 goes down; below two the shield is left weak, and on reaching zero it switches off
+lower_shield:		; SHIP_TIMER goes down; below two the shield is left weak, and on reaching zero it switches off
 	ld b,001h
 	ld hl,SHIP_TIMER
 	dec (hl)		; One point less of shield
@@ -307,8 +309,8 @@ L_741A:
 L_741B:
 	dec l
 	ld (hl),b
-	jp 0a153h
-check_ship_enemy_collision_2:		; The twelve at 0xE300, with a box of 0x21 by 0x15
+	jp refresh_meter
+check_ship_enemy_collision_2:		; The twelve at OBJECTS, with a box of 0x21 by 0x15
 	ld a,(SHIP)		; Below two: no shield
 	cp 002h
 	ret m
@@ -373,7 +375,7 @@ L_7498:
 L_749A:
 	call type_1E_splits_in_three
 	ld de,00010h		; Ten points in BCD
-	call 055b4h
+	call add_to_score
 	pop ix
 	ret
 dispatch_by_touched_type:		; Depending on the type, the option gets an upgrade, a ship or a prize
@@ -395,9 +397,9 @@ pick_up_ship:		; Turns the object into 0x1A, gives it drawing 0xE0, plays sound 
 	ld (ix+00dh),002h
 	ld (ix+00ch),0e0h
 	ld a,011h		; Sound 0x11
-	call 049deh
-	jp 0561ch		; And one more ship
-pick_up_capsule:		; The same, with the drawing taken from 0xE128 and sound 0x10
+	call check_if_sound
+	jp award_ship		; And one more ship
+pick_up_capsule:		; The same, with the drawing taken from CAPSULE_STREAK and sound 0x10
 	call turn_into_prize
 	ld (ix+00dh),008h
 	call score_capsule
@@ -407,7 +409,7 @@ pick_up_capsule:		; The same, with the drawing taken from 0xE128 and sound 0x10
 	add a,0e0h
 	ld (ix+00ch),a
 	ld a,010h		; Sound 0x10
-	jp 049deh
+	jp check_if_sound
 start_exploding:		; The object becomes an explosion: type (byte 14) plus 0x13, it can no longer be hit and its drawing is erased from the screen
 	ld a,(ix+00eh)		; Byte 14 says what type it was
 	ld b,a
@@ -434,7 +436,7 @@ L_7503:
 	ld (ix+016h),a
 	ld l,(ix+004h)		; The cell where it was
 	ld h,(ix+006h)		; Byte 15 keeps the type
-	call 0571bh
+	call cell_to_ram_address
 	xor a
 	ld (hl),a		; The two characters on top...
 	inc hl
@@ -459,9 +461,9 @@ turn_into_prize:		; The object keeps its type in byte 24 and becomes 0x1A, the o
 score_capsule:		; Raises the capsule count and pays whatever the table at 0x7561 says
 	call raise_capsule_count
 	ld hl,L_7561
-	call 047aeh
-	jp 055b4h
-raise_capsule_count:		; 0xE128 goes up to seven and stays there
+	call get_word
+	jp add_to_score
+raise_capsule_count:		; CAPSULE_STREAK goes up to seven and stays there
 	ld hl,CAPSULE_STREAK
 	ld a,(hl)
 	inc a
@@ -474,7 +476,7 @@ L_7561:
 
 ; ----------------------------------------------------------------------
 ; DATA capsule_points (part): Eight words in BCD, each one double or five
-;   times the previous: what capsule number N pays, with N counted in 0xE128
+;   times the previous: what capsule number N pays, with N counted in CAPSULE_STREAK
 ;   and capped at seven. Read by 0x754D.
 DATA_7563:
 	defw 0001h
@@ -493,16 +495,16 @@ pick_up_meter_upgrade:		; Advances the upgrade meter's slot (from one to six, ro
 	ld a,001h
 L_757C:
 	ld (hl),a
-	call 05fa5h
+	call turn_off_object
 	ld de,00005h		; Five points
-	call 055b4h
+	call add_to_score
 	ld a,011h		; Sound 0x11
-	call 049deh
-	jp 0a153h
+	call check_if_sound
+	jp refresh_meter
 pick_up_bomb:		; Plays sound 0x12 and blows up everything in the two tables at once
 	call turn_off_object
 	ld a,012h		; Sound 0x12
-	call 049deh
+	call check_if_sound
 blow_up_everything:		; The twelve at 0xE460 and the five at 0xEB80, counted backwards
 	ld ix,OBJECTS+(OBJECT_COUNT-1)*OBJECT_SIZE
 	ld b,00ch		; Twelve slots
@@ -520,7 +522,7 @@ L_75A5:
 	add ix,de
 	djnz L_75A5
 	ret
-any_over_ship:		; Like 0x7357, but with IX already set: walks L slots looking for the one that catches the ship's point
+any_over_ship:		; Like any_on_top, but with IX already set: walks L slots looking for the one that catches the ship's point
 	ld a,(SHIP_ROW)		; The ship's row plus four and its column plus one
 	add a,004h
 	ld e,a
@@ -564,7 +566,7 @@ ship_has_died:		; Clears the joystick, plays sound 0x47 and hands over to bank 2
 	xor a
 	ld (SND_MUTE),a
 	ld a,047h		; Sound 0x47
-	call 049deh
+	call check_if_sound
 	jp kill_ship
 falls_inside_box:		; Checks whether the point in HL falls inside the box BC around DE
 	ld a,l			; The X against the box
@@ -584,7 +586,7 @@ L_7606:
 	ret c
 	add a,b
 	ret
-check_boss_collisions:		; The ship's nine shots against the boss's pieces, while 0xE155 is zero
+check_boss_collisions:		; The ship's nine shots against the boss's pieces, while CORE_DEAD is zero
 	ld a,(BOSS_STATE)	; Without a boss there is nothing to check
 	and a
 	ret z
@@ -595,7 +597,7 @@ check_boss_collisions:		; The ship's nine shots against the boss's pieces, while
 	ld b,009h
 L_761D:
 	ld (SHOT_PTR),hl	; Each one is parked
-	push bc			; Each shot is parked in 0xEC00
+	push bc			; Each shot is parked in SHOT_PTR
 	call check_one_shot_against_boss
 	pop bc
 	ld hl,(SHOT_PTR)
@@ -603,7 +605,7 @@ L_761D:
 	add hl,de
 	djnz L_761D
 	ret
-check_one_shot_against_boss:		; Walks the boss's pieces at 0xE780; how many there are is given by the table at 0x7674, indexed by the step 0xE152
+check_one_shot_against_boss:		; Walks the boss's pieces at BOSS_PIECES; how many there are is given by the table at boss_piece_counts, indexed by the step BOSS_KIND
 	ld a,(hl)
 	and a
 	ret z
@@ -622,7 +624,7 @@ check_one_shot_against_boss:		; Walks the boss's pieces at 0xE780; how many ther
 	cp 003h			; Shot 3 (the laser) is measured separately
 	call z,laser_height
 	ld a,(BOSS_KIND)
-	ld hl,07674h		; The table at 0x7674: how many pieces the boss has at each step
+	ld hl,boss_piece_counts	; The table at boss_piece_counts: how many pieces the boss has at each step
 	add a,l
 	ld l,a
 	jr nc,L_7655
@@ -648,8 +650,8 @@ L_766D:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_7674: Seven bytes read by 0x764D.
-table_7674:
+; DATA boss_piece_counts: Seven bytes read by 0x764D.
+boss_piece_counts:
 	defb 01h,08h,07h,01h,02h,08h,01h
 laser_height:		; The laser measures whatever its record says, plus one and times eight
 	ld a,007h		; Seven bytes further on: the length
@@ -664,7 +666,7 @@ laser_height:		; The laser measures whatever its record says, plus one and times
 	ld b,a
 	exx
 	ret
-piece_box:		; Each boss piece has its own box, and those of types 4 and 7 come from the table at 0x76EF
+piece_box:		; Each boss piece has its own box, and those of types 4 and 7 come from the table at table_76EF
 	ld a,(ix+000h)		; The piece type rules
 	dec a
 	jr z,L_76A0
@@ -697,7 +699,7 @@ L_76B4:
 	ret
 L_76B8:
 	push de
-	ld de,076efh		; The table at 0x76EF, indexed by the Y
+	ld de,table_76EF	; The table at table_76EF, indexed by the Y
 	ld a,(ix+006h)
 	call shift_centre
 	pop de
@@ -705,7 +707,7 @@ L_76B8:
 	ret
 shift_centre:		; Adds to HL the pair from the table, plus six in X
 	add a,a			; Times two: two bytes per entry
-	call 04062h
+	call add_a_to_de
 	ld a,(de)
 	add a,l
 	add a,006h		; And six more in X
@@ -721,8 +723,8 @@ L_76D5:
 L_76D9:
 	ld bc,00808h		; 8 by 8, and the centre comes from another table in bank 2
 	push de
-	ld de,076efh
-	ld de,08a93h
+	ld de,table_76EF
+	ld de,shot_origin
 	ld a,(ix+00ah)
 	call shift_centre
 	pop de
@@ -774,12 +776,12 @@ hit_piece_5:		; With life to spare it plays sound 6; if not, collects 0x10 point
 	dec a
 	jp m,L_7794
 	ld a,006h		; Sound 6: the hit it withstands
-	jp 049deh
-hit_piece_1:		; The same, and when it runs out it lowers the piece count in 0xE15B
+	jp check_if_sound
+hit_piece_1:		; The same, and when it runs out it lowers the piece count in HEIGHT_PIECES
 	dec a
 	jp m,L_7788
 	ld a,006h
-	jp 049deh
+	jp check_if_sound
 L_7788:
 	ld a,(ix+00eh)		; Byte 14 says which group it belongs to
 	ld hl,HEIGHT_PIECES	; How many pieces of that group are left
@@ -792,14 +794,14 @@ L_7794:
 blow_up_big_piece:		; When it runs out it sets the submode to 1, plays sound 0x0E, collects 0x10 and sets up the explosion
 	dec a
 	ld a,006h
-	jp p,049deh
+	jp p,check_if_sound
 	ld (ix+00ch),001h
-	ld a,001h		; 0xE10A to one
+	ld a,001h		; BIG_PIECE_BLOWN to one
 	ld (BIG_PIECE_BLOWN),a
 	ld a,00eh		; Sound 0x0E
-	call 049deh
+	call check_if_sound
 	ld de,00010h		; Ten points
-	call 055b4h
+	call add_to_score
 	ld e,(ix+003h)
 	ld d,(ix+005h)
 	jp set_up_background_explosion
@@ -809,12 +811,12 @@ blow_up_without_explosion:		; Frees the slot, collects 0x30 and plays sound 0x0E
 	ld (ix+000h),000h
 	ld de,00030h
 	ld a,00eh
-	jp 049deh
+	jp check_if_sound
 blow_up_and_score:		; Plays sound 0x0E, collects whatever DE brings, frees the slot and sets up the explosion
 	ld a,00eh		; Sound 0x0E
-	call 049deh
+	call check_if_sound
 L_77CD:
-	call 055b4h		; Collects whatever DE brings
+	call add_to_score	; Collects whatever DE brings
 	ld (ix+000h),000h
 	ld d,(ix+005h)
 	ld e,(ix+003h)
@@ -823,7 +825,7 @@ L_77DD:
 	dec a
 	jp p,L_7806
 	ld a,00eh
-	call 049deh
+	call check_if_sound
 blow_up_this_piece:		; Tells bank 2 and collects 0x10
 	ld a,(ix+000h)		; A slot at zero is already free
 	and a
@@ -845,9 +847,9 @@ L_7803:
 	ld (ix+001h),c
 L_7806:
 	ld a,00dh		; Sound 0x0D
-	jp 049deh
+	jp check_if_sound
 blow_up_three_pieces:		; Collects 0x50 for this one and also blows up the next two slots
-	call 082c2h
+	call erase_one_piece
 	ld de,00050h		; Fifty points
 	call blow_up_and_score
 	ld de,00010h		; Sixteen bytes: the next piece
@@ -858,7 +860,7 @@ blow_up_three_pieces:		; Collects 0x50 for this one and also blows up the next t
 	ld de,00010h
 	add ix,de
 	jr blow_up_this_piece
-hit_core:		; Only the odd shots count, and only from the front: sets up the explosion at 0xE300 and takes life off the core
+hit_core:		; Only the odd shots count, and only from the front: sets up the explosion at OBJECTS and takes life off the core
 	ld hl,(SHOT_PTR)
 	ld a,(hl)
 	rra			; Bit 0 of the type: only half of the shots count
@@ -897,7 +899,7 @@ hit_core:		; Only the odd shots count, and only from the front: sets up the expl
 L_786D:
 	dec (ix+009h)		; Byte 9 is the core's life
 	jr nz,L_7879
-	ld a,001h		; 0xE155 to one: the core is dead
+	ld a,001h		; CORE_DEAD to one: the core is dead
 	ld (CORE_DEAD),a
 	jr L_7806
 L_7879:
@@ -906,7 +908,7 @@ L_7879:
 	cp 003h
 	jp nz,L_7806
 	ld de,00005h
-	call 055b4h
+	call add_to_score
 	jp L_7806
 just_play_sound_6:		; Nothing happens to the core from behind
 	ld hl,(SHOT_PTR)	; Only the laser makes a sound
@@ -914,8 +916,8 @@ just_play_sound_6:		; Nothing happens to the core from behind
 	cp 003h
 	ret nz
 	ld a,006h
-	jp 049deh
-check_background_collisions:		; The ship's nine shots against the background objects at 0xE700; stages 3 and 5 go their own way
+	jp check_if_sound
+check_background_collisions:		; The ship's nine shots against the background objects at BG_OBJECTS; stages 3 and 5 go their own way
 	ld hl,SHOTS
 	ld b,009h		; Nine shots
 	ld a,(STAGE)
@@ -1017,7 +1019,7 @@ L_7936:
 	ld a,(ix+000h)
 	and a
 	jr z,L_7969
-	ld hl,07B38h		; The table at 0x7B38: the centre of each type
+	ld hl,table_7B38-6	; The table at 0x7B38: the centre of each type
 	add a,a
 	add a,l
 	ld l,a
@@ -1188,12 +1190,12 @@ L_7A5D:
 	dec a
 	jp m,L_7A6D
 	ld a,006h		; Sound 6: it still holds
-	jp 049deh
+	jp check_if_sound
 L_7A6D:
 	ld de,00010h		; Ten points
-	call 055b4h
+	call add_to_score
 	ld a,00eh		; Sound 0x0E
-	call 049deh
+	call check_if_sound
 	ld a,(ix+000h)
 	add a,004h		; The type goes up four: the broken wall
 	ld (ix+000h),a
@@ -1221,7 +1223,7 @@ L_7A9E:
 	ld a,00fh
 	jp m,erase_and_score
 	ld a,006h
-	jp 049deh
+	jp check_if_sound
 hit_background_object:		; Gives it the drawing times two minus one, takes life off it and, when it runs out, plays sound 0x0E and erases it
 	ld a,(ix+000h)
 	add a,a			; The type times two minus one: the hit drawing
@@ -1241,20 +1243,20 @@ L_7AC6:
 	dec a
 	jp m,L_7AD6
 	ld a,006h		; Sound 6: it still holds
-	jp 049deh
+	jp check_if_sound
 L_7AD6:
 	ld a,00eh
 erase_and_score:		; Plays a sound, erases the object from the screen, collects 0x10 and sets up the explosion
-	call 049deh
+	call check_if_sound
 	call erase_background_objects
 	ld de,00010h		; Ten points
-	call 055b4h
+	call add_to_score
 	ld e,(ix+002h)
 	ld d,(ix+003h)
 	ld (ix+000h),000h
 	jr set_up_background_explosion
-hit_stage_3_object:		; The same, but switches on 0xE1FF, leaves it on step 2 and moves the explosion with the table at 0x7B40
-	ld a,001h		; 0xE1FF to one
+hit_stage_3_object:		; The same, but switches on STAGE3_BG_HIT, leaves it on step 2 and moves the explosion with the table at background_explosion_offsets
+	ld a,001h		; STAGE3_BG_HIT to one
 	ld (STAGE3_BG_HIT),a	; To one
 	ld hl,(SHOT_PTR)
 	ld c,003h
@@ -1270,20 +1272,20 @@ L_7B03:
 	dec a
 	jp m,L_7B13
 	ld a,006h		; Sound 6
-	jp 049deh
+	jp check_if_sound
 L_7B13:
 	call erase_background_objects
 	ld de,00010h		; Ten points
-	call 055b4h
+	call add_to_score
 	ld a,00fh		; Sound 0x0F
-	call 049deh
+	call check_if_sound
 	ld e,(ix+002h)
 	ld d,(ix+003h)
 	ld (ix+001h),002h	; The object moves to step 2
 	ld a,(ix+000h)
 	add a,a
-	ld hl,07b40h		; The table at 0x7B40: where each type's explosion lands
-	call 0405dh		; The table at 0x7B40: where the explosion lands
+	ld hl,background_explosion_offsets	; The table at background_explosion_offsets: where each type's explosion lands
+	call add_a_to_hl	; The table at background_explosion_offsets: where the explosion lands
 	ld a,(hl)		; And the Y
 	add a,e
 	ld e,a
@@ -1302,8 +1304,8 @@ table_7B38:
 	defb 18h,18h
 
 ; ----------------------------------------------------------------------
-; DATA table_7B40: Fourteen bytes read by 0x7B2F.
-table_7B40:
+; DATA background_explosion_offsets: Fourteen bytes read by 0x7B2F.
+background_explosion_offsets:
 	defb 18h,28h
 	defb 08h,38h
 	defb 08h,38h
@@ -1311,7 +1313,7 @@ table_7B40:
 	defb 08h,10h
 	defb 10h,28h
 	defb 0F0h,28h
-set_up_background_explosion:		; Looks for room in the four slots at 0xE800 and sets up the explosion there, with its mirror at 0xEA80 cleared to zero
+set_up_background_explosion:		; Looks for room in the four slots at EXPLOSIONS and sets up the explosion there, with its mirror at BLAST_MIRROR cleared to zero
 	ld hl,EXPLOSIONS
 	ld b,004h		; Four slots
 L_7B53:
@@ -1340,8 +1342,8 @@ L_7B60:
 	ld a,(STAGE)
 	cp 006h			; Stage 6 has no mirror
 	ret z
-	ld a,b			; Four minus the slot, times sixteen: its place in 0xEA80
-	sub 004h		; 0xEC1E keeps the mirror's place
+	ld a,b			; Four minus the slot, times sixteen: its place in BLAST_MIRROR
+	sub 004h		; BLAST_MIRROR_PTR keeps the mirror's place
 	neg			; Times sixteen: its place in the mirror
 	add a,a
 	add a,a
@@ -1358,7 +1360,7 @@ L_7B8A:
 	djnz L_7B8A
 	xor a
 	ret
-check_stage_5_collisions:		; Only in stage 5: the nine shots against the four pieces at 0xE880
+check_stage_5_collisions:		; Only in stage 5: the nine shots against the four pieces at TURRETS
 	ld a,(STAGE)		; Only stage 5
 	cp 005h
 	ret nz
@@ -1438,17 +1440,17 @@ L_7C0C:
 	dec a
 	jp m,L_7C1C
 	ld a,006h		; Sound 6
-	jp 049deh
+	jp check_if_sound
 L_7C1C:
 	ld de,00010h		; Ten points
-	call 055b4h
+	call add_to_score
 	ld a,00fh		; Sound 0x0F
-	call 049deh
+	call check_if_sound
 	ld e,(ix+002h)
 	ld d,(ix+003h)
 	ld (ix+000h),000h
 	jp set_up_background_explosion
-dispatch_boss_step:		; 0xE151 says whether there is a boss and 0xE152 which step it is on: seven exits
+dispatch_boss_step:		; BOSS_STATE says whether there is a boss and BOSS_KIND which step it is on: seven exits
 	ld hl,BOSS_STATE	; At zero there is no boss
 	ld a,(hl)
 	dec a
@@ -1456,12 +1458,12 @@ dispatch_boss_step:		; 0xE151 says whether there is a boss and 0xE152 which step
 	jr z,start_boss
 	inc hl
 	ld a,(hl)
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_7C3E: Seven words stuck right after the `call 0x4067`
+; DATA boss_runners_per_kind: Seven words stuck right after the `call dispatcher`
 ;   at 0x7C3E.
-dispatcher_table_7C3E:
+boss_runners_per_kind:
 	defw dispatch_core_step	; 0
 	defw run_and_draw_boss	; 1
 	defw stage_5_boss_step	; 2
@@ -1469,26 +1471,26 @@ dispatcher_table_7C3E:
 	defw dispatch_boss_step_4	; 4
 	defw run_and_draw_boss_3	; 5
 	defw run_and_draw_boss_2	; 6
-start_boss:		; Advances the step, sets 0xE190 to zero and leaves 0x1E frames in 0xE153
+start_boss:		; Advances the step, sets BOSS_PHASE to zero and leaves 0x1E frames in BOSS_TIMER
 	inc (hl)
 	xor a
 	ld (BOSS_PHASE),a
 	ld a,01eh		; 0x1E frames
 	ld (BOSS_TIMER),a
 	ret
-dispatch_boss_step_2:		; Another table of seven, indexed by the same 0xE152
+dispatch_boss_step_2:		; Another table of seven, indexed by the same BOSS_KIND
 	ld hl,BOSS_STATE	; At zero there is no boss
 	ld a,(hl)
 	and a
 	ret z
 	inc hl
 	ld a,(hl)
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_7C62: Seven words stuck right after the `call 0x4067`
+; DATA boss_drawers_per_kind: Seven words stuck right after the `call dispatcher`
 ;   at 0x7C62.
-dispatcher_table_7C62:
+boss_drawers_per_kind:
 	defw draw_boss		; 0
 	defw draw_eight_pieces	; 1
 	defw paint_boss		; 2
@@ -1505,10 +1507,10 @@ dispatch_boss_drawing:		; The third table of seven: who saves what is under the 
 	ret z
 	inc hl
 	ld a,(hl)
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_7C7C: Seven words stuck right after the `call 0x4067`
+; DATA dispatcher_table_7C7C: Seven words stuck right after the `call dispatcher`
 ;   at 0x7C7C.
 dispatcher_table_7C7C:
 	defw erase_boss		; 0
@@ -1518,14 +1520,14 @@ dispatcher_table_7C7C:
 	defw erase_two_pieces	; 4
 	defw save_under_the_eight	; 5
 	defw save_under_e780	; 6
-dispatch_core_step:		; Five steps, counted in 0xE190
+dispatch_core_step:		; Five steps, counted in BOSS_PHASE
 	ld a,(BOSS_PHASE)
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_7C90: Five words stuck right after the `call 0x4067`
+; DATA core_boss_steps: Five words stuck right after the `call dispatcher`
 ;   at 0x7C90.
-dispatcher_table_7C90:
+core_boss_steps:
 	defw wait_until_nobody_left	; 0
 	defw core_enters	; 1
 	defw core_waits		; 2

@@ -2,18 +2,20 @@
 ; Nemesis / Gradius - map image (banks 11-12) - scripts.asm
 ; ============================================================================
 
+	public endings_table,script_table
+
 ; ----------------------------------------------------------------------
 ; DATA script_table: Thirteen words, one per stage: where that stage's script
-;   starts. Read by 0x46C3 with 0x47AE. Entry 0 is 0x0000 (there is no stage
+;   starts. Read by 0x46C3 with get_word. Entry 0 is 0x0000 (there is no stage
 ;   0); 1 to 6 point into this bank and 7 onwards into bank 12.
 script_table:
-	defw 0000h,97F8h	; -> 0x0000 DATA_scripts_1
-	defw 99A8h,97F8h	; -> 0x99a8 DATA_scripts_1
-	defw 9B58h,9D08h
-	defw 9F18h,9F18h
-	defw 0A098h,0A2D8h
-	defw 0A428h,0A578h
-	defw 0A668h
+	defw 0000h,scripts_1	; -> 0x0000 DATA_scripts_1
+	defw scripts_1+1B0h,scripts_1
+	defw scripts_1+360h,scripts_1+510h
+	defw scripts_1+720h,scripts_1+720h
+	defw scripts_2+98h,scripts_2+2D8h
+	defw scripts_2+428h,scripts_2+578h
+	defw scripts_2+668h
 
 ; ----------------------------------------------------------------------
 ; DATA scripts_1: The scripts of stages 1 to 6 (0x97F8, 0x99A8, 0x9B58, 0x9D08
@@ -371,7 +373,7 @@ scripts_1:
 
 ; ----------------------------------------------------------------------
 ; DATA scripts_2: The scripts of stages 7 to 12 (0xA098, 0xA2D8, 0xA428,
-;   0xA578 and 0xA668), pointed to by table 0x97DE in bank 11. The stretch
+;   0xA578 and 0xA668), pointed to by table script_table in bank 11. The stretch
 ;   from 0xA000 to 0xA097 is the tail of the script that starts at 0x9F18, in
 ;   bank 11.
 scripts_2:
@@ -1183,14 +1185,14 @@ scripts_2:
 	defb 0Ah,04h,02h,00h,09h,08h
 
 ; ----------------------------------------------------------------------
-; DATA endings_table: Four words (0xB2EC, 0xB379, 0xB3F4, 0xB48A). Read by
-;   0x5D95 in bank 0 with `ld hl,0xB2D2` and 0x47AE, that is, with the base
+; DATA endings_table: Four words (ending_records, 0xB379, 0xB3F4, 0xB48A). Read by
+;   0x5D95 in bank 0 with `ld hl,0xB2D2` and get_word, that is, with the base
 ;   declared EIGHT WORDS further back: only indices 9 to 12 are valid, and the
 ;   entries for stages 1 to 8 would land on top of the previous script. It is
 ;   the same trick as table 0x42AD.
 endings_table:
-	defw 0B2ECh,0B379h	; -> DATA_ending_records 0xb379
-	defw 0B3F4h,0B48Ah
+	defw ending_records,ending_records+8Dh
+	defw ending_records+108h,ending_records+19Eh
 
 ; ----------------------------------------------------------------------
 ; DATA ending_records: What the table above points to: groups of three bytes

@@ -10,7 +10,7 @@
 	include "bios.inc"
 	include "variables.inc"
 
-	public write_period,read_melody_command,save_pointer
+	public read_melody_command,save_pointer,write_period
 	extrn write_volume_and_mix
 
 read_melody_command:		; Commands 0xDx, 0xFx and 0xEx set time, volume, envelope and octave; the last nibble is the note
@@ -96,7 +96,7 @@ L_82C9:
 	add a,e
 	ld (ix+CARD_DECAY),a
 	ld a,b
-	ld hl,descending_table	; The table at 0x831E: the period of the twelve notes
+	ld hl,descending_table	; The table at descending_table: the period of the twelve notes
 	add a,l
 	ld l,a
 	jr nc,L_82E3

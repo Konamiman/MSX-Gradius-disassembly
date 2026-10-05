@@ -6,7 +6,8 @@
 
 	public animate_options,check_fire,draw_shots,erase_shots,run_nine_shots,run_options
 	public set_up_one_option
-	extrn check_if_sound,collides_at_this_cell,collides_with_map,collides_with_map_2,is_special_cell
+	extrn add_a_to_hl,cell_to_ram_address,check_if_sound,collides_at_this_cell,collides_with_map,collides_with_map_2
+	extrn dispatcher,is_special_cell
 
 ; ----------------------------------------------------------------------
 ; THE OPTION'S QUEUE IS FILLED USING THE STACK
@@ -114,7 +115,7 @@ L_9C7A:
 	inc l
 	ldi
 	ret
-animate_options:		; Every two frames advances the options' drawing, four round and round, from the table at 0x9CBA
+animate_options:		; Every two frames advances the options' drawing, four round and round, from the table at option_drawings
 	ld b,a
 	ld hl,OPTION_ANIM_DELAY	; One in every two frames
 	inc (hl)
@@ -123,7 +124,7 @@ animate_options:		; Every two frames advances the options' drawing, four round a
 	ret c
 	ld (hl),000h
 	inc l
-	inc (hl)		; 0xE183: which drawing they are on
+	inc (hl)		; OPTION_FRAME: which drawing they are on
 	dec b			; With two options, both
 	jr z,L_9CA6
 	ld de,OPTIONS+OPTION_SIZE+0Ch
@@ -131,24 +132,24 @@ animate_options:		; Every two frames advances the options' drawing, four round a
 L_9CA6:
 	ld de,OPTIONS+0Ch
 L_9CA9:
-	ld hl,09cbah
+	ld hl,option_drawings
 	ld a,(OPTION_FRAME)
 	and 003h		; Four drawings round and round
 	add a,a
-	call 0405dh
+	call add_a_to_hl
 	ldi
 	ldi
 	ret
 
 ; ----------------------------------------------------------------------
 ; DATA option_drawings: Four (pattern, colour) pairs the option blinks with.
-;   Read by 0x9CA9.
+;   Read by L_9CA9.
 option_drawings:
 	defb 44h,0Ah
 	defb 44h,09h
 	defb 48h,08h
 	defb 48h,06h
-release_fire_button:		; 0xE180 to zero: the button has been released
+release_fire_button:		; FIRE_HELD to zero: the button has been released
 	ld (hl),000h
 	ret
 check_fire:		; With the button just pressed, or held for fifteen frames, the ship and its two options fire
@@ -212,10 +213,10 @@ L_9D26:
 	call free_slot_in_this_table
 	jr z,L_9D59
 	ret
-flag_no_room:		; 0xE184 to one: there is no free slot left for the double shot
+flag_no_room:		; DOUBLE_NO_ROOM to one: there is no free slot left for the double shot
 	ld a,001h
 	jr L_9D40
-flag_room:		; 0xE184 to zero
+flag_room:		; DOUBLE_NO_ROOM to zero
 	ld a,000h
 L_9D40:
 	ld (DOUBLE_NO_ROOM),a
@@ -242,7 +243,7 @@ L_9D59:
 	ld d,0f8h		; Speed 0xF8: upwards
 	call set_aligned_x
 	ld a,001h		; Sound 1
-	jp 049deh
+	jp check_if_sound
 fire_double:		; The double shot, which goes upwards with speed 0x18
 	ld a,(DOUBLE_NO_ROOM)	; Not without a free slot for it
 	or a			; With no free slot, there is no shot
@@ -259,7 +260,7 @@ fire_double:		; The double shot, which goes upwards with speed 0x18
 	inc l
 	ld (hl),00fh
 	ld a,002h		; Sound 2
-	jp 049deh
+	jp check_if_sound
 fire_laser:		; Sets up the laser, which stays attached to the ship: stores in its card the pointer to whoever fires it
 	ld hl,SHOTS
 	call free_slot_in_this_table
@@ -288,7 +289,7 @@ fire_laser:		; Sets up the laser, which stays attached to the ship: stores in it
 	exx
 	ld c,(ix+00eh)
 	ld b,000h
-	ld hl,09dcdh
+	ld hl,laser_max_lengths-1
 	add hl,bc
 	ld a,(hl)
 	exx
@@ -298,11 +299,11 @@ fire_laser:		; Sets up the laser, which stays attached to the ship: stores in it
 	inc l
 	ld (hl),000h
 	ld a,003h		; Sound 3
-	jp 049deh
+	jp check_if_sound
 
 ; ----------------------------------------------------------------------
-; DATA table_9DCD (part): Three bytes read by 0x9DBD with `ld hl,0x9DCD`.
-table_9DCD_9DCE:
+; DATA laser_max_lengths (part): Three bytes read by 0x9DBD with `ld hl,0x9DCD`.
+laser_max_lengths:
 	defb 08h,0Fh
 fire_missile:		; The missile goes to the table at 0x2C0, with one slot for every two cards
 	ld hl,MISSILES		; The missile table
@@ -359,7 +360,7 @@ set_aligned_x:		; The shooter's X, aligned to four, plus D
 	inc l
 	ld (hl),a
 	ret
-run_nine_shots:		; The nine slots at 0xE260, each through its type: four exits
+run_nine_shots:		; The nine slots at SHOTS, each through its type: four exits
 	ld ix,SHOTS
 	exx
 	ld b,009h		; Nine slots
@@ -368,15 +369,15 @@ L_9E1B:
 	ld a,(ix+000h)
 	dec a
 	jp m,next_shot
-	ld de,09e34h		; 0x9E34 is pushed: on return, execution carries on there
+	ld de,next_shot		; next_shot is pushed: on return, execution carries on there
 	push de
 	push ix
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_9E29: Four words glued right behind the `call 0x4067`
+; DATA shot_runners_per_type: Four words glued right behind the `call dispatcher`
 ;   at 0x9E29.
-dispatcher_table_9E29:
+shot_runners_per_type:
 	defw run_normal_shot	; 0
 	defw run_double_shot	; 1
 	defw run_laser		; 2
@@ -577,25 +578,25 @@ blink_missile:		; The colour alternates between 0x0A and 0x0B every two frames
 L_9F7D:
 	ld (ix+007h),a
 	ret
-draw_shots:		; 0xEC1A to one: the shots are painted
+draw_shots:		; SHOTS_PAINT_PASS to one: the shots are painted
 	ld a,001h
 	jr L_9F86
-erase_shots:		; 0xEC1A to zero: they are erased
+erase_shots:		; SHOTS_PAINT_PASS to zero: they are erased
 	xor a
 L_9F86:
 	ld (SHOTS_PAINT_PASS),a
 	ld ix,SHOTS
 	ld b,009h		; Nine slots
 	push bc
-	ld bc,09fa4h		; 0x9FA4 is pushed: on return, execution carries on there
+	ld bc,table_9FA4	; table_9FA4 is pushed: on return, execution carries on there
 	push bc
 	ld a,(ix+000h)
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_9F97: Five words glued right behind the `call 0x4067`
+; DATA shot_map_checks_per_type: Five words glued right behind the `call dispatcher`
 ;   at 0x9F97.
-dispatcher_table_9F97:
+shot_map_checks_per_type:
 	defw missile_skips_collision	; 0
 	defw check_shot_collision	; 1
 	defw check_shot_collision	; 2
@@ -636,7 +637,7 @@ break_cell:		; The special cell is erased from the map and plays whatever sound 
 	xor a
 	ld (de),a
 	ld a,c
-	call 049deh
+	call check_if_sound
 	jp switch_off_shot
 check_laser_against_map:		; Only when painting: walks the cells the laser occupies and cuts it off where it finds a wall
 	ld a,(SHOTS_PAINT_PASS)	; Only in the paint pass
@@ -644,7 +645,7 @@ check_laser_against_map:		; Only when painting: walks the cells the laser occupi
 	ret z
 	ld h,(ix+005h)
 	ld l,(ix+003h)
-	call 0571bh		; The map cell where it starts
+	call cell_to_ram_address	; The map cell where it starts
 	ex de,hl
 	ld a,(ix+00ch)		; Byte 12: how many cells long it is
 	or a
@@ -659,7 +660,7 @@ L_9FFB:
 ; The code of bank 2 falls through from 0x9FFF to 0xA000 and comes in here
 ; without any jump: the two banks are always mapped together.
 ;
-; AND AT THE END OF THE BANK IS KONAMI'S HIDDEN MARK (0xBFF5-0xBFFF). It is
+; AND AT THE END OF THE BANK IS KONAMI'S HIDDEN MARK (konami_mark-0xBFFF). It is
 ; not our find: Manuel Pazos (@ManuelPazosMSX) uncovered it in 2021.
 ; Behind the 0xFF filler, and reading towards the end, there is [title
 ; backwards] [how many characters] [last two digits of the RC in BCD] [0xAA].
@@ -670,12 +671,12 @@ L_9FFB:
 ; THE BANK STARTS WHERE BANK 2 ENDS, WITHOUT ANY JUMP
 ; ----------------------------------------------------------------------
 continued_from_bank_2:		; The code coming from 0x9FFF carries on here with no instruction in between
-	call 0992fh		; The code coming from 0x9FFF comes in here
+	call is_special_cell	; The code coming from 0x9FFF comes in here
 	jr nc,laser_cut_short
 	xor a
 	ld (de),a		; The cell, erased
 	ld a,c
-	call 049deh
+	call check_if_sound
 L_A00B:
 	inc de			; And whatever is left of the strip
 	djnz L_9FFB
@@ -685,8 +686,8 @@ laser_cut_short:		; The laser hits the map: its length is cut and, if nothing is
 	ld a,(ix+00ch)		; Byte 12: how many cells long it is
 	inc b
 	sub b
-	jp c,09e61h		; With no cells left, the laser goes out
-	jp z,09e61h
+	jp c,switch_off_shot	; With no cells left, the laser goes out
+	jp z,switch_off_shot
 	ld (ix+00ch),a
 	ret
 

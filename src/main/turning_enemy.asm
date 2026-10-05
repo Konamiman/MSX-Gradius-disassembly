@@ -5,7 +5,8 @@
 	include "variables.inc"
 
 	public finish_type_5,finish_type_6,move_type_2,move_type_6
-	extrn collides_with_map_3,finish_type_2,how_far_it_walks,L_9535,set_horiz_speed_from_acceleration,time_to_move
+	extrn add_vertical_acceleration,animate_round_and_round,collides_with_map_3,finish_type_2,fire_without_aiming,how_far_it_walks
+	extrn L_9535,set_horiz_speed_from_acceleration,set_horizontal_speed,set_vertical_acceleration,set_vertical_speed,time_to_move
 
 ; ----------------------------------------------------------------------
 ; THE ENEMY THAT TURNS BACK
@@ -19,7 +20,7 @@
 move_type_2:		; The four steps of the turn: to 0x81, back to 0x9F, to 0x51, and straight on once level with the ship
 	ld a,(DIFFICULTY)	; From difficulty 8 onwards, it also fires
 	cp 008h
-	call nc,09235h
+	call nc,fire_without_aiming
 	call animate_type_2	; Four drawings, one every four frames
 	ld a,(ix+001h)		; Byte 1: which step it is on
 	dec a
@@ -47,9 +48,9 @@ L_A8D6:
 	jr c,L_A8EB
 	ld de,0fc00h		; ...or four upwards if it is at the bottom
 L_A8EB:
-	call 06cbfh
+	call set_vertical_speed
 	ld de,00400h		; And four to the right: it turns back
-	jp 06cc6h
+	jp set_horizontal_speed
 back_to_column_9F:		; On reaching 0x9F it aligns the row to eight and heads left again
 	ld a,(ix+006h)
 	cp 09fh
@@ -75,30 +76,30 @@ level_with_ship:		; Within nine of its row it stops climbing and descending and 
 	xor a			; No vertical speed
 	ld d,a
 	ld e,a
-	jp 06cbfh
+	jp set_vertical_speed
 animate_type_2:		; Four drawings, one every four frames
 	ld bc,00304h
-	ld hl,0a933h
-	jp 095d1h
+	ld hl,type_2_drawings
+	jp animate_round_and_round
 
 ; ----------------------------------------------------------------------
-; DATA table_A933: Four bytes (0, 1, 2, 3) read by 0xA92D.
-table_A933:
+; DATA type_2_drawings: Four bytes (0, 1, 2, 3) read by 0xA92D.
+type_2_drawings:
 	defb 00h,01h,02h,03h
 finish_type_6:		; Shoots off upwards and towards the centre of the screen, wound up for 0x78 frames
 	ld (ix+01ch),078h	; Byte 28: 0x78 frames of wind-up
 	ld de,00060h		; 0x60 of vertical acceleration...
-	call 09522h
+	call set_vertical_acceleration
 	ld de,0fa00h		; ...against six points per frame upwards
-	call 06cbfh
+	call set_vertical_speed
 	call L_9535
 	ld de,0fe00h
 	bit 7,(ix+006h)		; In the right half, two points to the left...
-	jp nz,06cc6h
+	jp nz,set_horizontal_speed
 	ld de,00200h		; ...and in the left half, two to the right
-	jp 06cc6h
+	jp set_horizontal_speed
 move_type_6:		; Climbs until its wind-up runs out or it finds ground, and then launches itself towards the ship's column
-	call 09235h		; Fires without aiming
+	call fire_without_aiming	; Fires without aiming
 	call animate_type_6	; Four drawings, one every four frames
 	ld a,(ix+001h)		; Byte 1: which step it is on
 	dec a
@@ -110,29 +111,29 @@ move_type_6:		; Climbs until its wind-up runs out or it finds ground, and then l
 	jr c,move_to_next_step
 L_A973:
 	call has_ground_below
-	jp nc,0953ch
+	jp nc,add_vertical_acceleration
 	ld de,00200h		; Two points towards the ship's column
 	ld a,(SHIP_COLUMN)	; The ship's column
 	sub (ix+006h)
 	jr nc,L_A987
 	ld de,0fe00h
 L_A987:
-	call 06cc6h
+	call set_horizontal_speed
 	jp set_horiz_speed_from_acceleration
 move_to_next_step:		; One more step and carry on
 	inc (ix+001h)
 	jp L_A973
 type_6_step_1:		; On hitting ground, two points to the left and it plants itself
 	call has_ground_below	; With ground below, it plants itself
-	jp nc,0953ch
+	jp nc,add_vertical_acceleration
 	inc (ix+001h)
 	ld de,0fe00h		; Two points to the left
-	call 06cc6h
-	jp 09577h
+	call set_horizontal_speed
+	jp set_horiz_speed_from_acceleration
 type_6_step_2:		; Now it just lets the acceleration carry it
 	call has_ground_below	; Now it just lets itself be carried
-	jp nc,0953ch
-	jp 09577h
+	jp nc,add_vertical_acceleration
+	jp set_horiz_speed_from_acceleration
 has_ground_below:		; Climbing, no; descending, and between rows 0x58 and 0x9F, checks whether the map has wall 0x10 lower down
 	ld a,(ix+008h)		; Byte 8: climbing, there is nothing to check
 	or a
@@ -150,12 +151,12 @@ has_ground_below:		; Climbing, no; descending, and between rows 0x58 and 0x9F, c
 	jp collides_with_map_3
 animate_type_6:		; Four drawings, one every four frames
 	ld bc,00304h
-	ld hl,0a9d0h
-	jp 095d1h
+	ld hl,type_6_drawings
+	jp animate_round_and_round
 
 ; ----------------------------------------------------------------------
-; DATA table_A9D0: Four bytes (0xA0, 0xA4, 0xA8, 0xAC) read by 0xA9CA.
-table_A9D0:
+; DATA type_6_drawings: Four bytes (0xA0, 0xA4, 0xA8, 0xAC) read by 0xA9CA.
+type_6_drawings:
 	defb 0A0h,0A4h,0A8h,0ACh
 finish_type_5:		; Depending on whether it drops in at the top or the bottom, one drawing or the other, and two points to the right
 	ld a,(ix+004h)		; Bit 7 of the row: which half it comes in through
@@ -171,8 +172,8 @@ L_A9E2:
 	ld (ix+01ch),00ah	; Ten frames of wind-up
 	call how_far_it_walks
 	ld de,00000h		; No vertical speed
-	call 06cbfh
+	call set_vertical_speed
 	ld de,00200h		; And two points to the right
-	jp 06cc6h
+	jp set_horizontal_speed
 
 	end

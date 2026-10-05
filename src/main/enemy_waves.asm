@@ -5,14 +5,15 @@
 	include "variables.inc"
 
 	public release_stretch_enemies
-	extrn check_1B_script,check_for_wall,check_script,mark_next_or_not,release_big_ones_flock,release_bottom_four
-	extrn release_flock,release_left_ones,release_long_flock,release_mixed_eight,run_wave
+	extrn add_a_to_de,add_a_to_hl,check_1B_script,check_for_wall,check_script,get_word
+	extrn mark_next_or_not,release_big_ones_flock,release_bottom_four,release_flock,release_left_ones,release_long_flock
+	extrn release_mixed_eight,run_wave,spawn_object
 
 ; ----------------------------------------------------------------------
 ; WHICH ENEMIES COME OUT: ONE BYTE OF BITS PER STRETCH OF SCREEN
 ; The distance travelled, divided by 0x20, indexes a list per stage
 ; (0xA3A6): out comes ONE BYTE whose six low bits say which groups of
-; enemies are active in that stretch. 0xA359 rotates it bit by bit and
+; enemies are active in that stretch. L_A359 rotates it bit by bit and
 ; calls the routine of every group that is switched on. That way each piece
 ; of the stage has its own mix of enemies without needing a long script.
 ; ----------------------------------------------------------------------
@@ -54,7 +55,7 @@ L_A345:
 	and a
 	jr z,L_A359
 	ld hl,LIVE_OBJECTS
-	ld a,00bh		; With eleven objects minus the live ones below 0xE162, it waits
+	ld a,00bh		; With eleven objects minus the live ones below FILE_WAVE_LEFT, it waits
 	sub (hl)
 	ld hl,FILE_WAVE_LEFT
 	cp (hl)
@@ -90,8 +91,8 @@ L_A359:
 	jp release_big_ones_flock
 stretch_bits:		; The distance divided by 0x20 indexes the stage's list and returns the byte of bits
 	ld a,(STAGE)
-	ld hl,0A3A6h		; The table at 0xA3A6: one list per stage
-	call 047aeh
+	ld hl,wave_stretch_lists-2	; The table at 0xA3A6: one list per stage
+	call get_word
 	ld hl,(DISTANCE)	; The distance travelled
 	ld a,l
 	rr h			; Divided by 0x20: the stretch
@@ -101,19 +102,19 @@ stretch_bits:		; The distance divided by 0x20 indexes the stage's list and retur
 	rra
 	rra
 	and 00fh
-	call 04062h
+	call add_a_to_de
 L_A3A6:
 	ld a,(de)
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_A3A6 (part): Words read by 0xA390 with base 0xA3A6 (0xA3B8,
+; DATA wave_stretch_lists (part): Words read by 0xA390 with base 0xA3A6 (0xA3B8,
 ;   0xA3C8, 0xA3D8, ...) and, after them, what they point to.
-table_A3A6_A3A8:
-	defw 0A3B8h,0A3C8h
-	defw 0A3D8h,0A3E8h
-	defw 0A3F8h,0A408h
-	defw 0A418h,0A428h
+wave_stretch_lists:
+	defw wave_stretch_lists+10h,wave_stretch_lists+20h
+	defw wave_stretch_lists+30h,wave_stretch_lists+40h
+	defw wave_stretch_lists+50h,wave_stretch_lists+60h
+	defw wave_stretch_lists+70h,wave_stretch_lists+80h
 	defw 0000h,0200h
 	defw 0401h,0A06h
 	defw 0A03h,0E05h
@@ -173,12 +174,12 @@ L_A45C:
 	ld a,003h
 	ld de,0f030h		; X 0xF0 and Y 0x30: comes in from the right, at the top
 	push bc
-	call 06a72h
+	call spawn_object
 	pop bc
 	ld c,b
 	ld de,0f060h		; And the second along 0x60, lower down
 	ld a,003h
-	jp 06a72h
+	jp spawn_object
 release_trail:		; A line of type 4 enemies, one every eight frames, coming in at four heights that take turns
 	ld hl,TRAIL_COUNT	; How many are still to come out
 	ld a,(hl)
@@ -192,17 +193,17 @@ release_trail:		; A line of type 4 enemies, one every eight frames, coming in at
 	dec (hl)		; One fewer to come out
 	ld a,(hl)
 	and 003h		; The two low bits of the count: the height goes by turns
-	ld hl,0a4a6h
-	call 0405dh
+	ld hl,trail_heights
+	call add_a_to_hl
 	ld e,(hl)
 	ld d,0f0h		; Always from the right
 	ld c,000h
 	ld a,004h
-	jp 06a72h
+	jp spawn_object
 start_another_trail:		; The line is over: the difficulty says how many the next one brings
-	ld a,(DIFFICULTY)	; The difficulty indexes the ramp at 0xA4AA
-	ld de,0a4aah
-	call 04062h
+	ld a,(DIFFICULTY)	; The difficulty indexes the ramp at ramp_A4AA
+	ld de,ramp_A4AA
+	call add_a_to_de
 	ld a,(de)
 	ld (hl),a
 	inc l
@@ -215,8 +216,8 @@ wait_by_difficulty:		; 0x70 minus twice the difficulty: the harder the stage, th
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_A4A6: Four bytes (0x20, 0x80, 0x40, 0x70) read by 0xA480.
-table_A4A6:
+; DATA trail_heights: Four bytes (0x20, 0x80, 0x40, 0x70) read by 0xA480.
+trail_heights:
 	defb 20h,80h,40h,70h
 
 ; ----------------------------------------------------------------------

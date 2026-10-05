@@ -6,13 +6,14 @@
 
 	public blow_up_core,core_enters,core_waits,draw_boss,end_boss,erase_boss
 	public mark_boss_dead,next_core_step,stage_5_boss_step,wait_until_nobody_left
-	extrn aim_at_ship,aim_both_turrets,load_explosion_graphics,run_five_at_e7a0,run_six_pieces,set_up_background_explosion
-	extrn set_up_shot
+	extrn add_a_to_de,add_a_to_hl,add_to_score,aim_at_ship,aim_both_turrets,check_if_sound
+	extrn clear_rectangle,copy_rectangle,load_explosion_graphics,run_five_at_e7a0,run_six_pieces,set_up_background_explosion
+	extrn set_up_shot,table_8041
 
 ; ----------------------------------------------------------------------
 ; THE END-OF-STAGE BOSS, STEP BY STEP
-; 0xE151 says there is a boss and 0xE152 which step it is on; within the
-; step, 0xE190 keeps the core's count and 0xE153 the frames left. There
+; BOSS_STATE says there is a boss and BOSS_KIND which step it is on; within the
+; step, BOSS_PHASE keeps the core's count and BOSS_TIMER the frames left. There
 ; are five steps: wait for the screen to be empty, bring the core down,
 ; wait for it to be killed, and the two exits.
 ; ----------------------------------------------------------------------
@@ -40,13 +41,13 @@ L_7CB6:
 	call load_explosion_graphics	; The explosion graphics
 	xor a
 	ld (CORE_DEAD),a	; To zero: the core is still alive
-	ld de,BOSS_PIECES	; The thirteen bytes from 0x7ED9: the first piece
-	ld hl,07ed9h
+	ld de,BOSS_PIECES	; The thirteen bytes from boss_first_piece: the first piece
+	ld hl,boss_first_piece
 	ld bc,0000dh
 	ldir
 	ld a,03ch		; 0x3C frames
 	ld (BOSS_TIMER),a
-next_core_step:		; 0xE190 + 1
+next_core_step:		; BOSS_PHASE + 1
 	ld hl,BOSS_PHASE
 	inc (hl)
 	ret
@@ -103,7 +104,7 @@ core_leaves:		; Face 2, 0x28 frames and on to the next step
 	jr next_core_step
 blow_up_core:		; Erases it, sets up the explosion, plays sound 0x3B and, if it was alive, collects 0x100
 	ld hl,BOSS_TIMER
-	dec (hl)		; 0xE153: the frames left
+	dec (hl)		; BOSS_TIMER: the frames left
 	ret nz
 	xor a
 	ld (BOSS_PIECES),a	; To zero: the piece goes
@@ -112,19 +113,19 @@ blow_up_core:		; Erases it, sets up the explosion, plays sound 0x3B and, if it w
 	ex de,hl
 	call set_up_background_explosion
 	ld a,03bh		; Sound 0x3B
-	call 049deh
+	call check_if_sound
 	ld de,00100h		; A hundred points, and only if the core was still alive
 	ld a,(CORE_DEAD)
 	and a
-	call nz,055b4h
+	call nz,add_to_score
 	ld a,078h		; 0x78 frames
 	ld (BOSS_TIMER),a	; 0x78 frames
 	jp next_core_step
-end_boss:		; When the count runs out, 0xE150 to one: the stage can go on
+end_boss:		; When the count runs out, BOSS_DONE to one: the stage can go on
 	ld hl,BOSS_TIMER
 	dec (hl)
 	ret nz
-mark_boss_dead:		; 0xE150 to one
+mark_boss_dead:		; BOSS_DONE to one
 	ld a,001h
 	ld (BOSS_DONE),a
 	ret
@@ -161,16 +162,16 @@ L_7D9B:
 	and a
 	jp z,set_up_shot
 	ld a,020h		; Thirty-two bytes: the next one
-	call 0405dh		; Thirty-two bytes: the next slot
+	call add_a_to_hl	; Thirty-two bytes: the next slot
 	djnz L_7D9B
 	ret
-release_four_shots:		; Sets up the four slots at 0xE500 with the four shots, each with its offset from the table at 0x7E03
+release_four_shots:		; Sets up the four slots at ENEMY_SHOTS with the four shots, each with its offset from the table at boss_shot_origins
 	ld a,(BOSS_PIECES+3)
 	ld e,a
 	ld a,(BOSS_PIECES+5)
 	ld d,a
 	exx
-	ld hl,07e03h		; The table at 0x7E03: where each one comes out
+	ld hl,boss_shot_origins	; The table at boss_shot_origins: where each one comes out
 	exx
 	ld hl,ENEMY_SHOTS
 	ld b,004h		; Four shots
@@ -235,8 +236,8 @@ set_up_one_of_four:		; Fills the slot and gives it the speed, which comes from t
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_7E03: Eight bytes read by 0x7DB1.
-table_7E03:
+; DATA boss_shot_origins: Eight bytes read by 0x7DB1.
+boss_shot_origins:
 	defb 00h,10h
 	defb 10h,0F0h
 	defb 28h,0F0h
@@ -313,35 +314,35 @@ draw_boss:		; Paints the three parts: the body of 0x0B by 8 characters, the eye 
 	call boss_cell
 	jr c,L_7E86
 	ld bc,00b08h		; 0x0B wide by 8 high: the body
-	ld de,07ee6h
-	call 0490ch
+	ld de,body_drawing
+	call copy_rectangle
 L_7E86:
 	ld de,00818h		; The eye, eight to the right and 0x18 lower
 	call boss_cell
 	jr c,L_7EA3
-	ld de,07f3eh
+	ld de,boss_eye_drawings
 	ld a,(BOSS_PIECES+9)	; 0xE789 chooses one of the eye drawings
 	rra
 	and 00eh
 	ld c,a
 	add a,a
 	add a,c			; Times three: three characters per drawing
-	call 04062h
+	call add_a_to_de
 	ld bc,00302h		; Three wide by two high
-	call 0490ch
+	call copy_rectangle
 L_7EA3:
 	ld de,02018h		; And the mouth, 0x20 to the right
 	call boss_cell
 	ret c
-	ld de,07f62h
+	ld de,boss_mouth_drawings
 	ld a,(BOSS_PIECES+6)	; The face that is due
 	add a,a
 	ld c,a
 	add a,a
 	add a,c
-	call 04062h
+	call add_a_to_de
 	ld bc,00302h
-	jp 0490ch
+	jp copy_rectangle
 boss_cell:		; The boss's position plus the offset that DE brings
 	ld a,(BOSS_PIECES+3)	; The boss's row (0xE783) and its column (0xE785), plus whatever DE brings
 	add a,e
@@ -357,17 +358,17 @@ erase_boss:		; Erases the 0x0B by 8 rectangle of the body
 	ld de,00000h
 	call boss_cell
 	ld bc,00b08h
-	jp 048f7h
+	jp clear_rectangle
 
 ; ----------------------------------------------------------------------
-; DATA boss_first_piece: The thirteen bytes that 0x7CC7 copies to 0xE780 when
+; DATA boss_first_piece: The thirteen bytes that 0x7CC7 copies to BOSS_PIECES when
 ;   the boss comes in: the starting record of its first piece.
 boss_first_piece:
 	defb 01h,00h,00h,40h,00h,0F8h,01h,00h,10h,16h,01h,00h,00h
 
 ; ----------------------------------------------------------------------
 ; DATA body_drawing: The 88 characters of the boss's body, 0x0B wide by 8
-;   high, which 0x7E80 copies to the map with 0x490C.
+;   high, which 0x7E80 copies to the map with copy_rectangle.
 body_drawing:
 	defb 00h,00h,00h,00h,0A3h,44h,45h,46h,47h,48h,00h
 	defb 00h,00h,0A4h,49h,4Ah,4Bh,0A7h,0A8h,0A9h,4Ch,4Dh
@@ -379,8 +380,8 @@ body_drawing:
 	defb 00h,00h,00h,00h,0C1h,56h,57h,58h,59h,5Ah,00h
 
 ; ----------------------------------------------------------------------
-; DATA table_7F3E: Thirty-six bytes read by 0x7E8E.
-table_7F3E:
+; DATA boss_eye_drawings: Thirty-six bytes read by 0x7E8E.
+boss_eye_drawings:
 	defb 55h,55h,0BAh,67h,67h,0D8h,55h,55h	; "UU.gg.UU"
 	defb 0B0h,67h,67h,0CEh,55h,54h,0B0h,67h
 	defb 66h,0CEh,55h,53h,0B0h,67h,65h,0CEh
@@ -388,8 +389,8 @@ table_7F3E:
 	defb 0B0h,65h,65h,0CEh
 
 ; ----------------------------------------------------------------------
-; DATA table_7F62: Eighteen bytes read by 0x7EAA.
-table_7F62:
+; DATA boss_mouth_drawings: Eighteen bytes read by 0x7EAA.
+boss_mouth_drawings:
 	defb 0B7h,0B8h,0B9h,0D5h,0D6h,0D7h,0B1h,0B2h
 	defb 0B3h,0CFh,0D0h,0D1h,0BBh,0BCh,0BDh,0D9h
 	defb 0DAh,0DBh
@@ -445,11 +446,11 @@ run_stage_5_boss:		; With bank 10 in place, four of its routines; when 0xE790 an
 	or (hl)
 	ret nz
 	jr L_7FA4
-end_stage_5_boss:		; 0xE150 to one
+end_stage_5_boss:		; BOSS_DONE to one
 	ld a,001h
 	ld (BOSS_DONE),a
 	ret
-start_or_advance:		; Past distance 0x1A0 it switches on 0xE117; if not, every 0xC0 frames it advances the script in 0xE116
+start_or_advance:		; Past distance 0x1A0 it switches on BOSS5_MOVING; if not, every 0xC0 frames it advances the script in BOSS5_SCRIPT
 	ld hl,(DISTANCE)
 	ld de,001a0h		; Distance 0x1A0
 	rst 20h
@@ -473,13 +474,13 @@ L_7FED:
 ; THE LAST INSTRUCTION IS SPLIT BETWEEN BANK 1 AND BANK 2
 ; Its first two bytes, 21h 41h, are the last two of bank 1 (0x7FFE) and the
 ; third one, 80h, is the first byte of bank 2 (0x8000): together they are
-; `ld hl,0x8041`, and execution carries on at 0x8001 without any jump. It is
+; `ld hl,table_8041`, and execution carries on at continued_from_bank_1 without any jump. It is
 ; the only place in the cartridge where an instruction is split between two
 ; banks, and it welds bank 1 to bank 2: it only works with the bank layout
 ; that INIT sets up. Banks 0 to 3 are linked as one image, so here it can be
 ; written as the instruction it is.
 ; ----------------------------------------------------------------------
-	ld hl,08041h
+	ld hl,table_8041
 
 ; Bank 2 (runs at 0x8000) starts at the third byte of the instruction above.
 ; Something similar but milder happens at its bottom end: the code falls

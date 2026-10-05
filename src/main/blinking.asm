@@ -28,7 +28,7 @@ L_B01E:
 	xor a
 	ld (ix+01dh),a
 L_B02F:
-	ld hl,0b03ch
+	ld hl,type_0D_drawings
 	add a,l
 	ld l,a
 	jr nc,L_B037
@@ -39,8 +39,8 @@ L_B037:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_B03C: Six bytes read by 0xB02F.
-table_B03C:
+; DATA type_0D_drawings: Six bytes read by L_B02F.
+type_0D_drawings:
 	defb 0E0h,0E4h,0E8h,0ECh,0E8h,0E4h
 
 	end

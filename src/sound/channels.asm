@@ -10,9 +10,9 @@
 	include "variables.inc"
 
 	public restore_registers,set_volume,silence_channels
-	extrn write_mix,run_channel,silence_this_channel
+	extrn run_channel,silence_this_channel,write_mix
 
-silence_channels:		; Sets E to zero and falls into 0x80E4, that is, sets the volume of the three channels to zero.
+silence_channels:		; Sets E to zero and falls into set_volume, that is, sets the volume of the three channels to zero.
 	ld e,000h		; Volume zero
 	ld a,00ah		; Register 10: C's volume
 	call WRTPSG
@@ -57,7 +57,7 @@ restore_registers:		; When the noise effect ends, the four periods and the three
 L_812E:
 	ld a,(SND_MIX)		; And whatever mix there was
 	call write_mix
-run_three_channels:		; The three 0x11-byte cards at 0xE010, one after another
+run_three_channels:		; The three 0x11-byte cards at SND_CARD_A, one after another
 	ld c,001h		; Channel A: register 1
 	ld ix,SND_CARD_A	; The first card
 	ld hl,SND_MUTE		; The mute countdown

@@ -5,16 +5,16 @@
 	include "variables.inc"
 
 	public advance_script,check_script,finish_type_0D,move_type_0D
-	extrn aim_from_where_it_is,animate_type_0D
+	extrn aim_from_where_it_is,animate_type_0D,get_word,set_horizontal_speed,spawn_object,zero_speed
 
 ; ----------------------------------------------------------------------
 ; STAGE 7 RUNS ON A SCRIPT, AND EACH APPEARANCE FITS IN ONE WORD
 ; The other stages release enemies in bursts; the seventh has them WRITTEN
-; one by one in the list at 0xAF3F, forty-three appearances in eighty-six
+; one by one in the list at stage_7_script, forty-three appearances in eighty-six
 ; bytes. Each one is a single, tightly packed word: the low byte and bit 0
 ; of the high byte are the distance (nine bits) at which it appears, bits 1
 ; and 2 of the high byte are the variant, and the top five, the row. The
-; list is walked with a cursor at 0xE968 and ends at 0xFFFF.
+; list is walked with a cursor at STAGE7_SCRIPT_POS and ends at 0xFFFF.
 ; ----------------------------------------------------------------------
 advance_script:		; Skips in one go all the appearances that are already behind the distance travelled
 	ld a,(STAGE)		; Only stage 7 has a script
@@ -33,7 +33,7 @@ check_script:		; On every step with a new column, releases all the appearances t
 	ld a,(NEW_COLUMN)	; And only on steps with a new column
 	and a
 	ret z
-	ld a,0f8h		; 0xEC04 to 0xF8: they all come in from the right
+	ld a,0f8h		; ENTRY_X to 0xF8: they all come in from the right
 	ld (ENTRY_X),a
 spawn_due_ones:		; One after another as long as they match
 	call spawn_this_appearance
@@ -59,13 +59,13 @@ spawn_type_0D:		; The column, the row and the variant already unpacked
 	and 003h
 	ld c,a
 	ld a,00dh		; Type 0x0D
-	call 06a72h
+	call spawn_object
 	xor a
 	ret
 is_this_the_distance:		; Unpacks the script word and compares its nine bits of distance with the distance travelled
-	ld hl,0af3fh		; The word that is due from the list
+	ld hl,stage_7_script	; The word that is due from the list
 	ld a,(STAGE7_SCRIPT_POS)
-	call 047aeh
+	call get_word
 	ld c,d			; The high byte is saved whole...
 	ld a,d
 	and 001h		; ...and of it only bit 0 is distance
@@ -75,8 +75,8 @@ is_this_the_distance:		; Unpacks the script word and compares its nine bits of d
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_AF3F: Eighty-six bytes read by 0xAF2C, in pairs.
-table_AF3F:
+; DATA stage_7_script: Eighty-six bytes read by is_this_the_distance, in pairs.
+stage_7_script:
 	defb 94h,28h
 	defb 0ACh,68h
 	defb 0B3h,18h
@@ -127,14 +127,14 @@ finish_type_0D:		; Byte 20 to one, ten frames in byte 2, byte 28 to 0xFF, and st
 	ld (ix+014h),a
 	ld (ix+002h),00ah	; Ten frames
 	ld (ix+01ch),0ffh
-	jp 09510h
+	jp zero_speed
 type_0D_leaves:		; Step 2, drawing 0xDC in colour 0x0D and one point to the left
 	ld (ix+001h),002h	; Step 2: it is already leaving
 	ld (ix+00ch),0dch	; Drawing 0xDC in colour 0x0D
 	ld (ix+00dh),00dh
-	call 09510h
+	call zero_speed
 	ld de,0ff00h		; One point to the left
-	jp 06cc6h
+	jp set_horizontal_speed
 move_type_0D:		; Stays in place firing every ten frames until its 0xFF of life run out, and then leaves
 	ld a,(ix+001h)		; From step 2 onwards it is already leaving
 	cp 002h
@@ -156,10 +156,10 @@ type_0D_rests:		; Another ten frames still and then back to firing
 	ret nz
 	dec (ix+001h)
 	ld (ix+002h),00ah
-	jp 09510h
-speed_by_difficulty:		; From the ramp at 0xB000: 0x1A and two more for each notch of difficulty
-	ld a,(DIFFICULTY)	; The difficulty indexes the ramp at 0xB000
-	ld hl,0b000h
+	jp zero_speed
+speed_by_difficulty:		; From the ramp at ramp_B000: 0x1A and two more for each notch of difficulty
+	ld a,(DIFFICULTY)	; The difficulty indexes the ramp at ramp_B000
+	ld hl,ramp_B000
 	add a,l
 	ld l,a
 	jr nc,L_AFFB

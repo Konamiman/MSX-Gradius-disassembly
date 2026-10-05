@@ -9,16 +9,16 @@
 ; ----------------------------------------------------------------------
 ; THE SIXTEEN JOYSTICK DIRECTIONS, IN A TABLE
 ; The four direction bits of the joystick are not read one by one: the
-; sixteen possible values index the table at 0x9B0D, four bytes each, and
+; sixteen possible values index the table at controller_speeds, four bytes each, and
 ; out of it come the two speeds of the ship, ready-made. That way the
 ; diagonals do not cost a single instruction more than the straight lines.
 ; ----------------------------------------------------------------------
-controller_speed:		; The four direction bits index the table at 0x9B0D: the ship's two speeds come from there
+controller_speed:		; The four direction bits index the table at controller_speeds: the ship's two speeds come from there
 	ld a,(CONTROLLER)	; The four direction bits
 	and 00fh
 	add a,a			; Times four: four bytes per direction
 	add a,a
-	ld hl,09b0dh
+	ld hl,controller_speeds
 	add a,l
 	ld l,a
 	jr nc,L_9B05

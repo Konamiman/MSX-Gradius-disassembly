@@ -6,15 +6,17 @@
 
 	public advance_1B_script,check_1B_script,finish_type_1B,finish_type_1D,move_type_1B,move_type_1D
 	public release_long_flock,start_long_flock
-	extrn animate_round_and_round,fire_without_aiming,negate_vertical_speed,turn_one_way
+	extrn animate_round_and_round,blow_up_enemy,change_sign,collides_with_map,fire_without_aiming,get_word
+	extrn L_9239,mark_boss_dead,multiply_h_by_e,negate_vertical_speed,set_horizontal_speed,set_vertical_speed
+	extrn spawn_object,type_1D_tables,turn_one_way,zero_speed
 
 ; ----------------------------------------------------------------------
 ; THE SECOND SCRIPT OF STAGE 5
-; The fifth stage has two lists of distances: the one at 0xB7BF, which sets
-; up the background pieces, and this one at 0xB8B4, which releases type
+; The fifth stage has two lists of distances: the one at stage_5_background_script, which sets
+; up the background pieces, and this one at type_1B_script, which releases type
 ; 0x1B enemies. Here the word is packed even tighter than in stage 7: bits
 ; 0 and 1 of the high byte are the high bits of the distance (ten in all)
-; and the top five are saved in 0xE97E, from where the band the enemy
+; and the top five are saved in STAGE5_LINE_BITS, from where the band the enemy
 ; bounces in and its speed are taken later. The list ends at 0xFFFF.
 ; ----------------------------------------------------------------------
 advance_1B_script:		; Skips the lines that are already behind
@@ -34,18 +36,18 @@ check_1B_script:		; On every step with a new column, releases the enemies that f
 	ld a,(NEW_COLUMN)	; And only on steps with a new column
 	and a
 	ret z
-	ld a,0f8h		; 0xEC04 to 0xF8: they come in from the right
+	ld a,0f8h		; ENTRY_X to 0xF8: they come in from the right
 	ld (ENTRY_X),a
 release_due_1Bs:		; One after another as long as they match
 	call release_this_1B
 	jp z,release_due_1Bs
 	ret
-release_this_1B:		; Unpacks the line: the top five bits to 0xE97E, and from there comes the row
+release_this_1B:		; Unpacks the line: the top five bits to STAGE5_LINE_BITS, and from there comes the row
 	call is_this_the_1B_distance
 	ret nz
 	ld hl,STAGE5_SCRIPT_POS	; One line fewer
 	inc (hl)
-	ld a,c			; The top five bits, to 0xE97E
+	ld a,c			; The top five bits, to STAGE5_LINE_BITS
 	rra
 	rra
 	and 01fh
@@ -53,12 +55,12 @@ release_this_1B:		; Unpacks the line: the top five bits to 0xE97E, and from ther
 	rra			; Its bit 0: along row 8...
 	ld e,008h
 	jr nc,L_B891
-	rra			; ...or along one of the three at 0xB89E
+	rra			; ...or along one of the three at type_1B_band_rows
 	rra
 	and 003h
 	ld c,a
 	ld b,000h
-	ld hl,0b89eh
+	ld hl,type_1B_band_rows
 	add hl,bc
 	ld e,(hl)
 L_B891:
@@ -66,18 +68,18 @@ L_B891:
 	ld d,a
 	ld c,000h
 	ld a,01bh		; Type 0x1B
-	call 06a72h
+	call spawn_object
 	xor a
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_B89E: Three bytes (0x90, 0x58, 0x20) read by 0xB88C and 0xB925.
-table_B89E:
+; DATA type_1B_band_rows: Three bytes (0x90, 0x58, 0x20) read by 0xB88C and 0xB925.
+type_1B_band_rows:
 	defb 90h,58h,20h
 is_this_the_1B_distance:		; Compares the line's ten bits of distance with the distance travelled
-	ld hl,0b8b4h		; The word that is due from the list
+	ld hl,type_1B_script	; The word that is due from the list
 	ld a,(STAGE5_SCRIPT_POS)
-	call 047aeh
+	call get_word
 	ld c,d
 	ld a,d			; The high byte is saved whole...
 	and 003h		; ...and of it only two bits are distance
@@ -87,8 +89,8 @@ is_this_the_1B_distance:		; Compares the line's ten bits of distance with the di
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_B8B4: Thirty-eight bytes read by 0xB8A1, in pairs.
-table_B8B4:
+; DATA type_1B_script: Thirty-eight bytes read by is_this_the_1B_distance, in pairs.
+type_1B_script:
 	defb 42h,01h
 	defb 48h,11h
 	defb 4Eh,09h
@@ -108,7 +110,7 @@ table_B8B4:
 	defb 0AEh,55h
 	defb 0B4h,4Dh
 	defb 0FFh,0FFh
-finish_type_1B:		; From 0xE97E come the band it bounces in and which of the six speeds it has
+finish_type_1B:		; From STAGE5_LINE_BITS come the band it bounces in and which of the six speeds it has
 	ld a,(STAGE5_LINE_BITS)	; What its line brought packed
 	ld b,a
 	rra
@@ -128,28 +130,28 @@ finish_type_1B:		; From 0xE97E come the band it bounces in and which of the six 
 	inc b
 L_B8F5:
 	ld a,b
-	ld hl,0b909h		; The table at 0xB909: six speeds
-	call 047aeh
+	ld hl,type_1B_vertical_speeds	; The table at type_1B_vertical_speeds: six speeds
+	call get_word
 	pop af
-	call c,06729h		; And the leftover bit gives it its sign
-	call 06cbfh
+	call c,change_sign	; And the leftover bit gives it its sign
+	call set_vertical_speed
 	ld de,0ff00h		; One point to the left
-	jp 06cc6h
+	jp set_horizontal_speed
 
 ; ----------------------------------------------------------------------
-; DATA table_B909: Twelve bytes read by 0xB8F6, as words.
-table_B909:
+; DATA type_1B_vertical_speeds: Twelve bytes read by 0xB8F6, as words.
+type_1B_vertical_speeds:
 	defw 0080h,0100h
 	defw 0180h,0200h
 	defw 0300h,0400h
 move_type_1B:		; Bounces between row 8 and the bottom of its band, reversing the speed when it gets there
 	ld bc,00308h		; Eight drawings, one every four frames
-	ld hl,0b93eh
-	call 095d1h
+	ld hl,type_1B_drawings
+	call animate_round_and_round
 	ld c,008h		; The ceiling, row 8
 	ld e,(ix+013h)		; And the floor, that of its band
 	ld d,000h
-	ld hl,0b89eh
+	ld hl,type_1B_band_rows
 	add hl,de
 	ld b,(hl)
 	ld a,(ix+008h)		; Byte 8: climbing or descending
@@ -162,21 +164,21 @@ move_type_1B:		; Bounces between row 8 and the bottom of its band, reversing the
 L_B939:
 	cp c			; And on reaching the ceiling, too
 	ret nc
-	jp 09590h
+	jp negate_vertical_speed
 
 ; ----------------------------------------------------------------------
-; DATA table_B93E: Eight bytes read by 0xB918: another there and back (0xF0,
+; DATA type_1B_drawings: Eight bytes read by 0xB918: another there and back (0xF0,
 ;   0xF4, 0xF8, 0xFC, 0xFC, 0xF8, 0xF4, 0xF0).
-table_B93E:
+type_1B_drawings:
 	defb 0F0h,0F4h,0F8h,0FCh,0FCh,0F8h,0F4h,0F0h
 start_long_flock:		; A timer of 0x1E frames for each notch of difficulty plus 0x14, and a cadence of 0x1F minus the difficulty
-	ld a,001h		; 0xE988 to one: the flock is under way
+	ld a,001h		; LFLOCK_ON to one: the flock is under way
 	ld (LFLOCK_ON),a
 	ld a,(DIFFICULTY)	; Plus 0x14, times 0x1E: the frames it lasts
 	add a,014h
 	ld h,a
 	ld e,01eh
-	call 06743h
+	call multiply_h_by_e
 	ld (LFLOCK_TIMER),hl
 	ld a,(DIFFICULTY)	; And 0x1F minus the difficulty: the frames between one enemy and the next
 	sub 01fh
@@ -197,12 +199,12 @@ release_long_flock:		; While the timer lasts, a type 0x1D every few frames; one 
 	ld (LFLOCK_TIMER),hl
 	ld a,l
 	or h
-	jp z,07d64h		; Once the timer has run out, the stage carries on
+	jp z,mark_boss_dead	; Once the timer has run out, the stage carries on
 	ld hl,LFLOCK_COUNTDOWN	; The frames until the next one
 	dec (hl)
 	ret nz
 	dec l
-	ld a,(hl)		; Reloaded from 0xE98B
+	ld a,(hl)		; Reloaded from LFLOCK_RELOAD
 	inc l
 	ld (hl),a
 	inc l
@@ -213,12 +215,12 @@ release_long_flock:		; While the timer lasts, a type 0x1D every few frames; one 
 	inc l
 	ld (hl),a
 	jr c,L_B997
-	ld hl,0bb35h		; And the rest follow the list at 0xBB35
-	call 047aeh
+	ld hl,type_1D_tables+4	; And the rest follow the list at 0xBB35
+	call get_word
 L_B997:
 	ld c,000h
 	ld a,01dh		; Type 0x1D
-	jp 06a72h
+	jp spawn_object
 this_one_goes_at_ship:		; With the ship hugging an edge, the enemy comes in through that same edge and at the ship's column
 	ld b,a
 	ld a,(SHIP_ROW)		; The ship's row
@@ -248,7 +250,7 @@ finish_type_1D:		; From the table at 0xBB45 come the centre of its spiral, its c
 	ld (ix+013h),a
 	add a,a
 	add a,a
-	ld hl,0bb45h		; The table at 0xBB45: four bytes per variant
+	ld hl,type_1D_tables+14h	; The table at 0xBB45: four bytes per variant
 	ld e,a
 	ld d,000h
 	add hl,de
@@ -273,7 +275,7 @@ L_B9E0:
 	ld (ix+014h),0ffh	; Byte 20 to 0xFF: the radius, whole
 	ld (ix+002h),032h	; 0x32 frames
 	ld (ix+01bh),000h
-	jp 09510h
+	jp zero_speed
 move_type_1D:		; Fires, crashes if it touches the map and, once its count is over, starts turning in a spiral
 	ld bc,00304h		; Four drawings, one every four frames
 	ld a,(ix+001h)
@@ -281,12 +283,12 @@ move_type_1D:		; Fires, crashes if it touches the map and, once its count is ove
 	jr nz,L_BA0A
 	ld b,001h
 L_BA0A:
-	ld hl,0bb31h
+	ld hl,type_1D_tables
 	call animate_round_and_round
 	ld l,(ix+004h)		; Its row and its column...
 	ld h,(ix+006h)
-	call 09857h		; ...against the map: if it hits, it blows up
-	jp c,072d2h
+	call collides_with_map	; ...against the map: if it hits, it blows up
+	jp c,blow_up_enemy
 	ld a,(ix+001h)		; Byte 1: which step it is on
 	dec a
 	jp z,type_1D_starts_spiral
@@ -313,7 +315,7 @@ type_1D_starts_spiral:		; When byte 28 runs out it takes the two speeds for its 
 	dec (ix+01ch)		; Byte 28: how much straight flight it has left
 	jp nz,turn_one_way
 	inc (ix+001h)
-	ld hl,0bb6dh		; The table at 0xBB6D: two speeds per variant
+	ld hl,type_1D_tables+3Ch	; The table at 0xBB6D: two speeds per variant
 	ld a,(ix+013h)
 	add a,a
 	add a,a
@@ -323,12 +325,12 @@ type_1D_starts_spiral:		; When byte 28 runs out it takes the two speeds for its 
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
-	call 06cbfh
+	call set_vertical_speed
 	inc hl
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
-	jp 06cc6h
+	jp set_horizontal_speed
 type_1D_fires:		; With the ship's shield on it fires every 0x40 or every 0x20 frames; otherwise, without a count
 	ld a,(OPTION_COUNT)	; The ship's shield
 	dec a
@@ -341,10 +343,10 @@ type_1D_fires:		; With the ship's shield on it fires every 0x40 or every 0x20 fr
 	jp nz,fire_without_aiming
 	ld a,(SHIP)		; And also with the ship halfway through coming out or exploding
 	cp 003h
-	jp z,09235h
+	jp z,fire_without_aiming
 	ld a,(SHIP_LASER)
 	or a
-	jp nz,09235h
+	jp nz,fire_without_aiming
 	ret
 type_1D_fires_at_times:		; Every 0x40 or every 0x20 frames, depending on the shield
 	ld a,(FRAME_COUNT)
@@ -353,6 +355,6 @@ type_1D_fires_at_times:		; Every 0x40 or every 0x20 frames, depending on the shi
 	ld a,(CONTROLLER_NEW)	; Bit 4
 	and 010h
 	ret z
-	jp 09239h
+	jp L_9239
 
 	end

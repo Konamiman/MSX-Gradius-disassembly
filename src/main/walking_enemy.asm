@@ -5,6 +5,8 @@
 	include "variables.inc"
 
 	public how_far_it_walks,move_type_5
+	extrn animate_round_and_round,collides_with_map_3,L_9239,measure_distance_to_ship,move_with_scroll_eight,set_horizontal_speed
+	extrn time_to_move
 
 ; ----------------------------------------------------------------------
 ; THE ENEMY THAT WALKS STUCK TO THE TERRAIN
@@ -12,7 +14,7 @@
 ; depending on where it came in) and for that it carries no height map at
 ; all. On every step it asks the map what is eight points below its feet:
 ; if there is wall, it goes up eight; if there is nothing, it goes down
-; eight; and it repeats until it fits. With 0xE969 at one it fits in one go
+; eight; and it repeats until it fits. With WALKER_FIT_FULLY at one it fits in one go
 ; (when planting itself) and at zero it takes one step per frame, which is
 ; what gives it its hopping walk.
 ; ----------------------------------------------------------------------
@@ -21,7 +23,7 @@ move_type_5:		; Walks stuck to the terrain until its count runs out; then it pla
 	dec a
 	jr z,type_5_planted
 	jp p,type_5_leaving
-	call 095a6h		; If it is its turn to move, it leaves
+	call time_to_move	; If it is its turn to move, it leaves
 	jr c,type_5_leaves
 	dec (ix+002h)		; Byte 2: the frames it has left walking
 	jr z,type_5_plants_itself
@@ -34,18 +36,18 @@ type_5_plants_itself:		; Fits itself fully into the terrain, stays 0x5A frames a
 	call fit_fully
 	call when_to_fire_again
 	ld de,00000h		; No horizontal speed: still
-	jp 06cc6h
+	jp set_horizontal_speed
 type_5_leaves:		; Step 2 and two points to the left
 	ld (ix+001h),002h
 	ld de,0fe00h
-	jp 06cc6h
+	jp set_horizontal_speed
 type_5_planted:		; Holds out for the 0x5A frames and then sets off walking towards the ship's column
-	call 095a6h
+	call time_to_move
 	jr c,type_5_leaves
 	dec (ix+002h)		; The frames it has left planted
 	jr z,L_AA44
 	call fire_if_ship_in_arc
-	jp 09251h
+	jp move_with_scroll_eight
 L_AA44:
 	dec (ix+001h)		; Back to the walking step
 	call how_far_it_walks
@@ -55,14 +57,14 @@ L_AA44:
 	jr nc,L_AA58
 	ld de,0fe00h
 L_AA58:
-	jp 06cc6h
+	jp set_horizontal_speed
 type_5_leaving:		; Stays stuck to the terrain while it moves away
 	call animate_type_5
 	jr one_step_per_frame
-fit_fully:		; 0xE969 to one: the terrain is searched until it fits within the same frame
+fit_fully:		; WALKER_FIT_FULLY to one: the terrain is searched until it fits within the same frame
 	ld a,001h
 	jr L_AA65
-one_step_per_frame:		; 0xE969 to zero: only one step of eight points per frame
+one_step_per_frame:		; WALKER_FIT_FULLY to zero: only one step of eight points per frame
 	xor a
 L_AA65:
 	ld (WALKER_FIT_FULLY),a
@@ -73,14 +75,14 @@ find_floor:		; Checks the map 0x10 below: with no wall it goes down eight, and w
 	ld a,(ix+004h)
 	add a,010h
 	ld l,a
-	call 09897h		; That is where the map is asked
+	call collides_with_map_3	; That is where the map is asked
 	jr nc,descend_to_floor
 climb_until_fit:		; With wall eight points lower, it goes up eight
 	ld h,(ix+006h)
 	ld a,(ix+004h)
 	add a,008h		; Eight below
 	ld l,a
-	call 09897h
+	call collides_with_map_3
 	ret nc
 	ld a,(ix+004h)
 	sub 008h		; Eight points higher
@@ -102,7 +104,7 @@ descend_to_floor:		; With nothing below, goes down eight at a time as far as row
 find_ceiling:		; The same dance, but the other way round: it sticks to the top
 	ld h,(ix+006h)
 	ld l,(ix+004h)
-	call 09897h		; That is where the map is asked
+	call collides_with_map_3	; That is where the map is asked
 	jr nc,climb_to_ceiling
 	ld a,(ix+004h)
 	add a,008h		; With no ceiling where it is, it goes down eight
@@ -116,7 +118,7 @@ climb_to_ceiling:		; As long as there is room eight higher, it goes up, and neve
 	ld a,(ix+004h)
 	sub 008h
 	ld l,a
-	call 09897h		; That is where the map is asked
+	call collides_with_map_3	; That is where the map is asked
 	ret c
 	ld a,(ix+004h)
 	cp 009h			; Not above row 9
@@ -159,7 +161,7 @@ L_AB15:
 L_AB1C:
 	ld e,(ix+004h)
 	ld d,(ix+006h)
-	call 066d5h		; From that comes the angle to the ship, in 0xEC18
+	call measure_distance_to_ship	; From that comes the angle to the ship, in SHIP_ANGLE
 	ld a,(SHIP_ANGLE)
 	cp 080h			; Folded to half a turn...
 	jr c,L_AB2E
@@ -172,11 +174,11 @@ L_AB34:
 	sub 008h		; It only fires if the ship falls within 0x30
 	cp 030h
 	ret nc
-	jp 09239h
+	jp L_9239
 animate_type_5:		; Two drawings, one every four frames; the pair depends on whether it is climbing or descending and whether it walks on the ground or on the ceiling
 	ld a,(ix+00ah)		; Byte 10: climbing or descending
 	or a
-	ld hl,0ab58h
+	ld hl,type_5_drawings
 	jp p,L_AB48
 	inc hl
 	inc hl
@@ -187,11 +189,11 @@ L_AB48:
 	add hl,bc
 L_AB52:
 	ld bc,00302h		; Two drawings, one every four frames
-	jp 095d1h
+	jp animate_round_and_round
 
 ; ----------------------------------------------------------------------
-; DATA table_AB58: Eight bytes read by 0xAB40.
-table_AB58:
+; DATA type_5_drawings: Eight bytes read by 0xAB40.
+type_5_drawings:
 	defb 0F4h,0F8h,0D0h,0D4h,0E8h,0ECh,0DCh,0E0h
 face_ship:		; The drawing changes depending on which side of it the ship is
 	bit 0,(ix+013h)		; Bit 0 of byte 19: ground or ceiling

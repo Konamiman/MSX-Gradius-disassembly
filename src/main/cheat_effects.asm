@@ -5,16 +5,16 @@
 	include "variables.inc"
 
 	public cheat_double,cheat_down,cheat_everything,cheat_laser,cheat_missile,cheat_option
-	public cheat_shield,upload_ship_cards
-	extrn note_upgrades_held,set_up_one_option
+	public cheat_shield,refresh_meter,upload_ship_cards
+	extrn add_a_to_hl,draw_power_up_meter,note_upgrades_held,set_up_one_option
 
 ; ----------------------------------------------------------------------
 ; WHAT EACH CHEAT GIVES
-; This is where the cheats typed on the keyboard land, dispatched by 0x50C9
+; This is where the cheats typed on the keyboard land, dispatched by check_typed_keys
 ; in bank 0. Each one sets one field of the ship and returns:
-; 0xA0D8  HYPER and the stage's woman's name: all FIVE at once
-; 0xA0E9  SHIELD    0xA101  LASER     0xA106  MISSILE
-; 0xA10B  DOUBLE    0xA110  OPTION    0xA0FA  DOWN, which takes away
+; cheat_everything  HYPER and the stage's woman's name: all FIVE at once
+; cheat_shield  SHIELD    cheat_laser  LASER     cheat_missile  MISSILE
+; cheat_double  DOUBLE    cheat_option  OPTION    cheat_down  DOWN, which takes away
 ; ----------------------------------------------------------------------
 cheat_everything:		; HYPER and the stage's name: shield, speed, laser, missile and option, all five in a row
 	call set_shield		; All five at once: shield...
@@ -28,12 +28,12 @@ cheat_shield:		; Only the shield
 	jr refresh_meter
 
 ; ----------------------------------------------------------------------
-; DATA dead_code_A0EE: Twelve bytes that disassemble as code (`ld hl,0xE202 /
-;   ld a,(hl) / cp 7 / ret nc / call 0xA11E / jr`), but that no path reaches:
+; DATA dead_code_A0EE: Twelve bytes that disassemble as code (`ld hl,SHIP_SPEED /
+;   ld a,(hl) / cp 7 / ret nc / call dead_code_A11E / jr`), but that no path reaches:
 ;   the instruction before them is a `jr` and no table points here.
 dead_code_A0EE:		; Code that nothing reaches.
 	defb 21h,02h,0E2h,7Eh,0FEh,07h,0D0h,0CDh,1Eh,0A1h,18h,59h
-cheat_down:		; 0xE202 to zero: takes away from the ship what 0xA123 raises
+cheat_down:		; SHIP_SPEED to zero: takes away from the ship what raise_speed raises
 	ld hl,SHIP_SPEED
 	ld (hl),000h
 	jr refresh_meter
@@ -49,7 +49,7 @@ cheat_double:		; Only the double shot
 cheat_option:		; Only the options, up to the two that fit
 	call add_option
 	jr refresh_meter
-set_shield:		; 0xE200 to 3 and 0xE201 to 0x0A: the shield is on
+set_shield:		; SHIP to 3 and SHIP_TIMER to 0x0A: the shield is on
 	ld hl,SHIP
 	ld (hl),003h
 	inc l
@@ -57,28 +57,28 @@ set_shield:		; 0xE200 to 3 and 0xE201 to 0x0A: the shield is on
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA dead_code_A11E: Five bytes that are `ld hl,0xE202 / inc (hl) / ret`.
-;   The only caller is the dead piece at 0xA0EE, so they never run either.
+; DATA dead_code_A11E: Five bytes that are `ld hl,SHIP_SPEED / inc (hl) / ret`.
+;   The only caller is the dead piece at dead_code_A0EE, so they never run either.
 dead_code_A11E:
 	defb 21h,02h,0E2h,34h,0C9h
-raise_speed:		; 0xE202 to one
+raise_speed:		; SHIP_SPEED to one
 	ld hl,SHIP_SPEED
 	ld (hl),001h
 	ret
-set_laser:		; 0xE20C and 0xE20D to zero and 0xE20E to two: the shot becomes the laser
+set_laser:		; SHIP_SHOT and 0xE20D to zero and SHIP_LASER to two: the shot becomes the laser
 	ld hl,SHIP_SHOT		; This and 0xE20D to zero...
 	xor a
 	ld (hl),a
 	inc l
 	ld (hl),a
 	inc l
-	ld (hl),002h		; ...and 0xE20E to two: the laser
+	ld (hl),002h		; ...and SHIP_LASER to two: the laser
 	ret
-set_missile:		; 0xE20F to two
+set_missile:		; SHIP_MISSILE to two
 	ld hl,SHIP_MISSILE
 	ld (hl),002h
 	ret
-set_double_shot:		; 0xE20C and 0xE20D to one, and 0xE20E to zero
+set_double_shot:		; SHIP_SHOT and 0xE20D to one, and SHIP_LASER to zero
 	ld hl,SHIP_SHOT		; This and 0xE20D to one...
 	ld a,001h
 	ld (hl),a
@@ -86,9 +86,9 @@ set_double_shot:		; 0xE20C and 0xE20D to one, and 0xE20E to zero
 	ld (hl),a
 	dec a
 	inc l
-	ld (hl),a		; ...and 0xE20E to zero: the double
+	ld (hl),a		; ...and SHIP_LASER to zero: the double
 	ret
-add_option:		; Raises 0xE20B up to two and, for each one, calls 0x9BFB
+add_option:		; Raises OPTION_COUNT up to two and, for each one, calls set_up_one_option
 	ld hl,OPTION_COUNT
 	ld a,(hl)
 	cp 002h			; Two options at most
@@ -98,7 +98,7 @@ add_option:		; Raises 0xE20B up to two and, for each one, calls 0x9BFB
 	jr add_option
 refresh_meter:		; Notes again what the ship carries and repaints the meter
 	call note_upgrades_held
-	jp 0569dh
+	jp draw_power_up_meter
 upload_four_empty_cards:		; Four switched-off cards: the ship is not there
 	ld b,004h
 L_A15B:
@@ -127,7 +127,7 @@ upload_explosion_card:		; With the ship dead, the cards come from somewhere else
 upload_ship_cards:		; Copies to the sprite buffer the cards of the ship, its two options and its shots
 	ld de,SPRITE_BUFFER	; The sprite attribute buffer
 	ld hl,SHIP
-	ld a,(hl)		; With 0xE200 at zero there is no ship, and with bit 7 it is blown up
+	ld a,(hl)		; With SHIP at zero there is no ship, and with bit 7 it is blown up
 	or a
 	jr z,upload_four_empty_cards
 	jp m,upload_explosion_card
@@ -172,7 +172,7 @@ L_A1C3:
 	call upload_shot_card
 	ld hl,MISSILES
 	ld b,003h		; Three missiles
-upload_three_missiles:		; The three missiles at 0xE2C0; an empty slot is switched off
+upload_three_missiles:		; The three missiles at MISSILES; an empty slot is switched off
 	ld a,(hl)		; Three missiles, eight bytes apart
 	or a
 	jr z,missile_off
@@ -185,13 +185,13 @@ upload_three_missiles:		; The three missiles at 0xE2C0; an empty slot is switche
 	ldi
 	ldi
 	ld a,008h		; Eight bytes: the next one
-	call 0405dh
+	call add_a_to_hl
 	djnz upload_three_missiles
 	ret
 missile_off:		; Empty card and on to the next one
 	call card_off
 	ld a,010h		; Sixteen bytes: the next one
-	call 0405dh
+	call add_a_to_hl
 	djnz upload_three_missiles
 	ret
 upload_option_card:		; If the option is there, its position, pattern and colour to the buffer

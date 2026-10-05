@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - map image (banks 11-12) - pieces.asm
 ; ============================================================================
 
+	public pieces_A,pieces_B
+
 ; Bank 11 (runs at 0x8000).
 ;
 ; THIS BANK HOLDS NO CODE. It is the first half of the MAP: it is always
@@ -10,7 +12,7 @@
 ; scroll code they are 16 KB in a row from 0x8000 to 0xBFFF.
 ;
 ; HOW THE BACKGROUND IS DRAWN. Routine 0x46DF in bank 0 takes a byte from the
-; stage's script, multiplies it by 16 and adds it to 0x8000 (or to 0x8FF0 in
+; stage's script, multiplies it by 16 and adds it to 0x8000 (or to pieces_B in
 ; stages 5, 9, 10 and 12, p00:46F2-p00:4708). What is there is sixteen bytes:
 ; a column of four characters taken four at a time. In other words, each byte
 ; of the script is a PIECE of 4x4 characters, and the whole map is written
@@ -22,7 +24,7 @@
 
 ; ----------------------------------------------------------------------
 ; DATA pieces_A: 255 pieces of 16 bytes each (4x4 characters). The index comes
-;   from the stage's script; 0x470B adds 16*index to 0x8000.
+;   from the stage's script; L_470B adds 16*index to 0x8000.
 pieces_A:
 	defb 00h,00h,00h,00h,00h,00h,00h,00h,0F7h,00h,00h,00h,00h,00h,00h,00h
 	defb 00h,0F7h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h
@@ -282,7 +284,7 @@ pieces_A:
 
 ; ----------------------------------------------------------------------
 ; DATA pieces_B: The other set of pieces, based at 0x8FF0. Used by stages 5,
-;   9, 10 and 12 (0x46F5-0x4706 compares 0xE061 with 5, 9, 10 and 12).
+;   9, 10 and 12 (0x46F5-0x4706 compares STAGE with 5, 9, 10 and 12).
 pieces_B:
 	defb 00h,00h,00h,00h,00h,00h,00h,00h,0F7h,00h,00h,00h,00h,00h,00h,00h
 	defb 00h,0F7h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h

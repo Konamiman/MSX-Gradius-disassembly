@@ -6,6 +6,7 @@
 	include "variables.inc"
 
 	public switch_off_screen
+	extrn check_if_sound,dump_to_vram
 
 ; ----------------------------------------------------------------------
 ; WHEN THE BOSS DIES, THE SCREEN GOES DARK BY EATING THE VRAM
@@ -17,9 +18,9 @@
 ; 0xFE, 0xFC, 0xF8... down to 0x00, also rotating the mask three bits per
 ; byte, so that the black comes in crumbled and not in rows.
 ; Bank 2 calls it from two different bosses, and when it is done it sets
-; 0xE1A3.
+; FADE_DONE.
 ; ----------------------------------------------------------------------
-switch_off_screen:		; The four steps of the fade: eat the colours, eat the patterns, clear 0xED00 and report back
+switch_off_screen:		; The four steps of the fade: eat the colours, eat the patterns, clear MAP and report back
 	ld hl,FADE_STEP		; Which step the fade is on
 	ld a,(hl)
 	dec a
@@ -31,13 +32,13 @@ switch_off_screen:		; The four steps of the fade: eat the colours, eat the patte
 	ld a,(ENDING)		; If nothing else is already playing, sound 0x3E
 	and a
 	ld a,03eh
-	call z,049deh
-	xor a			; 0xE1A3 to zero: not finished yet
+	call z,check_if_sound
+	xor a			; FADE_DONE to zero: not finished yet
 	ld (FADE_DONE),a
-	inc l			; 0xE1A1 to zero: starting from the first row
+	inc l			; FADE_ROW to zero: starting from the first row
 	ld (hl),a
 	inc l
-	ld (hl),0f0h		; 0xE1A2: the mask starts at 0xF0
+	ld (hl),0f0h		; FADE_MASK: the mask starts at 0xF0
 eat_background_colours:		; A whole pass over the colour table, 0x40 rows at a time
 	ld a,(FADE_ROW)		; Which row it is on
 	cp 040h			; The first third does not reach 0x1000
@@ -94,7 +95,7 @@ L_A73E:
 	ld a,002h		; With the mask at zero everything is black: step 2
 	ld (FADE_STEP),a
 	ret
-clear_buffer:		; The 0x2C0 bytes of 0xED00 to zero, and on to step 3
+clear_buffer:		; The 0x2C0 bytes of MAP to zero, and on to step 3
 	ld hl,MAP		; From here onwards...
 	ld de,MAP+1
 	ld bc,002bfh		; ...0x2C0 bytes to zero
@@ -103,14 +104,14 @@ clear_buffer:		; The 0x2C0 bytes of 0xED00 to zero, and on to step 3
 	ld a,003h		; And step 3
 	ld (FADE_STEP),a
 	ret
-report_done:		; When the sound stops, 0xE1A3 is set and bank 2 takes the boss as dead
+report_done:		; When the sound stops, FADE_DONE is set and bank 2 takes the boss as dead
 	ld a,(SND_CARD_A+CARD_MODE)	; Not until the sound stops
 	and a
 	ret nz
-	ld a,001h		; 0xE1A3 to one: bank 2 can now carry on
+	ld a,001h		; FADE_DONE to one: bank 2 can now carry on
 	ld (FADE_DONE),a
 	ret
-chunk_with_current_mask:		; Comes in with the current row in 0xE1A1
+chunk_with_current_mask:		; Comes in with the current row in FADE_ROW
 	ld a,(FADE_ROW)
 eat_chunk:		; Brings 0x200 bytes down from VRAM to 0xEA00, applies the mask to them and sends them back up
 	ld bc,00200h		; Half a kilobyte at a time
@@ -141,7 +142,7 @@ L_A776:
 	pop bc
 	pop hl
 	ld de,FADE_BUFFER
-	jp 04960h		; And the block, bitten, goes back to VRAM
+	jp dump_to_vram		; And the block, bitten, goes back to VRAM
 apply_mask:		; In the first step the mask is the same for every byte; in the rest it rotates three bits per byte
 	ld a,(FADE_STEP)
 	and a

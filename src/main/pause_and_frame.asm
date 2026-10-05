@@ -36,9 +36,9 @@ check_pause_key:		; With the game running, looks at bit 5 of keyboard row 6 and,
 	and (hl)
 	dec hl
 	jr z,L_4518
-	inc (hl)		; 0xE10B counts the presses: even is play, odd is pause
+	inc (hl)		; PAUSE_COUNT counts the presses: even is play, odd is pause
 	bit 0,(hl)
-	ld de,00000h		; In play, 0xE047 to zero
+	ld de,00000h		; In play, NOISE_FX_ON to zero
 	jr z,L_4514
 	ld de,00101h		; And in pause, 0x0101
 	call clear_typing_state
@@ -66,7 +66,7 @@ L_4518:
 ; restored.
 ; ----------------------------------------------------------------------
 game_frame:		; The strip of calls that makes a whole frame: the scroll, the enemies, the shots, the collisions and the score
-	ld a,(CONTROLLER)	; Copied to 0xE10D: the joystick, as it was left
+	ld a,(CONTROLLER)	; Copied to PAUSE_JOYSTICK: the joystick, as it was left
 	ld (PAUSE_JOYSTICK),a
 	call upload_sprites_rotating
 	call dispatch_by_stage
@@ -107,7 +107,7 @@ game_frame:		; The strip of calls that makes a whole frame: the scroll, the enem
 	call run_options
 	call run_nine_shots
 	call check_fire
-	call 0a17fh
+	call upload_ship_cards
 	call run_twelve_objects
 	call release_stretch_enemies
 	call drop_rock
@@ -142,7 +142,7 @@ game_frame:		; The strip of calls that makes a whole frame: the scroll, the enem
 	dec a
 	ret nz
 	jp draw_scores		; ...it is time to refresh the score
-start_scroll:		; Moves the distance counter back 0x20 and leaves the screen pointer at 0xED00, with 0x20 steps to take
+start_scroll:		; Moves the distance counter back 0x20 and leaves the screen pointer at MAP, with 0x20 steps to take
 	xor a
 	ld (ENTRY_X),a		; To zero
 	ld hl,(DISTANCE)	; 0x20 less on the distance covered

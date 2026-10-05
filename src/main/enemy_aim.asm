@@ -4,10 +4,10 @@
 
 	include "variables.inc"
 
-	public aim_at_ship,change_sign,note_all_cells,paint_whole_frame,run_e780_and_ea00,run_four_at_e800_and_ea80
-	public save_under_e780,save_under_the_eight
-	extrn dispatch_boss_drawing,erase_e800_objects,erase_the_five,erase_turrets,paint_background_objects,restore_underneath
-	extrn save_under_laser
+	public aim_at_ship,change_sign,measure_distance_to_ship,multiply_h_by_e,note_all_cells,paint_whole_frame
+	public run_e780_and_ea00,run_four_at_e800_and_ea80,save_under_e780,save_under_the_eight
+	extrn add_a_to_hl,cell_to_ram_address,dispatch_boss_drawing,erase_e800_objects,erase_the_five,erase_turrets
+	extrn paint_background_objects,restore_underneath,save_under_laser
 
 ; ----------------------------------------------------------------------
 ; THE ENEMY'S AIM GETS WORSE ON PURPOSE... WITH THE R REGISTER
@@ -49,18 +49,18 @@ L_669E:
 ; THE SINE AND THE COSINE COME FROM THE SAME TABLE
 ; To know which way the shot goes it needs the sine and the cosine of the
 ; angle, and the cartridge does not keep two tables: it keeps ONE, the one
-; at 0x6853, and reads it twice. Once with the index as it is and once
+; at quarter_sine, and reads it twice. Once with the index as it is and once
 ; with 0x3F minus the index, which is exactly the complementary angle.
 ; With that it gets the two components, multiplies them by the speed
-; (0x6731, with the hand-made eight by eight multiplication at 0x6743)
-; and gives them the right sign with the two's complement at 0x6729.
+; (times_speed, with the hand-made eight by eight multiplication at multiply_h_by_e)
+; and gives them the right sign with the two's complement at change_sign.
 ; ----------------------------------------------------------------------
-get_both_speeds:		; Reads the table at 0x6853 from both sides (the index and its complement to 0x3F) and from that come the two speeds, the vertical and the horizontal
+get_both_speeds:		; Reads the table at quarter_sine from both sides (the index and its complement to 0x3F) and from that come the two speeds, the vertical and the horizontal
 	ld d,000h
 	ld a,e
 	sub 03fh		; 0x3F minus the index: the complementary angle
 	neg
-	ld hl,06853h		; The table at 0x6853, read from both ends
+	ld hl,quarter_sine	; The table at quarter_sine, read from both ends
 	push hl			; The table, from both ends
 	add hl,de
 	ld c,(hl)
@@ -83,7 +83,7 @@ get_both_speeds:		; Reads the table at 0x6853 from both sides (the index and its
 	call nz,change_sign
 	ld (AIM_HSPEED),de	; And the horizontal one
 	ret
-measure_distance_to_ship:		; Gets the two differences as absolute values, notes their signs in 0xEC10 and 0xEC11, and from the pair gets the angle
+measure_distance_to_ship:		; Gets the two differences as absolute values, notes their signs in AIM_ROW_SIGN and AIM_COL_SIGN, and from the pair gets the angle
 	ld hl,AIM_ROW_SIGN
 	ld (hl),000h
 	ld a,(SHIP_ROW)		; The ship's row
@@ -112,14 +112,14 @@ L_66F2:
 	inc (hl)
 L_6700:
 	ld a,d
-	rra			; The high nibble of one and of the other: the index into the table at 0x6753
+	rra			; The high nibble of one and of the other: the index into the table at angles
 	rra
 	rra
 	rra
 	and 00fh
 	add a,e
-	ld hl,06753h
-	call 0405dh
+	ld hl,angles
+	call add_a_to_hl
 	ld a,(hl)
 	ld (AIM_BASE_ANGLE),a	; Keeps the angle
 	ld c,a
@@ -130,7 +130,7 @@ L_6700:
 	jr z,L_671E
 	ld b,080h
 L_671E:
-	cp l			; And 0xEC18 the quadrant, which comes from the two signs
+	cp l			; And SHIP_ANGLE the quadrant, which comes from the two signs
 	ld a,c
 	jr z,L_6724
 	neg
@@ -147,7 +147,7 @@ change_sign:		; Two's complement of DE
 	ld e,a
 	inc de
 	ret
-times_speed:		; Multiplies the component by the speed in 0xE110 and keeps the high part, shifted three bits
+times_speed:		; Multiplies the component by the speed in ENEMY_SHOT_SPEED and keeps the high part, shifted three bits
 	ld a,(ENEMY_SHOT_SPEED)	; The shot's speed
 	ld h,a
 	call multiply_h_by_e
@@ -175,14 +175,14 @@ L_674C:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_674F: Four bytes ahead of the base 0x6753.
+; DATA table_674F: Four bytes ahead of the base angles.
 table_674F:
 	defb 40h,00h,80h,0C0h
 
 ; ----------------------------------------------------------------------
 ; DATA angles: Two hundred and fifty-six bytes that 0x6708 indexes with the
 ;   high nibble of one difference and that of the other: from the pair (dx,
-;   dy) comes the angle with which the quarter sine at 0x6853 is then read.
+;   dy) comes the angle with which the quarter sine at quarter_sine is then read.
 angles:
 	defb 20h,0Dh,08h,06h,04h,04h,03h,03h,02h,02h,02h,02h,01h,01h,01h,01h
 	defb 33h,20h,16h,10h,0Dh,0Bh,09h,08h,07h,06h,06h,05h,05h,04h,04h,04h
@@ -213,22 +213,22 @@ quarter_sine:
 	defb 62h,68h,6Dh,73h,79h,7Eh,84h,89h,8Eh,93h,99h,9Eh,0A2h,0A7h,0ACh,0B1h
 	defb 0B5h,0B9h,0BEh,0C2h,0C6h,0CAh,0CEh,0D1h,0D5h,0D8h,0DCh,0DFh,0E2h,0E5h,0E7h,0EAh
 	defb 0EDh,0EFh,0F1h,0F3h,0F5h,0F7h,0F8h,0FAh,0FBh,0FCh,0FDh,0FEh,0FEh,0FFh,0FFh,0FFh
-note_all_cells:		; Works out for each object the screen cell it lands on, for the twelve at 0xE300 and the ten at 0xE500
+note_all_cells:		; Works out for each object the screen cell it lands on, for the twelve at OBJECTS and the ten at ENEMY_SHOTS
 	call twelve_at_e300
 	call save_under_laser	; And a bank 3 routine
 	call e500_objects_if_due
-	call anything_in_e151	; And the ten at 0xE500
+	call anything_in_e151	; And the ten at ENEMY_SHOTS
 	ret c
-ten_at_e500:		; The ten objects at 0xE500
+ten_at_e500:		; The ten objects at ENEMY_SHOTS
 	ld ix,ENEMY_SHOTS
 	ld b,00ah
 	jr L_68B5
-e500_objects_if_due:		; Only with 0xE1B0 set
+e500_objects_if_due:		; Only with FIVE_PIECES_ON set
 	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
 	jr ten_at_e500
-twelve_at_e300:		; The twelve objects at 0xE300
+twelve_at_e300:		; The twelve objects at OBJECTS
 	ld ix,OBJECTS		; The twelve slots
 	ld b,00ch
 L_68B5:
@@ -248,7 +248,7 @@ object_cell:		; From the object's X and Y gets the map cell and stores it in byt
 	ret z
 	ld l,(ix+004h)		; The Y and the X
 	ld h,(ix+006h)
-	call 0571bh		; The bank 0 routine that turns a cell into a RAM address
+	call cell_to_ram_address	; The bank 0 routine that turns a cell into a RAM address
 	ld (ix+01eh),l		; Bytes 30 and 31: where it lands
 	ld (ix+01fh),h
 	push ix
@@ -263,9 +263,9 @@ object_cell:		; From the object's X and Y gets the map cell and stores it in byt
 	ldi
 	ldi
 	ret
-anything_in_e151:		; Returns carry if 0xE151 is zero or if 0xE152 is not
+anything_in_e151:		; Returns carry if BOSS_STATE is zero or if BOSS_KIND is not
 	ld hl,(BOSS_STATE)	; At zero there is no boss
-	ld a,l			; 0xE152 at zero: no boss
+	ld a,l			; BOSS_KIND at zero: no boss
 	and a
 	scf
 	ret z
@@ -274,12 +274,12 @@ anything_in_e151:		; Returns carry if 0xE151 is zero or if 0xE152 is not
 	ret z
 	scf
 	ret
-run_four_at_e800_and_ea80:		; With 0xE151 set and 0xE152 at 1 or at 4-5, walks the four pairs of slots
+run_four_at_e800_and_ea80:		; With BOSS_STATE set and BOSS_KIND at 1 or at 4-5, walks the four pairs of slots
 	ld hl,BOSS_STATE	; Without a boss there is nothing to save
 	ld a,(hl)
 	or a
 	ret z
-	inc l			; 0xE152: the boss's step
+	inc l			; BOSS_KIND: the boss's step
 	ld a,(hl)
 	dec a
 	jp z,L_690C
@@ -287,7 +287,7 @@ run_four_at_e800_and_ea80:		; With 0xE151 set and 0xE152 at 1 or at 4-5, walks t
 	cp 002h
 	ret nc
 L_690C:
-	ld ix,EXPLOSIONS	; This and its partner at 0xEA80
+	ld ix,EXPLOSIONS	; This and its partner at BLAST_MIRROR
 	ld iy,BLAST_MIRROR
 	ld b,004h		; Four
 L_6916:
@@ -307,7 +307,7 @@ L_6928:
 	ld l,(ix+002h)
 	ld h,(ix+003h)
 	jp L_696F
-run_e780_and_ea00:		; Eight pairs, or just one if 0xE152 is 6
+run_e780_and_ea00:		; Eight pairs, or just one if BOSS_KIND is 6
 	ld hl,BOSS_STATE
 	ld a,(hl)
 	or a
@@ -317,7 +317,7 @@ run_e780_and_ea00:		; Eight pairs, or just one if 0xE152 is 6
 	ld a,(hl)
 	dec a
 	jp z,L_694D
-	sub 004h		; With 0xE152 at 5 as well
+	sub 004h		; With BOSS_KIND at 5 as well
 	jp z,L_694D
 	dec a
 	ret nz
@@ -341,7 +341,7 @@ save_what_was_there:		; The 4x4 rectangle of characters under the object is save
 	ld l,(ix+003h)
 	ld h,(ix+005h)
 L_696F:
-	call 0571bh		; The map cell where it lands
+	call cell_to_ram_address	; The map cell where it lands
 	push iy
 	pop de
 	ld a,004h		; Four rows
@@ -353,7 +353,7 @@ L_6977:
 	dec a			; 0x1C: what is left to reach the row below
 	jr nz,L_6977
 	ret
-paint_whole_frame:		; The drawing chain: the objects, the background, the ones at 0xE800 and the ones at 0xE780, each with its own routine
+paint_whole_frame:		; The drawing chain: the objects, the background, the ones at EXPLOSIONS and the ones at BOSS_PIECES, each with its own routine
 	call restore_underneath
 	call draw_e300_objects
 	call erase_the_five
@@ -368,20 +368,20 @@ paint_whole_frame:		; The drawing chain: the objects, the background, the ones a
 	jp z,erase_e800_objects
 	inc l
 	ld a,(hl)
-	dec a			; And 0xE152 which step it is on
+	dec a			; And BOSS_KIND which step it is on
 	jp z,save_under_the_four
 	inc a
-	cp 005h			; Without a boss, the four at 0xE800 are erased
+	cp 005h			; Without a boss, the four at EXPLOSIONS are erased
 	jp nc,save_under_the_four
 	jp erase_e800_objects
-draw_e500_objects_if_due:		; Only if there is something in 0xE151
+draw_e500_objects_if_due:		; Only if there is something in BOSS_STATE
 	call anything_in_e151
 	ret c
 L_69B6:
 	ld ix,ENEMY_SHOTS	; The ten slots
 	ld b,00ah
 	jr draw_two_by_two
-draw_e500_objects:		; Only with 0xE1B0 set
+draw_e500_objects:		; Only with FIVE_PIECES_ON set
 	ld a,(FIVE_PIECES_ON)
 	or a
 	ret z
@@ -407,7 +407,7 @@ draw_two_by_two:		; Writes the object's four characters into the map: two on top
 	ld a,(ix+014h)
 	ld (hl),a
 	ld a,01fh		; 0x1F: the row below
-	call 0405dh
+	call add_a_to_hl
 	ld a,(ix+015h)		; And bytes 21 and 22: the two below
 	ld (hl),a
 	inc hl
@@ -418,7 +418,7 @@ L_69FB:
 	add ix,de
 	djnz draw_two_by_two
 	ret
-save_under_the_four:		; The four at 0xE800, with their mirror table at 0xEA80
+save_under_the_four:		; The four at EXPLOSIONS, with their mirror table at BLAST_MIRROR
 	ld ix,EXPLOSIONS
 	ld iy,BLAST_MIRROR
 	ld b,004h
@@ -439,11 +439,11 @@ save_under_one:		; That object's cell, and copy
 	ld l,(ix+002h)
 	ld h,(ix+003h)
 	jr copy_four_by_four
-save_under_e780:		; A single object at 0xE780
+save_under_e780:		; A single object at BOSS_PIECES
 	ld ix,BOSS_PIECES
 	ld iy,PIECE_MIRROR
 	jp save_one_at_e780
-save_under_the_eight:		; The eight at 0xE780, with their mirror at 0xEA00
+save_under_the_eight:		; The eight at BOSS_PIECES, with their mirror at PIECE_MIRROR
 	ld b,008h
 	ld ix,BOSS_PIECES
 	ld iy,PIECE_MIRROR
@@ -463,7 +463,7 @@ save_one_at_e780:		; The same, but with the position in bytes 3 and 5
 	ld l,(ix+003h)		; The piece's position
 	ld h,(ix+005h)
 copy_four_by_four:		; Copies the four by four rectangle of characters from the screen to the mirror table
-	call 0571bh		; The map cell where it lands
+	call cell_to_ram_address	; The map cell where it lands
 	push iy
 	pop de
 	ex de,hl

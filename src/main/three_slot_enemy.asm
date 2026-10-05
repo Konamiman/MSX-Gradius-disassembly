@@ -5,13 +5,13 @@
 	include "variables.inc"
 
 	public finish_type_1E,move_type_1E,move_type_1F,type_1E_splits_in_three
-	extrn add_horizontal_acceleration,add_vertical_acceleration,aim_acceleration,blow_up_enemy,collides_with_map,L_9239
-	extrn negate_horizontal_speed,set_horizontal_speed,set_vertical_speed,zero_speed
+	extrn add_horizontal_acceleration,add_speed,add_vertical_acceleration,aim_acceleration,blow_up_enemy,collides_with_map
+	extrn L_9239,negate_horizontal_speed,set_horizontal_speed,set_vertical_speed,zero_speed
 
 ; ----------------------------------------------------------------------
 ; THE THREE-SLOT ENEMY
 ; Type 0x1E is the only one that does not fit in one slot: it takes THREE
-; in a row, and that is why p01:0x6A98 looks for them three at a time.
+; in a row, and that is why p01:find_three_consecutive_slots looks for them three at a time.
 ; Here the other two are set up with a single 0x40-byte `ldir` that
 ; overlaps itself (copying the first onto the second and the second onto
 ; the third), and then they are given their position: one 0x10 below and
@@ -42,26 +42,26 @@ L_BC05:
 	ld (ix+013h),000h	; Byte 19 says which of the three each one is
 	ld (ix+033h),001h
 	ld (ix+053h),002h
-	ld a,(BIGFLOCK_DOOR)	; The table at 0xBC43: two speeds per door
+	ld a,(BIGFLOCK_DOOR)	; The table at type_1E_door_speeds: two speeds per door
 	add a,a
 	add a,a
 	ld e,a
 	ld d,000h
-	ld hl,0bc43h
+	ld hl,type_1E_door_speeds
 	add hl,de
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
-	call 06cbfh
+	call set_vertical_speed
 	inc hl
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
-	jp 06cc6h
+	jp set_horizontal_speed
 
 ; ----------------------------------------------------------------------
-; DATA table_BC43: Sixteen bytes read by 0xBC32, as words.
-table_BC43:
+; DATA type_1E_door_speeds: Sixteen bytes read by 0xBC32, as words.
+type_1E_door_speeds:
 	defw 0000h,0040h
 	defw 0000h,0FF40h
 	defw 0000h,0FFC0h
@@ -80,9 +80,9 @@ L_BC61:
 	xor 001h
 	ld (ix+01dh),a
 set_drawing_trio:		; One character for each of the three slots
-	ld hl,0bc83h
+	ld hl,type_1E_drawing_trios
 	jr z,L_BC74
-	ld hl,0bc86h
+	ld hl,type_1E_drawing_trios+3
 L_BC74:
 	ld a,(hl)		; The first slot's...
 	ld (ix+00ch),a
@@ -95,8 +95,8 @@ L_BC74:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_BC83: Six bytes read by 0xBC6C (0xBC83) and 0xBC71 (0xBC86).
-table_BC83:
+; DATA type_1E_drawing_trios: Six bytes read by set_drawing_trio (0xBC83) and 0xBC71 (0xBC86).
+type_1E_drawing_trios:
 	defb 0D0h,0D4h,0D8h
 	defb 0DCh,0E0h,0E4h
 set_colour_of_three:		; Colour 7 or 5, the same in all three slots
@@ -168,8 +168,8 @@ move_type_1E:		; Only the first slot moves: it closes in on the ship's row betwe
 	jr nc,L_BD09
 	ld de,0ffe0h
 L_BD09:
-	call 06cbfh
-	call 05f7ch
+	call set_vertical_speed
+	call add_speed
 	ld a,070h		; Not past row 0x70...
 	cp (ix+004h)
 	jr nc,L_BD1B
@@ -188,7 +188,7 @@ L_BD25:
 	ret c
 	jp negate_horizontal_speed
 type_1E_splits_in_three:		; Once the count is over, the three slots become type 0x1F and fly off, each in its own direction
-	ld hl,0bd71h		; The table at 0xBD71: two speeds per piece
+	ld hl,type_1E_split_speeds	; The table at type_1E_split_speeds: two speeds per piece
 	exx
 	ld b,003h		; The three slots
 L_BD39:
@@ -223,8 +223,8 @@ L_BD39:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_BD71: Twelve bytes read by 0xBD33, as signed words.
-table_BD71:
+; DATA type_1E_split_speeds: Twelve bytes read by type_1E_splits_in_three, as signed words.
+type_1E_split_speeds:
 	defw 0FF80h,0000h
 	defw 0080h,0FF80h
 	defw 0080h,0080h
@@ -245,7 +245,7 @@ L_BD95:
 	jr nc,L_BDA2
 	ld de,0fe00h		; ...or two upwards
 L_BDA2:
-	jp 06cbfh
+	jp set_vertical_speed
 type_1F_touches_map:		; Checks the cell where it is and, if it is descending, the one 0x10 lower
 	ld l,(ix+004h)		; Its row and its column
 	ld h,(ix+006h)

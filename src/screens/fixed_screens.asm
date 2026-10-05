@@ -2,6 +2,9 @@
 ; Nemesis / Gradius - screens image (banks 9-10) - fixed_screens.asm
 ; ============================================================================
 
+	public graphics_0468,graphics_2468,graphics_9B3F,graphics_9BCB,graphics_colours_2008,graphics_colours_2808
+	public graphics_colours_3008,graphics_patterns_0008,graphics_patterns_0808,graphics_patterns_1008,name_table_screen
+
 ; Bank 9 (runs at 0x8000).
 ;
 ; THIS BANK HOLDS NO CODE. These are the fixed screens: the title, the ship
@@ -9,9 +12,9 @@
 ; p00:5315-p00:5321, p00:5B34-p00:5B3E, p00:5B7D-p00:5B87 and
 ; p00:5BFE-p00:5C08.
 ;
-; Almost all of it is compressed blocks for 0x49B9 (tools/rle.py). The proof
+; Almost all of it is compressed blocks for decompress (tools/rle.py). The proof
 ; that they are correctly delimited is that the chains fit with no slack:
-; from 0x8300 to 0x9B3F there are exactly six blocks, and from 0x9C57 to the
+; from graphics_colours_2008 to 0x9B3F there are exactly six blocks, and from graphics_2468 to the
 ; end of the bank, two.
 
 ; ----------------------------------------------------------------------
@@ -494,8 +497,8 @@ graphics_9BCB:
 	defb 0F9h,0FAh,0FDh,0FBh,0FCh,0FDh,0FEh,0FFh,00h,00h,00h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_2468: Compressed block that 0x5B56 passes to 0x4988 with
-;   HL=0x2468: 0x4988 dumps it three times, once per screen third, adding
+; DATA graphics_2468: Compressed block that 0x5B56 passes to decompress_three_thirds with
+;   HL=0x2468: decompress_three_thirds dumps it three times, once per screen third, adding
 ;   0x800 each time.
 graphics_2468:
 	defb 8Ah,00h,0FFh,0C0h,60h,30h,18h,0Ch,06h,00h,0FFh,04h,00h,02h,0C7h,82h
@@ -538,7 +541,7 @@ graphics_2468:
 	defb 60h,0C0h,80h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_0468: Compressed block that 0x5B5F passes to 0x4988 with
+; DATA graphics_0468: Compressed block that 0x5B5F passes to decompress_three_thirds with
 ;   HL=0x0468, again across the three thirds.
 graphics_0468:
 	defb 0Bh,0F0h,04h,0E0h,04h,0F0h,04h,0E0h,04h,0F0h,04h,0E0h,04h,0F0h,04h,0E0h

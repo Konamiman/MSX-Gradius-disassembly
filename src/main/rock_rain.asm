@@ -5,14 +5,15 @@
 	include "variables.inc"
 
 	public drop_rock,L_ABCC,start_rain
+	extrn get_word,mark_boss_dead,spawn_object
 
 ; ----------------------------------------------------------------------
 ; THE RAIN OF ROCKS
 ; A timer of 0x384 frames (fifteen seconds) during which a type 8 rock
 ; falls every few frames. Where each one comes from is drawn by lot by the
-; R register among the sixteen positions at 0xABD3, and how often one falls
-; is set by the difficulty: 0x14 frames minus 0xE111. When the timer runs
-; out, p01:0x7D64 is called and the stage carries on.
+; R register among the sixteen positions at rock_rain_doors, and how often one falls
+; is set by the difficulty: 0x14 frames minus DIFFICULTY. When the timer runs
+; out, p01:mark_boss_dead is called and the stage carries on.
 ; ----------------------------------------------------------------------
 start_rain:		; The timer to 0x384 frames and the cadence to 0x14 minus the difficulty
 	ld hl,RAIN_TIMER	; The timer, 0x384 frames
@@ -20,7 +21,7 @@ start_rain:		; The timer to 0x384 frames and the cadence to 0x14 minus the diffi
 	ld (hl),c
 	inc l
 	ld (hl),b
-	ld a,001h		; 0xE972 to one: the rain is under way
+	ld a,001h		; RAIN_ON to one: the rain is under way
 	inc l
 	ld (hl),a
 	inc l
@@ -33,7 +34,7 @@ start_rain:		; The timer to 0x384 frames and the cadence to 0x14 minus the diffi
 	inc l
 	ld (hl),a
 	ret
-drop_rock:		; Counts the timer down and, every few frames, drops a rock through one of the sixteen doors at 0xABD3
+drop_rock:		; Counts the timer down and, every few frames, drops a rock through one of the sixteen doors at rock_rain_doors
 	ld a,(SCROLL_MODE)	; With the screen stopped, no
 	and a
 	ret nz
@@ -45,7 +46,7 @@ drop_rock:		; Counts the timer down and, every few frames, drops a rock through 
 	ld (RAIN_TIMER),hl
 	ld a,l
 	or h
-	jp z,07d64h		; Once the timer has run out, the stage carries on
+	jp z,mark_boss_dead	; Once the timer has run out, the stage carries on
 	ld hl,RAIN_COUNTDOWN	; The frames until the next rock
 	dec (hl)
 	ret nz
@@ -55,16 +56,16 @@ drop_rock:		; Counts the timer down and, every few frames, drops a rock through 
 	ld (hl),a
 	ld a,r			; The R register picks one of the sixteen doors
 	and 00fh
-	ld hl,0abd3h
-	call 047aeh
+	ld hl,rock_rain_doors
+	call get_word
 L_ABCC:
 	ld c,000h
 	ld a,008h		; Type 8: the rock
-	jp 06a72h
+	jp spawn_object
 
 ; ----------------------------------------------------------------------
-; DATA table_ABD3: Thirty-two bytes read by 0xABC6, in pairs.
-table_ABD3:
+; DATA rock_rain_doors: Thirty-two bytes read by 0xABC6, in pairs.
+rock_rain_doors:
 	defb 08h,10h
 	defb 98h,10h
 	defb 20h,30h

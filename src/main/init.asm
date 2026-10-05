@@ -5,6 +5,7 @@
 	include "bios.inc"
 	include "variables.inc"
 
+	public INIT
 	extrn find_other_cartridge,interrupt,start_machine
 
 ; ----------------------------------------------------------------------
@@ -12,10 +13,10 @@
 ; ----------------------------------------------------------------------
 INIT:		; What the BIOS calls at boot (the AB header says so at 0x4002).
 	di
-	im 1			; Interrupt mode 1: the BIOS hook at 0x0038 ends up leading to 0xFD9A.
+	im 1			; Interrupt mode 1: the BIOS hook at 0x0038 ends up leading to H_KEYI.
 	di
 	push hl
-	ld hl,BANK_6000		; This, 0xF0F2 and 0xF0F3 are the RAM copy of the three mapper registers.
+	ld hl,BANK_6000		; This, BANK_8000 and BANK_A000 are the RAM copy of the three mapper registers.
 	ld a,001h
 	ld (06000h),a		; Bank 1 at 0x6000...
 	ld (hl),a
@@ -43,7 +44,7 @@ INIT:		; What the BIOS calls at boot (the AB header says so at 0x4002).
 	ld (hl),000h
 	ldir
 	ld a,001h
-	ld (INTERRUPT_LOCK),a	; This and 0xE006 to 1: the lock is set while booting.
+	ld (INTERRUPT_LOCK),a	; This and DEMO_STAGE to 1: the lock is set while booting.
 	ld (DEMO_STAGE),a
 	call start_machine
 	call find_other_cartridge
@@ -92,11 +93,11 @@ find_my_slot:		; Builds for ENASLT the slot number of this cartridge, reading RS
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA dead_jump: Three bytes that are `jp 0x49E9`, that is, a shortcut to
+; DATA dead_jump: Three bytes that are `jp request_sound`, that is, a shortcut to
 ;   request a sound. No instruction or table in the cartridge points to
-;   0x40FD, and the one before ends in `ret`: it is dead code, and that is why
+;   jump_to_request_sound, and the one before ends in `ret`: it is dead code, and that is why
 ;   it is listed as bytes.
-jump_to_request_sound:		; `jp 0x49E9`. Nobody jumps here: it is dead code.
+jump_to_request_sound:		; `jp request_sound`. Nobody jumps here: it is dead code.
 	defb 0C3h,0E9h,49h
 
 	end

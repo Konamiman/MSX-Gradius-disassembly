@@ -4,14 +4,16 @@
 
 	include "variables.inc"
 
-	public enemy_shoots,erase_background_objects,erase_e800_objects,paint_background_objects,paint_background_or_bank3,paint_e800_objects
-	public release_background_objects,release_background_objects_on_column,run_four_at_e800,run_object,run_ten_at_e500,set_up_shot
-	extrn add_speed,advance_background_script,aim_at_ship,check_falling_pieces_script,clear_rectangle,copy_rectangle
-	extrn erase_stage_5_background,object_collides_with_map,paint_stage_5_background,script_entry,spawn_object
+	public enemy_shoots,erase_background_objects,erase_e800_objects,formations,paint_background_objects,paint_background_or_bank3
+	public paint_e800_objects,release_background_objects,release_background_objects_on_column,run_four_at_e800,run_object,run_ten_at_e500
+	public set_up_shot
+	extrn add_a_to_de,add_a_to_hl,add_speed,advance_background_script,aim_at_ship,check_falling_pieces_script
+	extrn clear_rectangle,copy_rectangle,dispatcher,erase_stage_5_background,get_word,object_collides_with_map
+	extrn paint_stage_5_background,script_entry,spawn_object
 
 ; ----------------------------------------------------------------------
 ; THE ENEMY MOVERS
-; This is the bank that moves the enemies. p00:5FFC calls 0x6008 once per
+; This is the bank that moves the enemies. p00:5FFC calls run_object once per
 ; object, with IX pointing at its slot, and from there it is dispatched by
 ; type (IX+0) and by the step it is on (IX+1): every enemy is a tiny state
 ; machine with its frame counter in (IX+4).
@@ -39,7 +41,7 @@ mover_step:		; With the screen stopped nothing moves; types 1 and 2 shoot, and f
 	ld a,(SCROLL_MODE)	; Non-zero: the screen is stopped
 	and a
 	ret nz
-	ld a,(ix+000h)		; The type is noted in 0xE123
+	ld a,(ix+000h)		; The type is noted in MOVER_TYPE
 	ld (MOVER_TYPE),a
 	cp 003h			; From type 3 upwards, the other dispatch
 	jr nc,L_6061
@@ -76,13 +78,13 @@ L_6061:
 	ld c,a
 	ld a,(ix+000h)
 	sub 003h		; Minus three: types 3, 4, 5 and 6
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_607B: Four words stuck right after the `call 0x4067`
-;   at 0x607B (0x610E, 0x6131, 0x614A, 0x615B). The index is (IX+0) minus
+; DATA mover_start_checks: Four words stuck right after the `call dispatcher`
+;   at 0x607B (check_if_passing_in_front, check_if_passing_below, check_if_in_front, check_if_already_passed). The index is (IX+0) minus
 ;   three.
-dispatcher_table_607B:
+mover_start_checks:
 	defw check_if_passing_in_front	; 0
 	defw check_if_passing_below	; 1
 	defw check_if_in_front	; 2
@@ -97,8 +99,8 @@ waiting_mover:		; Counts down and, every four frames, releases a type 0x0E shot 
 	dec (ix+007h)
 	jr z,end_burst
 	ld a,(ix+000h)
-	ld hl,060c1h		; The table at 0x60C1: where the shot comes out for each type
-	call 047aeh		; The table at 0x60C1
+	ld hl,offsets_60C1-6	; The table at 0x60C1: where the shot comes out for each type
+	call get_word		; The table at 0x60C1
 	ld a,(ix+002h)
 	add a,e
 	ld e,a
@@ -127,8 +129,8 @@ next_step:		; Moves the object by what the table at 0x60E7 says and leaves it 0x
 	inc (ix+001h)
 	ld a,(ix+000h)
 	add a,a			; Times two: two bytes per type
-	ld hl,060e7h
-	call 0405dh
+	ld hl,offsets_60E7-6
+	call add_a_to_hl
 	ld a,(hl)
 	add a,(ix+002h)
 	ld (ix+002h),a
@@ -207,7 +209,7 @@ check_if_already_passed:		; Starts as soon as the ship is left behind
 	cp c
 	ret c
 	jr start_burst
-run_four_at_e800:		; The four objects at 0xE800, eight bytes each
+run_four_at_e800:		; The four objects at EXPLOSIONS, eight bytes each
 	ld ix,EXPLOSIONS
 	ld b,004h		; Four objects
 L_6170:
@@ -220,9 +222,9 @@ L_6170:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA dead_call: Three bytes that are `call 0x6014`. Nobody reaches 0x617F:
+; DATA dead_call: Three bytes that are `call shift_with_scroll`. Nobody reaches 0x617F:
 ;   the instruction before it ends in `ret` and no table points here.
-dead_call:		; `call 0x6014`. Nobody gets here.
+dead_call:		; `call shift_with_scroll`. Nobody gets here.
 	defb 0CDh,14h,60h
 e800_object_step:		; Moves with the scroll and, every four frames, uses up one unit of (IX+6); when it runs out, it switches off
 	call shift_with_scroll
@@ -233,7 +235,7 @@ e800_object_step:		; Moves with the scroll and, every four frames, uses up one u
 	ret p			; Four frames per unit
 	ld (ix+000h),000h
 	ret
-erase_e800_objects:		; Walks the four objects at 0xE800 erasing their drawing from the screen
+erase_e800_objects:		; Walks the four objects at EXPLOSIONS erasing their drawing from the screen
 	xor a
 	jr L_619B
 paint_e800_objects:		; The same, painting them
@@ -242,7 +244,7 @@ L_619B:
 	ld ix,EXPLOSIONS
 	ld b,004h
 	jr walk_e700_objects
-paint_background_objects:		; In stages 3 and 5 it does nothing; in the rest, it paints the objects at 0xE700
+paint_background_objects:		; In stages 3 and 5 it does nothing; in the rest, it paints the objects at BG_OBJECTS
 	ld a,(STAGE)		; Stages 3 and 5 have their own mover
 	cp 003h
 	ret z
@@ -265,7 +267,7 @@ L_61B9:
 	ld b,002h
 L_61C9:
 	ex af,af'
-walk_e700_objects:		; 0xEC00 says whether to paint or erase, and then it goes through the B objects
+walk_e700_objects:		; PAINT_FLAG says whether to paint or erase, and then it goes through the B objects
 	ld (PAINT_FLAG),a	; At zero erases, and at 0xFF paints
 L_61CD:
 	push bc
@@ -287,10 +289,10 @@ draw_background_object:		; Takes the object's rectangle of characters from which
 	and a
 	ret z
 	ld c,(ix+006h)
-	cp 020h			; Type 0x20 uses the table at 0x633A
-	ld hl,0633ah
+	cp 020h			; Type 0x20 uses the table at type_20_drawing_pointers
+	ld hl,type_20_drawing_pointers
 	jr z,L_6209
-	ld hl,06370h		; The rest, the one at 0x6370
+	ld hl,trajectories	; The rest, the one at trajectories
 	ld a,(STAGE)
 	cp 002h			; And in stage 2, from drawing 2 upwards it skips twelve
 	jr nz,L_6209
@@ -301,8 +303,8 @@ draw_background_object:		; Takes the object's rectangle of characters from which
 	ld c,a
 L_6209:
 	ld a,c
-	call 047aeh
-paint_rectangle:		; Four by four characters at the object's cell: 0x48F7 erases them and 0x490C copies them
+	call get_word
+paint_rectangle:		; Four by four characters at the object's cell: clear_rectangle erases them and copy_rectangle copies them
 	ld bc,00404h		; Four wide by four high
 	ld l,(ix+002h)		; The cell where it lands
 	ld h,(ix+003h)
@@ -314,14 +316,14 @@ paint_rectangle:		; Four by four characters at the object's cell: 0x48F7 erases 
 	and a
 	jp z,clear_rectangle
 	jp copy_rectangle
-paint_in_chunks:		; The big types are painted in chunks: the table at 0x6283 gives the width, the height and the offset of each one
+paint_in_chunks:		; The big types are painted in chunks: the table at chunk_sizes_and_offsets gives the width, the height and the offset of each one
 	ld a,(ix+006h)
 	ld c,a
 	add a,a			; Times three: three bytes per chunk
 	add a,c
 	push hl
-	ld hl,06283h
-	call 0405dh
+	ld hl,chunk_sizes_and_offsets
+	call add_a_to_hl
 	ld c,(hl)		; The width, the height and where it lands
 	inc hl
 	ld b,(hl)
@@ -342,28 +344,28 @@ L_6246:
 	jr c,paint_wide_chunk
 	ld a,(PAINT_FLAG)
 	and a
-	jp z,048f7h
-	call 0490ch
-paint_wide_chunk:		; A ten by one rectangle, with the origin taken from the two tables at 0x6273 and 0x64D4
+	jp z,clear_rectangle
+	call copy_rectangle
+paint_wide_chunk:		; A ten by one rectangle, with the origin taken from the two tables at 0x6273 and wide_chunk_characters
 	ld a,(ix+006h)
 	add a,a			; Times two: two bytes per drawing
-	ld de,06273h		; The table at 0x6273
-	call 04062h
+	ld de,table_6273-8	; The table at 0x6273
+	call add_a_to_de
 	ld a,(de)
 	add a,(ix+002h)
 	ld l,a
 	ld h,(ix+003h)
 	inc de
 	ld a,(de)
-	ld de,064d4h
+	ld de,wide_chunk_characters
 	add a,a			; Times ten: ten characters per row
 	ld c,a
 	add a,a
 	add a,a
 	add a,c
-	call 04062h
+	call add_a_to_de
 	ld bc,00a01h		; Ten wide by one high
-	jp 0490ch
+	jp copy_rectangle
 
 ; ----------------------------------------------------------------------
 ; DATA table_6273: Eight bytes that 0x625A indexes with the base 0x6273.
@@ -371,8 +373,8 @@ table_6273:
 	defb 28h,00h,28h,00h,28h,00h,28h,00h
 
 ; ----------------------------------------------------------------------
-; DATA table_6283: Forty-two bytes read by 0x6230.
-table_6283:
+; DATA chunk_sizes_and_offsets: Forty-two bytes read by 0x6230.
+chunk_sizes_and_offsets:
 	defb 00h,01h,00h,01h,10h,02h,10h,02h
 	defb 10h,00h,00h,03h,05h,07h,10h,05h
 	defb 07h,10h,05h,07h,08h,05h,07h,08h
@@ -387,7 +389,7 @@ release_background_objects:		; Keeps taking out background objects while the scr
 	jr z,release_background_objects
 	ret c
 	ld hl,BG_SCRIPT_ROW
-	inc (hl)		; 0xE109 moves on to the next row
+	inc (hl)		; BG_SCRIPT_ROW moves on to the next row
 	jr release_background_objects
 release_background_objects_on_column:		; The same, but only on the steps that bring in a new column
 	ld a,(NEW_COLUMN)	; Only on the steps with a column
@@ -396,15 +398,15 @@ release_background_objects_on_column:		; The same, but only on the steps that br
 	ld a,(STAGE)
 	cp 005h
 	jp z,check_falling_pieces_script
-	ld a,0f8h		; 0xF8 in 0xEC04
+	ld a,0f8h		; 0xF8 in ENTRY_X
 	ld (ENTRY_X),a
 L_62D3:
 	call check_background_script
 	jr z,L_62D3
 	ret
-check_background_script:		; Checks the script at 0x64FA with the bank 2 routine and, when due, sets up the object in the first free slot at 0xE700
+check_background_script:		; Checks the script at background_object_scripts with the bank 2 routine and, when due, sets up the object in the first free slot at BG_OBJECTS
 	ld a,(BG_SCRIPT_ROW)
-	ld hl,064fah
+	ld hl,background_object_scripts
 	call script_entry	; The bank 2 routine that compares the distance
 	ret nz
 	ld hl,BG_SCRIPT_ROW
@@ -445,8 +447,8 @@ L_6316:
 	ld (hl),a		; 0xF8 or 0xFF depending on where it comes from
 	inc l
 	ld (hl),00fh		; Fifteen
-	inc l			; 0xE1FF to zero
-	pop af			; 0xE109: which script row it is on
+	inc l			; STAGE3_BG_HIT to zero
+	pop af			; BG_SCRIPT_ROW: which script row it is on
 	dec a
 	add a,a
 	ld (hl),a
@@ -472,10 +474,10 @@ L_6332:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_633A: Three words (0x6340, 0x6350, 0x6360) read by 0x61F2.
-table_633A:
-	defw 6340h,6350h	; -> DATA_formations 0x6350
-	defw 6360h
+; DATA type_20_drawing_pointers: Three words (formations, 0x6350, 0x6360) read by 0x61F2.
+type_20_drawing_pointers:
+	defw formations,formations+10h
+	defw formations+20h
 
 ; ----------------------------------------------------------------------
 ; DATA formations: Forty-eight bytes the table above points to, and which
@@ -513,8 +515,8 @@ trajectories:
 	defb 1Ah,1Bh,00h,00h
 
 ; ----------------------------------------------------------------------
-; DATA table_64D4: Thirty-eight bytes read by 0x626A.
-table_64D4:
+; DATA wide_chunk_characters: Thirty-eight bytes read by 0x626A.
+wide_chunk_characters:
 	defb 72h,73h,74h,75h,76h,0A1h,0A2h,0A3h
 	defb 0A4h,0A5h,3Ah,3Bh,3Ch,3Dh,3Eh,3Fh
 	defb 39h,41h,42h,43h,72h,73h,74h,75h	; "9ABCrstu"
@@ -522,8 +524,8 @@ table_64D4:
 	defb 3Ch,3Dh,3Eh,3Fh,2Bh,2Ch
 
 ; ----------------------------------------------------------------------
-; DATA table_64FA: What 0x62DC reads with `ld hl,0x64FA`.
-table_64FA:
+; DATA background_object_scripts: What 0x62DC reads with `ld hl,0x64FA`.
+background_object_scripts:
 	defb 2Dh,2Eh,12h,65h,26h,65h,34h,65h,0BAh,65h,0C6h,65h,0C8h,65h,0CAh,65h
 	defb 0D2h,65h,0DAh,65h,0DAh,65h,0DAh,65h,0B4h,00h,10h,0D8h,00h,10h,10h,01h
 	defb 81h,28h,01h,10h,40h,01h,81h,5Ch,01h,10h,0FFh,0FFh,0B8h,00h,8Eh,0E4h
@@ -539,7 +541,7 @@ table_64FA:
 	defb 0A8h,00h,81h,0BCh,00h,10h,02h,01h,10h,90h,01h,81h,0FFh,0FFh,0FFh,0FFh
 	defb 86h,00h,0Eh,1Eh,01h,0Eh,0FFh,0FFh,29h,01h,83h,33h,01h,83h,0FFh,0FFh
 	defb 0FFh,0FFh
-run_ten_at_e500:		; The ten objects at 0xE500: adds their speed to them, checks whether they collide and switches off the ones that go off screen
+run_ten_at_e500:		; The ten objects at ENEMY_SHOTS: adds their speed to them, checks whether they collide and switches off the ones that go off screen
 	ld ix,ENEMY_SHOTS
 	ld b,00ah		; Ten objects
 L_65E2:
@@ -595,11 +597,11 @@ L_663A:
 	and a
 	jr z,set_up_shot
 	ld a,020h
-	call 0405dh		; Thirty-two bytes: the next one
+	call add_a_to_hl	; Thirty-two bytes: the next one
 	djnz L_663A
 	ret
-set_up_shot:		; Fills the shot's slot with its position and the two speeds that 0x6677 left in 0xEC12 and 0xEC14
-	ld a,001h		; 0xE112 to one: there is a new shot
+set_up_shot:		; Fills the shot's slot with its position and the two speeds that aim_at_ship left in AIM_VSPEED and AIM_HSPEED
+	ld a,001h		; NEW_SHOT to one: there is a new shot
 	ld (NEW_SHOT),a		; To one: there is a new shot
 	ld (hl),a
 	inc l

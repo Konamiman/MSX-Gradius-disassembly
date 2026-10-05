@@ -38,7 +38,7 @@ def routines(paths):
     out, name, n, c = [], "(start of %s)" % os.path.basename(paths[0]), 0, 0
     for ln in (ln for p in paths for ln in open(p, encoding="utf-8")):
         m = re.match(r"^([A-Za-z_]\w*):", ln)
-        if m and "equ" not in ln.split(";", 1)[0].lower():
+        if m and not re.search(r"\bequ\b", ln.split(";", 1)[0].lower()):
             if n:
                 out.append((name, n, c))
             name, n, c = m.group(1), 0, 0

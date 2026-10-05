@@ -5,8 +5,9 @@
 	include "variables.inc"
 
 	public check_map_collision_2,check_which_music_plays,L_71B0,raise_difficulty,run_enemy_wave,run_ship
-	extrn blow_up_enemy,change_sign,check_background_collisions,check_collisions,check_option_collision,check_ship_enemy_collision
-	extrn check_ship_enemy_collision_2,check_ship_map_collision,check_ship_shot_collision,check_stage_5_collisions,L_721C,spawn_object
+	extrn add_vertical_acceleration,blow_up_enemy,change_sign,check_background_collisions,check_collisions,check_if_sound
+	extrn check_option_collision,check_ship_enemy_collision,check_ship_enemy_collision_2,check_ship_map_collision,check_ship_shot_collision,check_stage_5_collisions
+	extrn collides_with_map,get_word,L_721C,spawn_object
 
 ; ----------------------------------------------------------------------
 ; THE MUSIC CHANGES WITH THE DISTANCE TRAVELLED
@@ -31,8 +32,8 @@ check_which_music_plays:		; Looks in the stage's list for the distance range it 
 	and a
 	jr nz,start_noted_music
 	ld a,(STAGE)
-	ld hl,07056h		; The table at 0x7056: one list per stage
-	call 047aeh
+	ld hl,music_by_distance_lists-2	; The table at 0x7056: one list per stage
+	call get_word
 	ld c,e
 	ld b,d
 	ld hl,(DISTANCE)	; The distance travelled
@@ -61,7 +62,7 @@ L_7033:
 	xor a
 	ld (SND_MUTE_STEP),a
 	ret
-start_noted_music:		; When the channel goes quiet, launches the music that was parked in 0xE113; 0xFF only clears it
+start_noted_music:		; When the channel goes quiet, launches the music that was parked in PENDING_MUSIC; 0xFF only clears it
 	ld a,(SND_CARD_A+CARD_MODE)	; Until the channel goes quiet, nothing changes
 	and a
 	ret nz
@@ -69,18 +70,18 @@ start_noted_music:		; When the channel goes quiet, launches the music that was p
 	cp 0ffh			; 0xFF means silence
 	ld (hl),000h
 	ret z
-	jp 049deh
+	jp check_if_sound
 
 ; ----------------------------------------------------------------------
-; DATA table_7056 (part): Words that 0x701C indexes with the base 0x7056:
+; DATA music_by_distance_lists (part): Words that 0x701C indexes with the base 0x7056:
 ;   0x7070, 0x7079, 0x7082, 0x708B, ... all in this same bank.
-table_7056_7058:
-	defw 7070h,7079h
-	defw 7082h,708Bh
-	defw 7094h,709Dh
-	defw 70A6h,70AFh
-	defw 70B8h,70B8h
-	defw 70BEh,70C4h
+music_by_distance_lists:
+	defw music_by_distance_lists+18h,music_by_distance_lists+21h
+	defw music_by_distance_lists+2Ah,music_by_distance_lists+33h
+	defw music_by_distance_lists+3Ch,music_by_distance_lists+45h
+	defw music_by_distance_lists+4Eh,music_by_distance_lists+57h
+	defw music_by_distance_lists+60h,music_by_distance_lists+60h
+	defw music_by_distance_lists+66h,music_by_distance_lists+6Ch
 	defw 0064h,80ACh
 	defw 0AF01h,0FFFFh
 	defw 64B5h,0AC00h
@@ -104,7 +105,7 @@ table_7056_7058:
 	defw 0FFA4h,0FFFFh
 	defw 0177h,0FFA4h
 	defw 0FFFFh
-raise_difficulty:		; One more step in 0xE111, up to 0x0F
+raise_difficulty:		; One more step in DIFFICULTY, up to 0x0F
 	ld c,001h
 	ld hl,DIFFICULTY
 	ld a,(hl)
@@ -113,7 +114,7 @@ raise_difficulty:		; One more step in 0xE111, up to 0x0F
 	ret nc
 	ld (hl),a
 	ret
-run_enemy_wave:		; With 0xE140 set, keeps releasing type 0x0F enemies every two frames until the count in 0xE148 runs out
+run_enemy_wave:		; With ENEMY_WAVE set, keeps releasing type 0x0F enemies every two frames until the count in ENEMY_WAVE_LEFT runs out
 	ld a,(SCROLL_MODE)	; With the screen stopped, no
 	and a
 	ret nz
@@ -146,32 +147,32 @@ L_70F1:
 	ld a,00fh		; Object 0x0F: the wave enemy
 	ld c,000h		; No adjustment
 	jp spawn_object
-end_enemy_wave:		; 0xE150 to one: the wave is used up
+end_enemy_wave:		; BOSS_DONE to one: the wave is used up
 	ld a,001h
 	ld (BOSS_DONE),a
 	ret
-set_spawn_position:		; With 0xE140 at one, alternates between the two positions at 0x7189 according to bit 0 of the count
+set_spawn_position:		; With ENEMY_WAVE at one, alternates between the two positions at enemy_wave_spawn_positions according to bit 0 of the count
 	ld a,(ENEMY_WAVE)
 	dec a
 	jr nz,set_spawn_position_by_height
-	ld hl,07189h
+	ld hl,enemy_wave_spawn_positions
 	ld a,(ENEMY_WAVE_LEFT)	; Bit 0 of the count: once at the top and once at the bottom
 	and 001h		; Bit 0: once at the top and once at the bottom
-	call 047aeh
+	call get_word
 	ld (ENEMY_WAVE_POS),de
 	ret
-set_spawn_position_by_height:		; With 0xE140 at two, the position comes from the height in 0xE141 and column 0x20
+set_spawn_position_by_height:		; With ENEMY_WAVE at two, the position comes from the height in ENEMY_WAVE_X and column 0x20
 	ld a,(ENEMY_WAVE_X)
 	ld h,a
 	ld l,020h
 	ld (ENEMY_WAVE_POS),hl
 	ret
-wave_speed:		; The R register chooses one of the eight speed pairs at 0x718D; in stage 1 it is turned around, and halfway through the wave it is halved
+wave_speed:		; The R register chooses one of the eight speed pairs at enemy_wave_speeds; in stage 1 it is turned around, and halfway through the wave it is halved
 	ld a,r			; The R register: one of eight pairs
 	and 007h
 	add a,a			; Times two: two words per pair
-	ld hl,0718dh
-	call 047aeh
+	ld hl,enemy_wave_speeds
+	call get_word
 	inc hl
 	ld c,(hl)
 	inc hl
@@ -211,13 +212,13 @@ L_717D:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_7189: Four bytes read by 0x7122.
-table_7189:
+; DATA enemy_wave_spawn_positions: Four bytes read by 0x7122.
+enemy_wave_spawn_positions:
 	defb 7Fh,0BCh,7Fh,3Ch
 
 ; ----------------------------------------------------------------------
-; DATA table_718D: Thirty-two bytes read by 0x7141.
-table_718D:
+; DATA enemy_wave_speeds: Thirty-two bytes read by 0x7141.
+enemy_wave_speeds:
 	defb 00h,0Bh,80h,01h
 	defb 80h,0Ah,00h,02h
 	defb 80h,0Bh,00h,04h
@@ -227,7 +228,7 @@ table_718D:
 	defb 70h,0Ah,80h,02h
 	defb 60h,0Ah,40h,02h
 check_map_collision_2:		; Passes the object's position to bank 2, with a correction of 0x10 if bit 7 of byte 8 is zero
-	call 0953ch
+	call add_vertical_acceleration
 L_71B0:
 	ld l,(ix+004h)		; The object's position
 	ld h,(ix+006h)		; The object's position
@@ -237,7 +238,7 @@ L_71B0:
 	add a,010h
 	ld l,a
 L_71C0:
-	call 09857h		; And bank 2 answers
+	call collides_with_map	; And bank 2 answers
 	ret nc
 	jp blow_up_enemy
 sound_on_arrival:		; In stage 1, at count 0x1C1 sound 0x32 plays; in the rest, at 0xB3 sound 0x13 plays
@@ -251,13 +252,13 @@ sound_on_arrival:		; In stage 1, at count 0x1C1 sound 0x32 plays; in the rest, a
 	xor a
 	ld (SND_MUTE),a
 	ld a,032h		; Sound 0x32
-	jp 049deh
+	jp check_if_sound
 L_71DE:
 	ld de,000b3h		; And in the rest, at 0xB3
 	rst 20h
 	ret nz
 	ld a,013h		; Sound 0x13
-	jp 049deh
+	jp check_if_sound
 run_ship:		; The chain of routines that move the ship, its shots and its options
 	ld a,(SCROLL_MODE)	; With the screen stopped, the ship does not move
 	and a
@@ -271,7 +272,7 @@ run_ship:		; The chain of routines that move the ship, its shots and its options
 	call check_ship_enemy_collision
 	call check_option_collision
 	jp check_ship_shot_collision
-check_eb00_collisions:		; The five objects at 0xEB00, only if 0xE1B0 is set
+check_eb00_collisions:		; The five objects at MID_BOSS_PIECES, only if FIVE_PIECES_ON is set
 	ld a,(FIVE_PIECES_ON)	; Without it there is nothing to check
 	or a
 	ret z

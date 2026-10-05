@@ -1,9 +1,24 @@
 ; ============================================================================
 ; Sound player - The sound streams
 ; ============================================================================
+
+	public empty_sound,sound_01,sound_02,sound_03,sound_04,sound_05
+	public sound_06,sound_07,sound_08,sound_09,sound_10,sound_11
+	public sound_12,sound_13,sound_14,sound_15,sound_16,sound_17
+	public sound_18,sound_19,sound_20,sound_21,sound_22,sound_23
+	public sound_24,sound_25,sound_26,sound_27,sound_28,sound_29
+	public sound_30,sound_31,sound_32,sound_33,sound_34,sound_35
+	public sound_36,sound_37,sound_38,sound_39,sound_40,sound_41
+	public sound_42,sound_43,sound_44,sound_45,sound_46,sound_47
+	public sound_48,sound_49,sound_50,sound_51,sound_52,sound_53
+	public sound_54,sound_55,sound_56,sound_57,sound_58,sound_59
+	public sound_60,sound_61,sound_62,sound_63,sound_64,sound_65
+	public sound_66,sound_67,sound_68,sound_69,sound_70,sound_71
+	public sound_72,sound_73,sound_74,sound_75,sound_76
+
 ;
-; The melodies and the effects, one label per sound, from 0x83C8 in bank 7 to
-; 0xA3DE in bank 8.
+; The melodies and the effects, one label per sound, from sound_01 in bank 7 to
+; empty_sound in bank 8.
 ;
 ; THIS MODULE CROSSES THE BANK BOUNDARY. Banks 7 and 8 are always mapped
 ; together (the interrupt does it at p00:402C-p00:4032 and the sound trigger at
@@ -14,21 +29,10 @@
 ; The bytes of each stream are kept as they are: the addresses inside the 0xFE
 ; commands are still plain numbers.
 
-	public empty_sound,sound_01,sound_02,sound_03,sound_04,sound_05,sound_06,sound_07
-	public sound_08,sound_09,sound_10,sound_11,sound_12,sound_13,sound_14,sound_15
-	public sound_16,sound_17,sound_18,sound_19,sound_20,sound_21,sound_22,sound_23
-	public sound_24,sound_25,sound_26,sound_27,sound_28,sound_29,sound_30,sound_31
-	public sound_32,sound_33,sound_34,sound_35,sound_36,sound_37,sound_38,sound_39
-	public sound_40,sound_41,sound_42,sound_43,sound_44,sound_45,sound_46,sound_47
-	public sound_48,sound_49,sound_50,sound_51,sound_52,sound_53,sound_54,sound_55
-	public sound_56,sound_57,sound_58,sound_59,sound_60,sound_61,sound_62,sound_63
-	public sound_64,sound_65,sound_66,sound_67,sound_68,sound_69,sound_70,sound_71
-	public sound_72,sound_73,sound_74,sound_75,sound_76
-
 ; ----------------------------------------------------------------------
 ; DATA sound_data: The melodies and the effects, one after another, in the
-;   order in which the table above names them: 0x83C8, 0x83F3, 0x8400, ...
-;   0x9FBF. They continue in bank 8, which is mapped at the same time.
+;   order in which the table above names them: sound_01, sound_03, sound_04, ...
+;   sound_65. They continue in bank 8, which is mapped at the same time.
 sound_01:
 sound_02:
 	defb 22h,01h,0C0h,50h,0C0h,54h,0C0h,58h,0C0h,60h,0B0h,54h,0B0h,58h,0B0h,60h

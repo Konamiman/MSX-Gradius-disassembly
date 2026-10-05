@@ -2,6 +2,8 @@
 ; Nemesis / Gradius - screens image (banks 9-10) - screen_graphics.asm
 ; ============================================================================
 
+	public graphics_colours_0418,graphics_colours_0780,graphics_patterns_2418,graphics_patterns_2780,graphics_sprites_1800,graphics_sprites_1800_b
+
 ; Bank 10 (runs at 0xA000).
 ;
 ; Mixed bank: 424 bytes of code and the rest data. It is mapped together with
@@ -30,7 +32,7 @@ data_A000:
 	defb 04h,0F0h,04h,40h,04h,0F0h,04h,40h,0Ch,0F0h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_patterns_2418: Compressed block that 0x4B17 passes to 0x4988
+; DATA graphics_patterns_2418: Compressed block that 0x4B17 passes to decompress_three_thirds
 ;   with HL=0x2418: it is dumped three times, once per third, adding 0x800. In
 ;   this cartridge the patterns live at VRAM 0x2000 and the colours at 0x0000,
 ;   the other way round from what the BIOS sets up.
@@ -87,7 +89,7 @@ graphics_patterns_2418:
 	defb 7Ch,10h,0D0h,90h,80h,80h,00h,00h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_colours_0418: Compressed block that 0x4B20 passes to 0x4988
+; DATA graphics_colours_0418: Compressed block that 0x4B20 passes to decompress_three_thirds
 ;   with HL=0x0418.
 graphics_colours_0418:
 	defb 81h,0F0h,04h,40h,96h,0F0h,70h,40h,70h,70h,40h,00h,70h,40h,40h,0F0h
@@ -152,7 +154,7 @@ graphics_sprites_1800:
 	defb 70h,20h,1Bh,00h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_patterns_2780: Compressed block that 0x5C4B passes to 0x4988
+; DATA graphics_patterns_2780: Compressed block that 0x5C4B passes to decompress_three_thirds
 ;   with HL=0x2780.
 graphics_patterns_2780:
 	defb 05h,00h,02h,04h,85h,0Eh,1Fh,0Eh,04h,04h,08h,00h,04h,04h,81h,0Eh
@@ -160,7 +162,7 @@ graphics_patterns_2780:
 	defb 07h,00h,81h,20h,07h,00h,81h,20h,05h,00h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_colours_0780: Compressed block that 0x5C54 passes to 0x4988
+; DATA graphics_colours_0780: Compressed block that 0x5C54 passes to decompress_three_thirds
 ;   with HL=0x0780.
 graphics_colours_0780:
 	defb 06h,40h,04h,50h,0Bh,40h,02h,50h,85h,70h,74h,70h,50h,50h,04h,40h

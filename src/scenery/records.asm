@@ -2,15 +2,18 @@
 ; Nemesis / Gradius - scenery image (banks 4-6) - records.asm
 ; ============================================================================
 
+	public common_records,extra_records_1,extra_records_2,graphics_1D00,graphics_names_1800,list_for_0x4348
+	public record_lists_A,record_lists_B,record_lists_C,stage_graphics_blocks,trigger_records
+
 ; Bank 5 (runs at 0x8000).
 ;
 ; THIS BANK HOLDS NO CODE. It holds two things:
 ;
-;   - the six-byte RECORDS with which routine 0x4371 in bank 0 loads the
+;   - the six-byte RECORDS with which routine load_entries in bank 0 loads the
 ;     scenery: a flag saying which third of the screen, the colour source,
 ;     the index of the character where it starts, the pattern source. A zero
 ;     flag ends the list.
-;   - graphics compressed in the 0x49B9 format (tools/rle.py), just like the
+;   - graphics compressed in the decompress format (tools/rle.py), just like the
 ;     whole of bank 4.
 ;
 ; The sources in the records point into this bank AND into bank 4, because
@@ -137,11 +140,11 @@ graphics_chain_8000:
 	defb 40h,50h,70h,0Ch,0E0h,02h,40h,82h,50h,70h,00h
 
 ; ----------------------------------------------------------------------
-; DATA graphics_per_stage: Seven compressed blocks in a row (0x86BB, 0x8A8C,
+; DATA stage_graphics_blocks: Seven compressed blocks in a row (0x86BB, 0x8A8C,
 ;   0x8C1E, 0x8D27, 0x8E4B, 0x8ECA, 0x8F3E). They are handed out by table
-;   0x42B3 of bank 0: two blocks per stage, each with the index of the
+;   graphics_per_stage of bank 0: two blocks per stage, each with the index of the
 ;   character where it starts.
-graphics_per_stage:
+stage_graphics_blocks:
 	defb 86h,00h,80h,0E0h,70h,7Fh,7Fh,03h,0BFh,82h,78h,0E0h,0Ah,00h,83h,88h
 	defb 0FFh,0F8h,1Ch,00h,82h,0C0h,70h,0Dh,00h,84h,0B0h,0FCh,7Fh,7Fh,03h,0BFh
 	defb 83h,7Fh,78h,0E0h,08h,00h,85h,80h,18h,8Fh,0FCh,0E0h,1Ch,00h,82h,0E0h
@@ -290,7 +293,7 @@ graphics_per_stage:
 
 ; ----------------------------------------------------------------------
 ; DATA graphics_1D00: Two blocks: 0x8FCB, which 0x4287 dumps into VRAM 0x1D00,
-;   and 0x9038, which table 0x42B3 asks for for stage 5.
+;   and 0x9038, which table graphics_per_stage asks for for stage 5.
 graphics_1D00:
 	defb 87h,0Ch,3Bh,76h,85h,05h,02h,01h,08h,00h,90h,01h,0F0h,18h,0ECh,0F4h
 	defb 0F8h,78h,0BCh,5Ch,1Ch,1Ch,18h,38h,30h,60h,0C0h,08h,00h,97h,80h,40h
@@ -403,39 +406,39 @@ object_shapes:
 
 ; ----------------------------------------------------------------------
 ; DATA record_lists_A: Twelve words, one per stage: where that stage's list of
-;   0x4371 records starts. Read by 0x4306 with 0x47AE (DE = word at HL+2*A).
+;   load_entries records starts. Read by 0x4306 with get_word (DE = word at HL+2*A).
 record_lists_A:
-	defw 0D0D1h,93A8h	; -> 0xd0d1 DATA_records_per_stage
-	defw 9403h,9434h
-	defw 9477h,94D8h
-	defw 9527h,9546h
-	defw 95BFh,961Ah
-	defw 963Fh,9664h
+	defw 0D0D1h,records_per_stage	; -> 0xd0d1 DATA_records_per_stage
+	defw records_per_stage+5Bh,records_per_stage+8Ch
+	defw records_per_stage+0CFh,records_per_stage+130h
+	defw records_per_stage+17Fh,records_per_stage+19Eh
+	defw records_per_stage+217h,records_per_stage+272h
+	defw records_per_stage+297h,records_per_stage+2BCh
 
 ; ----------------------------------------------------------------------
 ; DATA record_lists_B: Twelve words, one per stage. Read by 0x4316.
 record_lists_B:
-	defw 9689h,96AEh
-	defw 96C7h,96ECh
-	defw 96F9h,9712h
-	defw 972Fh,9733h
-	defw 9750h,9779h
-	defw 9779h,9779h
+	defw records_per_stage+2E1h,records_per_stage+306h
+	defw records_per_stage+31Fh,records_per_stage+344h
+	defw records_per_stage+351h,records_per_stage+36Ah
+	defw records_per_stage+387h,records_per_stage+38Bh
+	defw records_per_stage+3A8h,records_per_stage+3D1h
+	defw records_per_stage+3D1h,records_per_stage+3D1h
 
 ; ----------------------------------------------------------------------
 ; DATA record_lists_C: Thirteen words, one per stage. Read by 0x4320.
 record_lists_C:
-	defw 9779h,9782h
-	defw 979Fh,97B4h
-	defw 97C9h,97FEh
-	defw 9837h,9838h
-	defw 9865h,988Eh
-	defw 988Eh,988Eh
-	defw 988Eh
+	defw records_per_stage+3D1h,records_per_stage+3DAh
+	defw records_per_stage+3F7h,records_per_stage+40Ch
+	defw records_per_stage+421h,records_per_stage+456h
+	defw records_per_stage+48Fh,records_per_stage+490h
+	defw records_per_stage+4BDh,records_per_stage+4E6h
+	defw records_per_stage+4E6h,records_per_stage+4E6h
+	defw records_per_stage+4E6h
 
 ; ----------------------------------------------------------------------
 ; DATA common_records: Sixteen six-byte records and the 0x00 that ends them.
-;   Loaded by 0x42FC in every stage.
+;   Loaded by load_stage_characters in every stage.
 common_records:
 	defb 07h,76h,67h,0E6h,80h,7Ah
 	defb 07h,0D5h,66h,0D2h,17h,7Ah
@@ -457,7 +460,7 @@ common_records:
 
 ; ----------------------------------------------------------------------
 ; DATA extra_records_1: Two six-byte records and their 0x00. Loaded by 0x432B,
-;   and only when 0xF0F4 is not zero.
+;   and only when TWINBEE_FOUND is not zero.
 extra_records_1:
 	defb 07h,0B9h,98h,77h,0FDh,98h
 	defb 07h,0B9h,98h,7Bh,0DBh,98h
@@ -700,15 +703,15 @@ trigger_records:
 	defb 00h
 
 ; ----------------------------------------------------------------------
-; DATA list_for_0x4348: Nine bytes that 0x4A92 passes to 0x4348 in IX. A
-;   different format from the 0x4371 records.
+; DATA list_for_0x4348: Nine bytes that 0x4A92 passes to build_mirror in IX. A
+;   different format from the load_entries records.
 list_for_0x4348:
 	defb 44h,56h,3Fh,12h,0A1h,0BFh,3Fh,1Dh,00h
 
 ; ----------------------------------------------------------------------
 ; DATA extra_records_graphics: Five compressed blocks of 34 bytes (0x98B9,
 ;   0x98DB, 0x98FD, 0x991F, 0x9941): the patterns and colours requested by the
-;   records at 0x938E and 0x939B.
+;   records at extra_records_1 and extra_records_2.
 extra_records_graphics:
 	defb 0A0h,00h,00h,01h,0Fh,3Fh,7Fh,5Fh,4Fh,0Eh,7Bh,0FDh,0E0h,0FEh,0FEh,0FEh
 	defb 0FCh,27h,1Bh,1Dh,0Ch,02h,01h,00h,00h,0FCh,0F8h,0F8h,0F0h,70h,60h,0E0h
@@ -724,7 +727,7 @@ extra_records_graphics:
 
 ; ----------------------------------------------------------------------
 ; DATA graphics_names_1800: Compressed block that 0x4296 dumps into VRAM
-;   0x1800 (the name table) when 0xF0F4 is not zero.
+;   0x1800 (the name table) when TWINBEE_FOUND is not zero.
 graphics_names_1800:
 	defb 8Ch,0C0h,0F0h,0EFh,1Fh,7Fh,0FFh,0FFh,7Fh,06h,0FAh,0FBh,07h,08h,00h,02h
 	defb 80h,87h,0C0h,60h,39h,2Fh,07h,8Eh,0F8h,0Bh,00h,02h,01h,08h,00h,8Ah

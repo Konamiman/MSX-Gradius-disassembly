@@ -5,11 +5,11 @@
 	include "variables.inc"
 
 	public spawn_object
-	extrn finish_type_0A,finish_type_0B,finish_type_0C,finish_type_0D,finish_type_0F,finish_type_1
-	extrn finish_type_11,finish_type_16,finish_type_17,finish_type_18,finish_type_19,finish_type_1B
-	extrn finish_type_1D,finish_type_1E,finish_type_2,finish_type_3,finish_type_4,finish_type_5
-	extrn finish_type_6,finish_type_7,finish_type_8,finish_type_9,finish_with_aim,finish_with_slow_aim
-	extrn L_6B96,set_both_speeds,shot_speed
+	extrn dispatcher,finish_type_0A,finish_type_0B,finish_type_0C,finish_type_0D,finish_type_0F
+	extrn finish_type_1,finish_type_11,finish_type_16,finish_type_17,finish_type_18,finish_type_19
+	extrn finish_type_1B,finish_type_1D,finish_type_1E,finish_type_2,finish_type_3,finish_type_4
+	extrn finish_type_5,finish_type_6,finish_type_7,finish_type_8,finish_type_9,finish_with_aim
+	extrn finish_with_slow_aim,L_6B96,records_by_type,set_both_speeds,shot_speed
 
 ; ----------------------------------------------------------------------
 ; PUTTING A NEW OBJECT ON THE SCREEN
@@ -17,11 +17,11 @@
 ; to release a shot, an explosion or a new enemy. It is entered with A =
 ; the type, DE = where it goes and C = an adjustment, and it looks for a
 ; free slot in the object table, fills it with the record that belongs to
-; the type (four bytes from the table at 0x6BA3) and bumps the live count.
+; the type (four bytes from the table at records_by_type) and bumps the live count.
 ; Three types break the rule: 0x1E needs THREE consecutive slots (which
-; is why 0x6AA1 looks for three consecutive free slots and adds two to the
+; is why L_6AA1 looks for three consecutive free slots and adds two to the
 ; count), 0x0E goes to another table (the one at 0xE460, eight slots of
-; 0x20 bytes counted backwards) and the rest to the one at 0xE300, twelve
+; 0x20 bytes counted backwards) and the rest to the one at OBJECTS, twelve
 ; slots.
 ; ----------------------------------------------------------------------
 spawn_object:		; Looks for a free slot and sets up there an object of type A, at position DE
@@ -80,7 +80,7 @@ find_free_slot:		; The first one with its first byte at zero
 	add hl,de
 	djnz find_free_slot
 	ret
-set_up_object:		; Fills the slot: type, counters to zero, the position, and the four bytes from the table at 0x6BA3
+set_up_object:		; Fills the slot: type, counters to zero, the position, and the four bytes from the table at records_by_type
 	ld de,(SPAWN_POS)	; The position, which was parked
 	exx
 	ld hl,LIVE_OBJECTS	; One more in the count of live objects
@@ -105,7 +105,7 @@ set_up_object:		; Fills the slot: type, counters to zero, the position, and the 
 	ld (hl),d		; ...and the X to byte 6
 	ld de,00005h
 	add hl,de
-	ld de,06ba3h		; The table at 0x6BA3: four bytes per type
+	ld de,records_by_type	; The table at records_by_type: four bytes per type
 	ld a,(SPAWN_TYPE)
 	add a,a			; Times four
 	add a,a
@@ -153,13 +153,13 @@ L_6B37:
 L_6B3F:
 	ld a,(SPAWN_TYPE)	; And each type finishes its record on its own: thirty-one exits
 	dec a
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_6B43: Thirty-one words stuck right after the `call
-;   0x4067` at 0x6B43. Almost all the destinations fall in bank 3
+; DATA type_finishers: Thirty-one words stuck right after the `call
+;   dispatcher` at 0x6B43. Almost all the destinations fall in bank 3
 ;   (0xA000-0xBFFF).
-dispatcher_table_6B43:
+type_finishers:
 	defw finish_type_1	; 0
 	defw finish_type_2	; 1
 	defw finish_type_3	; 2

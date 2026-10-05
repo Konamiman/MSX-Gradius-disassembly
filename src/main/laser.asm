@@ -5,12 +5,13 @@
 	include "variables.inc"
 
 	public restore_underneath,save_under_laser,write_laser
+	extrn add_a_to_hl,cell_to_ram_address
 
 ; ----------------------------------------------------------------------
 ; THE LASER IS PAINTED IN THE NAME TABLE, NOT WITH SPRITES
 ; The normal shot is a sprite, but the laser is not: it is a STRIP OF
-; CHARACTERS written into the map. 0xA22D saves what lies underneath (its
-; cell and its length) and then writes the strip; 0xA27F erases it by
+; CHARACTERS written into the map. save_under_laser saves what lies underneath (its
+; cell and its length) and then writes the strip; write_laser erases it by
 ; putting the characters back. That is why the laser can cover the terrain
 ; as it goes by.
 ; ----------------------------------------------------------------------
@@ -29,7 +30,7 @@ L_A233:
 L_A23D:
 	pop hl
 	ld a,010h		; Sixteen bytes: the next one
-	call 0405dh
+	call add_a_to_hl
 	exx
 	djnz L_A233
 	ret
@@ -68,8 +69,8 @@ shot_cell:		; From the shot's position comes its cell in the map
 	inc l
 	inc l
 	ld d,(hl)
-	ex de,hl		; 0x571B: the cell that belongs to it
-	call 0571bh
+	ex de,hl		; cell_to_ram_address: the cell that belongs to it
+	call cell_to_ram_address
 	ex de,hl
 	ret
 write_laser:		; Writes the shot's character into the map, and for the laser its whole strip
@@ -87,7 +88,7 @@ L_A285:
 L_A28F:
 	pop hl
 	ld a,010h		; Sixteen bytes: the next one
-	call 0405dh
+	call add_a_to_hl
 	exx
 	djnz L_A285
 	ret
@@ -100,7 +101,7 @@ write_shot:		; A single character in its cell
 	inc l
 	ld d,(hl)
 	ex de,hl
-	call 0571bh		; From that comes its cell in the map
+	call cell_to_ram_address	; From that comes its cell in the map
 	ex de,hl
 	inc l
 	ld a,(hl)		; And there its character is written
@@ -140,7 +141,7 @@ L_A2CD:
 L_A2D7:
 	pop hl
 	ld a,010h		; Sixteen bytes: the next one
-	call 0405dh
+	call add_a_to_hl
 	exx
 	djnz L_A2CD
 	ret
@@ -153,7 +154,7 @@ restore_shot_cell:		; The saved character goes back to its cell
 	inc l
 	ld d,(hl)
 	ex de,hl
-	call 0571bh		; ...and the character that was underneath
+	call cell_to_ram_address	; ...and the character that was underneath
 	ex de,hl
 	inc l
 	inc l

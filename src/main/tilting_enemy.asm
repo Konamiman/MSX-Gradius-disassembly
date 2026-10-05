@@ -5,6 +5,7 @@
 	include "variables.inc"
 
 	public finish_type_2,move_type_4
+	extrn fire_without_aiming,set_horizontal_speed,set_vertical_speed,zero_speed
 
 ; ----------------------------------------------------------------------
 ; THE ENEMY TILTS TOWARDS WHERE IT FLIES
@@ -16,7 +17,7 @@
 ; never contradict each other.
 ; ----------------------------------------------------------------------
 move_type_4:		; Gets level with the ship and tilts towards where it is going
-	call 09235h
+	call fire_without_aiming
 	ld a,(SHIP_ROW)		; The ship's row minus its own
 	sub (ix+004h)
 	push af
@@ -46,13 +47,13 @@ L_A899:
 	ld a,0b0h
 L_A89E:
 	ld (ix+00ch),a		; The chosen drawing, to byte 12
-	call 06cc6h
+	call set_horizontal_speed
 	ld d,b
 	ld e,c
-	jp 06cbfh
+	jp set_vertical_speed
 finish_type_2:		; Still, and four points to the left
-	call 09510h
+	call zero_speed
 	ld de,0fc00h
-	jp 06cc6h
+	jp set_horizontal_speed
 
 	end

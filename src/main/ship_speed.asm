@@ -5,14 +5,15 @@
 	include "variables.inc"
 
 	public kill_ship,next_ship_state,times_speed_steps
+	extrn get_word
 
 ; ----------------------------------------------------------------------
 ; THE SHIP'S SPEED IS A REPEATED SUM
 ; The speed upgrade does not multiply: it takes the speed of one unit and
-; ADDS it to itself as many times as the steps it has (0xE202, capped at
+; ADDS it to itself as many times as the steps it has (SHIP_SPEED, capped at
 ; seven) plus three. Eight speed steps, and not a single multiplication.
 ; ----------------------------------------------------------------------
-times_speed_steps:		; Adds the two speeds to themselves 3 + (0xE202) times: that is the speed upgrade
+times_speed_steps:		; Adds the two speeds to themselves 3 + (SHIP_SPEED) times: that is the speed upgrade
 	ld a,(SHIP_SPEED)	; The speed steps
 	cp 008h			; Seven at most
 	jp c,L_9B57
@@ -40,7 +41,7 @@ L_9B68:
 	ld e,l
 	ld d,h
 	ret
-end_game:		; Copies 0xE130 to 0xE06B and clears the flag at 0xE05F
+end_game:		; Copies METER_SLOT to METER_AT_DEATH and clears the flag at IN_PLAY
 	ld a,(METER_SLOT)
 	ld (METER_AT_DEATH),a
 	xor a
@@ -62,16 +63,16 @@ L_9B86:
 	jr set_up_ship_card
 next_ship_state:		; Decrements the counter and, when it runs out, increments the state; past 4 the game is over
 	ld hl,SHIP_TIMER
-	dec (hl)		; 0xE201: the frames left in this state
+	dec (hl)		; SHIP_TIMER: the frames left in this state
 	ret nz
 	inc l
 	inc (hl)
 	ld a,(hl)
 	cp 004h			; Four states
 	jr nc,end_game
-set_up_ship_card:		; Takes from the table at 0x9BD2 the frames the state lasts and the sprite card of the ship and of its two options
-	ld hl,09bd2h		; The table at 0x9BD2, indexed by the state
-	call 047aeh
+set_up_ship_card:		; Takes from the table at table_9BD2 the frames the state lasts and the sprite card of the ship and of its two options
+	ld hl,table_9BD2	; The table at table_9BD2, indexed by the state
+	call get_word
 	ex de,hl
 	ld a,(hl)
 	ld (SHIP_TIMER),a	; The frames it lasts
@@ -101,7 +102,7 @@ set_up_the_option:		; The option goes on the ship's row and at its column plus t
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_9BD2: Forty-one bytes read by 0x9B9D.
+; DATA table_9BD2: Forty-one bytes read by set_up_ship_card.
 table_9BD2:
 	defb 0F0h,9Bh,0DAh,9Bh,0E5h,9Bh,0F0h,9Bh,14h,5Ch,09h,60h,0Fh,0F8h,58h,06h
 	defb 08h,74h,06h,0Ah,50h,09h,54h,0Fh,0F8h,4Ch,06h,08h,70h,06h,0Ah,64h

@@ -4,27 +4,29 @@
 
 	include "variables.inc"
 
-	public add_speed,release_what_is_due,run_background_objects,run_demo,run_twelve_objects,start_demo
-	public turn_off_object
-	extrn add_a_to_hl,aim_cannon,check_map_collision_2,check_pause_key,dispatcher,get_word
-	extrn L_71B0,move_type_0A,move_type_0B,move_type_0C,move_type_0D,move_type_1A
-	extrn move_type_1B,move_type_1D,move_type_1E,move_type_1F,move_type_2,move_type_3
-	extrn move_type_4,move_type_5,move_type_6,move_type_8,move_type_9,move_types_17_and_18
-	extrn move_with_scroll_eight,run_object,run_stage_5_background,set_up_due_stage,write_captions
+	include "map_symbols.inc"
+	public add_speed,find_group,release_what_is_due,run_background_objects,run_demo,run_twelve_objects
+	public start_demo,turn_off_object
+	extrn add_a_to_hl,aim_cannon,cheat_everything,check_map_collision_2,check_pause_key,collides_with_map
+	extrn dispatcher,enemy_shoots,get_word,L_71B0,move_type_0A,move_type_0B
+	extrn move_type_0C,move_type_0D,move_type_1A,move_type_1B,move_type_1D,move_type_1E
+	extrn move_type_1F,move_type_2,move_type_3,move_type_4,move_type_5,move_type_6
+	extrn move_type_8,move_type_9,move_types_17_and_18,move_with_scroll_eight,multiply_h_by_e,run_object
+	extrn run_stage_5_background,set_up_due_stage,spawn_object,write_captions
 
 ; ----------------------------------------------------------------------
 ; THE DEMO PLAYS ITSELF BY READING A RECORDING OF THE JOYSTICK
 ; The demo is not played by any clever machine: it is a RECORDING. In bank
 ; 12 there is, per stage, a list of pairs [how many frames][what the
-; joystick reads], and 0x5CDA reads through it: 0xE00B counts the frames
-; left and 0xE00C holds the joystick value, which 0x5CCF puts in 0xE009
-; (the same byte where 0x5767 leaves what it reads from the real
+; joystick reads], and next_recording_step reads through it: DEMO_FRAMES counts the frames
+; left and DEMO_INPUT holds the joystick value, which feed_recorded_controller puts in CONTROLLER
+; (the same byte where read_controller leaves what it reads from the real
 ; joystick), as well as turning on bit 4, which is fire. So the demo ship
 ; ALWAYS fires and moves the way the tape says.
-; And it starts fully powered: 0x5CB8 calls 0xA0D8, which is the same
+; And it starts fully powered: 0x5CB8 calls cheat_everything, which is the same
 ; thing the HYPER cheat gives.
 ; ----------------------------------------------------------------------
-start_demo:		; Picks the stage that is due (0xE006 wraps at eight), sets it up with all the power-ups and leaves it ready to play itself
+start_demo:		; Picks the stage that is due (DEMO_STAGE wraps at eight), sets it up with all the power-ups and leaves it ready to play itself
 	xor a
 	ld (CONTROLLER),a
 	ld (VAR_E007),a
@@ -41,13 +43,13 @@ L_5CA1:
 	ld (hl),a
 	ld hl,00020h		; 0x20 of distance covered
 	ld (DISTANCE),hl
-	ld hl,00001h		; 0xE00B to one: the first step of the recording goes in straight away
+	ld hl,00001h		; DEMO_FRAMES to one: the first step of the recording goes in straight away
 	ld (DEMO_FRAMES),hl
 	xor a
 	ld (DEMO_STEP),a
 	ld (LOOP_NUMBER),a
 	call set_up_due_stage
-	call 0a0d8h		; And all the power-ups at once, like the HYPER cheat
+	call cheat_everything	; And all the power-ups at once, like the HYPER cheat
 	jp write_captions
 run_demo:		; While it lasts, takes the joystick value from the recording and passes it to the game as if someone had pressed it
 	ld a,(DISTANCE+1)	; With 0xE064 set, the demo is cut short
@@ -60,15 +62,15 @@ L_5CC9:
 	ld hl,DEMO_FRAMES	; The frames left in this step
 	dec (hl)
 	jr z,next_recording_step
-feed_recorded_controller:		; The recorded value goes to 0xE009, with bit 4 (fire) always set
+feed_recorded_controller:		; The recorded value goes to CONTROLLER, with bit 4 (fire) always set
 	ld a,(DEMO_INPUT)
 	or 010h			; Bit 4: in the demo it fires non-stop
 	ld (CONTROLLER),a
 	jp check_pause_key
-next_recording_step:		; Maps banks 11 and 12, takes the next pair from the stage's list and leaves it in 0xE00B and 0xE00C
+next_recording_step:		; Maps banks 11 and 12, takes the next pair from the stage's list and leaves it in DEMO_FRAMES and DEMO_INPUT
 	inc hl
 	inc hl
-	ld c,(hl)		; 0xE00D says which pair it is on
+	ld c,(hl)		; DEMO_STEP says which pair it is on
 	inc (hl)
 	di			; Banks 11 and 12: the recordings are there
 	ld a,00bh
@@ -81,7 +83,7 @@ next_recording_step:		; Maps banks 11 and 12, takes the next pair from the stage
 	ld (BANK_A000),a
 	ei
 	ld a,(STAGE)
-	ld hl,05D1Dh		; The table at 0x5D1D, indexed by the stage
+	ld hl,ends_per_stage_5D1F-2	; The table at 0x5D1D, indexed by the stage
 	call get_word
 	ld l,c
 	ld h,000h
@@ -107,7 +109,7 @@ L_5D1D:
 
 ; ----------------------------------------------------------------------
 ; DATA ends_per_stage (part): Words that 0x5CF5 indexes with the stage
-;   (0x47AE), with the base 0x5D1D: 0xA878, 0xA942, 0xAA92, 0xAC34, 0xAD94,
+;   (get_word), with the base 0x5D1D: 0xA878, 0xA942, 0xAA92, 0xAC34, 0xAD94,
 ;   0xAF54, 0xB078 and 0xB13A, all of them in bank 3.
 ends_per_stage_5D1F:
 	defw 0A878h,0A942h
@@ -126,7 +128,7 @@ release_what_is_due:		; From the ninth stage onwards, and only on the steps with
 	ld a,(NEW_COLUMN)	; And only on the steps that bring in a column
 	and a
 	ret z
-	ld a,0f8h		; 0xF8 in 0xEC04
+	ld a,0f8h		; 0xF8 in ENTRY_X
 	ld (ENTRY_X),a
 L_5D51:
 	call release_one
@@ -150,7 +152,7 @@ release_one:		; Checks whether something is due to be released here; if so, take
 	ld c,a
 	add a,013h
 L_5D74:
-	call 06a72h
+	call spawn_object
 	xor a
 	ret
 L_5D79:
@@ -169,14 +171,14 @@ check_stage_script:		; With banks 11 and 12, looks in the stage script for the r
 	ld (0a000h),a
 	ld (BANK_A000),a
 	ei
-	ld hl,0b2d2h		; The table at 0xB2D2, indexed by the stage
+	ld hl,endings_table-12h	; The table at 0xB2D2, indexed by the stage
 	ld a,(STAGE)
 	call get_word
 	push de
 	ld a,(STAGE_SCRIPT_ROW)	; Which row of the script it is on
 	ld h,a
 	ld e,003h		; Three bytes per row
-	call 06743h
+	call multiply_h_by_e
 	pop de
 	add hl,de
 	ld c,(hl)		; The first, the type; the other two, the distance
@@ -197,7 +199,7 @@ check_stage_script:		; With banks 11 and 12, looks in the stage script for the r
 	ld hl,(DISTANCE)	; DCOMPR: the distance covered against the row's
 	rst 20h
 	ret
-run_twelve_objects:		; The twelve objects at 0xE300, 0x20 bytes apart: each one gets its mover routine and then 0x5F66
+run_twelve_objects:		; The twelve objects at OBJECTS, 0x20 bytes apart: each one gets its mover routine and then check_object_gone
 	ld ix,OBJECTS
 	ld b,00ch		; Twelve objects
 L_5DCE:
@@ -209,7 +211,7 @@ L_5DCE:
 	add ix,de
 	djnz L_5DCE
 	ret
-dispatch_object_mover:		; The first byte says what the object is; with the screen stopped (0xE1C0) there are three cases, and otherwise the table of thirty-one
+dispatch_object_mover:		; The first byte says what the object is; with the screen stopped (SCROLL_MODE) there are three cases, and otherwise the table of thirty-one
 	ld c,(ix+000h)
 	ld a,(SCROLL_MODE)	; Non-zero: the screen is stopped
 	and a
@@ -228,11 +230,11 @@ L_5DF6:
 	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_5DFA: Thirty-one words right behind the `call 0x4067`
+; DATA type_movers: Thirty-one words right behind the `call dispatcher`
 ;   at 0x5DFA. It is the largest table in the cartridge, and almost all of its
 ;   destinations are in ANOTHER bank: it sends to 0x8000 and 0xA000, that is,
 ;   to banks 2 and 3.
-dispatcher_table_5DFA:
+type_movers:
 	defw aim_cannon		; 0
 	defw move_type_2	; 1
 	defw move_type_3	; 2
@@ -265,22 +267,22 @@ dispatcher_table_5DFA:
 	defw move_type_1E	; 29
 	defw move_type_1F	; 30
 L_5E3B:
-	jp 09251h
-animate_four_drawings:		; The object's first sixteen frames cycle through the four character-and-colour pairs at 0x5E5D
+	jp move_with_scroll_eight
+animate_four_drawings:		; The object's first sixteen frames cycle through the four character-and-colour pairs at characters_of_5E4B
 	ld a,(ix+002h)
 	inc (ix+002h)		; One more frame for this object
 	cp 010h			; Past sixteen, the animation is over
 	jr nc,object_to_explosion
 	rra			; Skipping one bit: each drawing lasts two frames
 	and 006h
-	ld hl,05e5dh
+	ld hl,characters_of_5E4B
 	call add_a_to_hl
 	ld a,(hl)
 	ld (ix+00ch),a		; The character in byte 12 and the colour in 13
 	inc hl
 	ld a,(hl)
 	ld (ix+00dh),a
-	jp 09251h
+	jp move_with_scroll_eight
 
 ; ----------------------------------------------------------------------
 ; DATA characters_of_5E4B: Eight bytes that 0x5E4B indexes with (A AND 6) and
@@ -292,7 +294,7 @@ object_to_explosion:		; Turns the object into an explosion: gives it type 0x12 o
 	and a
 	jr z,L_5E88
 	ld a,(ix+012h)
-	call find_group		; The group is looked up in the table at 0xE900
+	call find_group		; The group is looked up in the table at GROUPS
 	jp c,turn_off_object
 	ld a,(hl)
 	inc l
@@ -328,8 +330,8 @@ L_5E95:
 	ld a,(ix+006h)		; And the X, snapped to eight
 	and 0f8h
 	ld (ix+006h),a
-	jp 09251h
-find_group:		; Walks the four three-byte entries at 0xE900 looking for group A; exits with carry if it is not there
+	jp move_with_scroll_eight
+find_group:		; Walks the four three-byte entries at GROUPS looking for group A; exits with carry if it is not there
 	ld hl,GROUPS
 	ld b,004h		; Four groups
 L_5EBF:
@@ -341,7 +343,7 @@ L_5EBF:
 	djnz L_5EBF
 	scf
 	ret
-animate_four_characters:		; The first sixteen frames, a character from 0x5EE3 every four; after that, the object blows up
+animate_four_characters:		; The first sixteen frames, a character from characters_of_5ED6 every four; after that, the object blows up
 	ld a,(ix+002h)
 	inc (ix+002h)
 	cp 010h			; Past sixteen, on to exploding
@@ -349,11 +351,11 @@ animate_four_characters:		; The first sixteen frames, a character from 0x5EE3 ev
 	rra			; Skipping two bits: each drawing lasts four frames
 	rra
 	and 003h
-	ld hl,05ee3h
+	ld hl,characters_of_5ED6
 	call add_a_to_hl
 	ld a,(hl)
 	ld (ix+00ch),a
-	jp 09251h
+	jp move_with_scroll_eight
 
 ; ----------------------------------------------------------------------
 ; DATA characters_of_5ED6: Four bytes (0xF0, 0xF4, 0xF8, 0xFC) that 0x5ED6
@@ -367,7 +369,7 @@ move_hatch_enemy:		; Every four frames changes drawing, moves with the screen an
 	inc (ix+002h)
 	ld a,(ix+002h)
 	and 007h		; Eight drawings, round and round
-	ld hl,05f47h
+	ld hl,animation_of_5EF6
 	call add_a_to_hl
 	ld a,(hl)
 	ld (ix+00ch),a
@@ -404,7 +406,7 @@ enemy_turns:		; Stops going up or down (the speed in bytes 7 and 8 to zero) and 
 	ret z
 	ld e,(ix+004h)
 	ld d,(ix+006h)
-	jp 06613h
+	jp enemy_shoots
 
 ; ----------------------------------------------------------------------
 ; DATA animation_of_5EF6: Eight bytes (4,5,6,7,8,7,6,5) that 0x5EF6 indexes
@@ -420,7 +422,7 @@ check_map_collision:		; Passes the object's X and Y to bank 2, with a correction
 	add a,l
 	ld l,a
 L_5F5F:
-	call 09857h
+	call collides_with_map
 	ret nc
 	jp turn_off_object
 check_object_gone:		; Types 2 to 0x10 and 0x1B to 0x1D add their speed and, if they go off the screen, are turned off
@@ -481,7 +483,7 @@ turn_off_object:		; Frees the slot and lowers the count of live objects; if it w
 	bit 0,(ix+011h)		; Bit 0 of byte 17: it belongs to a group
 	ret z			; Bit 0 of byte 17: the object was in a group
 	ld a,(ix+012h)
-	call find_group		; Its group is looked up in the table at 0xE900
+	call find_group		; Its group is looked up in the table at GROUPS
 	ret c
 	inc l			; The group's count goes down
 	dec (hl)
@@ -504,7 +506,7 @@ L_5FDA:
 	ld (iy+01bh),a
 	add iy,de
 	djnz L_5FDA
-run_background_objects:		; Stage 5 has its own engine in bank 3; the others walk eight or two objects at 0xE700
+run_background_objects:		; Stage 5 has its own engine in bank 3; the others walk eight or two objects at BG_OBJECTS
 	ld a,(STAGE)
 	cp 005h			; Stage 5 goes another way
 	jp z,run_stage_5_background
@@ -525,19 +527,19 @@ L_5FFB:
 ; figure of speech:
 ;
 ;   - above, the code of bank 0 falls through from 0x5FFF to 0x6000. The loop
-;     that starts at p00:5FFB (`push bc / call 0x6008 / pop bc`) ends right
+;     that starts at L_5FFB (`push bc / call run_object / pop bc`) ends right
 ;     here, at 0x6000-0x6007, with the `ld de,0x0008 / add ix,de / djnz /
 ;     ret`.
 ;   - below, the LAST INSTRUCTION OF THE BANK IS SPLIT. At 0x7FFE there is
 ;     `21 41` and the third byte, the 0x80, is the first byte of bank 2:
-;     together they make `ld hl,0x8041`, and execution carries on at 0x8001.
+;     together they make `ld hl,table_8041`, and execution carries on at continued_from_bank_1.
 ;     It is the only place in the cartridge where this happens (see the
 ;     end of boss.asm).
 
 ; ----------------------------------------------------------------------
 ; THE BANK STARTS IN THE MIDDLE OF A LOOP
 ; ----------------------------------------------------------------------
-end_of_bank_0_loop:		; The loop that starts at p00:5FFB ends here. The code crosses the bank boundary.
+end_of_bank_0_loop:		; The loop that starts at L_5FFB ends here. The code crosses the bank boundary.
 	ld de,00008h
 	add ix,de
 	djnz L_5FFB

@@ -2,12 +2,12 @@
 ; Nemesis / Gradius - main image (banks 0-3) - title_screen.asm
 ; ============================================================================
 
-	include "screens_symbols.inc"
 	include "variables.inc"
 
+	include "screens_symbols.inc"
 	public blink_selection,build_high_score_screen,L_5BDD
 	extrn add_a_to_hl,clear_screen,decompress,decompress_three_thirds,dump_to_vram,L_49A0
-	extrn request_sound,set_vram_write,write_characters
+	extrn messages,request_sound,set_vram_write,write_characters
 
 ; (The last instruction of vdp_setup.asm falls through into here.)
 
@@ -27,9 +27,9 @@
 ; ----------------------------------------------------------------------
 	ld a,(0002bh)		; The low nibble of 0x002B: the character set. At zero, Japanese
 	and 00fh
-	ld de,09bcbh		; The Japanese panel...
+	ld de,graphics_9BCB	; The Japanese panel...
 	jr z,L_5B9B
-	ld de,09b3fh		; ...and the one for the other machines
+	ld de,graphics_9B3F	; ...and the one for the other machines
 L_5B9B:
 	ld hl,03882h		; Row 4, column 2
 	ld b,005h		; Five rows
@@ -58,10 +58,10 @@ L_5BA6:
 	ld (0a000h),a
 	ld (BANK_A000),a
 	ei
-	ld de,057ebh		; And on top, the two messages at 0x57EB
+	ld de,messages+2Eh	; And on top, the two messages at 0x57EB
 	call write_characters
 	jp write_characters
-blink_selection:		; A bit of 0xE004 turns off and on the message of the option selected in the intro
+blink_selection:		; A bit of STATE_TIMER turns off and on the message of the option selected in the intro
 	ld hl,STATE_TIMER
 	bit 3,(hl)		; Bit 3 of the counter: on and off
 	ld c,0ffh
@@ -80,7 +80,7 @@ L_5BEA:
 	pop hl
 	ld c,000h
 L_5BF1:
-	ld de,0581dh
+	ld de,messages+60h
 	jp L_49A0
 
 ; ----------------------------------------------------------------------
@@ -101,35 +101,35 @@ build_high_score_screen:		; With banks 9 and 10, decompresses the six blocks of 
 	ld (BANK_A000),a
 	ei
 	ld hl,02008h		; Three pattern blocks, at 0x2008, 0x2808 and 0x3008
-	ld de,08300h
+	ld de,graphics_colours_2008
 	call decompress
 	ld hl,02808h
-	ld de,087fah
+	ld de,graphics_colours_2808
 	call decompress
 	ld hl,03008h
-	ld de,08cb2h
+	ld de,graphics_colours_3008
 	call decompress
 	ld hl,00008h		; And their three colour ones, at 0x0008, 0x0808 and 0x1008
-	ld de,0917eh
+	ld de,graphics_patterns_0008
 	call decompress
 	ld hl,00808h
-	ld de,09515h
+	ld de,graphics_patterns_0808
 	call decompress
 	ld hl,01008h
-	ld de,0989fh
+	ld de,graphics_patterns_1008
 	call decompress
 	ld hl,02780h		; The characters of the frame around it, in the three thirds
-	ld de,0a758h
+	ld de,graphics_patterns_2780
 	call decompress_three_thirds
 	ld hl,00780h
-	ld de,0a783h
+	ld de,graphics_colours_0780
 	call decompress_three_thirds
 	ld hl,01800h		; And the sprite patterns
-	ld de,0a7a4h
+	ld de,graphics_sprites_1800_b
 	call decompress
 	call set_up_screen
 	ld hl,03800h
-	ld de,08000h		; 0x8000: 768 UNCOMPRESSED characters, the whole screen in one go
+	ld de,name_table_screen	; 0x8000: 768 UNCOMPRESSED characters, the whole screen in one go
 	ld bc,00300h
 	call dump_to_vram
 	di

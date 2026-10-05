@@ -5,8 +5,8 @@
 	include "bios.inc"
 	include "variables.inc"
 
-	public animate_shrapnel,move_shrapnel,pick_border_colour,release_shrapnel,start_slow_message,upload_shrapnel_to_buffer
-	public write_one_letter
+	public animate_shrapnel,erase_drawing,four_by_four_drawing,meter_table,move_shrapnel,pick_border_colour
+	public release_shrapnel,start_slow_message,tables_of_4C4B,upload_shrapnel_to_buffer,write_one_letter
 	extrn add_a_to_de,add_a_to_hl,set_border_colour
 
 ; ----------------------------------------------------------------------
@@ -15,10 +15,10 @@
 ; and all the chance in it comes from the Z80's R REGISTER, the memory
 ; refresh one, read four times in a row: one of its bits picks between the
 ; two drawings, another four pick one of the sixteen directions in the
-; table at 0x4D3E, and the last two reads add a pinch to the X and to the
+; table at shrapnel_directions, and the last two reads add a pinch to the X and to the
 ; Y so that two pieces with the same direction do not travel stuck
 ; together.
-; In this mode, 0xE300 is NOT the usual object table: it is thirty-two
+; In this mode, SHRAPNEL is NOT the usual object table: it is thirty-two
 ; slots of sixteen bytes.
 ; ----------------------------------------------------------------------
 release_shrapnel:		; Every three frames releases a piece of shrapnel in the first free slot, with drawing, direction and push taken from the R register
@@ -64,7 +64,7 @@ build_shrapnel_piece:		; Fills the slot: drawing, Y 0x38, X 0x80, and the direct
 	add a,a			; Times four: two words per direction
 	add a,a
 	push hl
-	ld hl,04d3eh
+	ld hl,shrapnel_directions
 	call add_a_to_hl
 	ld e,(hl)
 	inc hl
@@ -226,7 +226,7 @@ two_phases:		; The other drawing only changes once, at 0x60 frames
 
 ; ----------------------------------------------------------------------
 ; DATA unreachable_code: Eighty-three bytes that disassemble as code (they
-;   start with `ld a,(0xE1D2) / dec a / ld hl,0x4E82`) but that no path
+;   start with `ld a,(ENDING_TIMER) / dec a / ld hl,0x4E82`) but that no path
 ;   reaches: the instruction before ends in `ret` and no instruction or table
 ;   in the cartridge points to 0x4E3B. They are listed as bytes so as not to
 ;   claim they are live code.
@@ -237,7 +237,7 @@ unreachable_code:
 	defb 60h,0Ch,04h,40h,70h,10h,04h,40h,80h,28h,06h,40h,70h,18h,06h,40h
 	defb 70h,1Ch,05h,0E0h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h
 	defb 00h,00h,00h
-pick_border_colour:		; A bit of 0xE1D2 picks between colour 3 and colour 9 for the border
+pick_border_colour:		; A bit of ENDING_TIMER picks between colour 3 and colour 9 for the border
 	ld a,(ENDING_TIMER)	; One of its bits
 	rra
 	rra
@@ -246,14 +246,14 @@ pick_border_colour:		; A bit of 0xE1D2 picks between colour 3 and colour 9 for t
 	ld b,009h
 L_4E99:
 	jp set_border_colour
-start_slow_message:		; Stores the VRAM cell in 0xE1DB and the text in 0xE1DD: the message is going to be written letter by letter
+start_slow_message:		; Stores the VRAM cell in SLOW_MSG_VRAM and the text in SLOW_MSG_TEXT: the message is going to be written letter by letter
 	ld e,(hl)		; The first two bytes are the cell
 	inc hl
 	ld d,(hl)
 	inc hl
-	ld (SLOW_MSG_VRAM),de	; The cell, and the text in 0xE1DD
+	ld (SLOW_MSG_VRAM),de	; The cell, and the text in SLOW_MSG_TEXT
 	ld (SLOW_MSG_TEXT),hl
-	ld a,001h		; 0xE1DA to one: the first letter goes in straight away
+	ld a,001h		; SLOW_MSG_DELAY to one: the first letter goes in straight away
 	ld (SLOW_MSG_DELAY),a
 	ret
 write_one_letter:		; Every six frames writes ONE letter of the message; 0xFF ends it and 0xFE continues it at another cell
@@ -286,18 +286,18 @@ L_4ECB:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA meter_table: Six words (0x4EE6, 0x4EEB, 0x4EF4, 0x4F08, 0x4F2B, 0x4F63)
-;   that 0x4BFD indexes with 0xE1D9, the lit cell of the power-up meter. They
-;   are NOT routines: they are the six drawings of the meter, and 0x4BFD ends
-;   in `jp 0x4998`, which is the one that writes characters.
+; DATA meter_table: Six words (meter_drawings, 0x4EEB, 0x4EF4, 0x4F08, 0x4F2B, 0x4F63)
+;   that draw_meter indexes with ENDING_DRAWING, the lit cell of the power-up meter. They
+;   are NOT routines: they are the six drawings of the meter, and draw_meter ends
+;   in `jp write_characters`, which is the one that writes characters.
 meter_table:
-	defw 4EE6h,4EEBh	; -> DATA_meter_drawings 0x4eeb
-	defw 4EF4h,4F08h
-	defw 4F2Bh,4F63h
+	defw meter_drawings,meter_drawings+5
+	defw meter_drawings+0Eh,meter_drawings+22h
+	defw meter_drawings+45h,meter_drawings+7Dh
 
 ; ----------------------------------------------------------------------
 ; DATA meter_drawings: The six drawings the table above points to, in the
-;   0x4998 format: two bytes of VRAM address, followed by the characters (0xFE
+;   write_characters format: two bytes of VRAM address, followed by the characters (0xFE
 ;   = another address follows, 0xFF = end). They are counted, not estimated:
 ;   the six measure 5, 9, 20, 35, 56 and 79 bytes and fit exactly from 0x4EE6
 ;   to 0x4FB1. They write to the name table around 0x38EA-0x390E, which is the
@@ -319,7 +319,7 @@ meter_drawings:
 
 ; ----------------------------------------------------------------------
 ; DATA four_by_four_drawing: Four rows of four characters (0xEB to 0xF8) at
-;   row 5 and column 14, in the 0x4998 format: a drawing made of characters in
+;   row 5 and column 14, in the write_characters format: a drawing made of characters in
 ;   the middle of the screen. Requested by 0x4B39.
 four_by_four_drawing:
 	defb 0AEh,38h,00h,0EBh,0ECh,00h,0FEh
@@ -329,7 +329,7 @@ four_by_four_drawing:
 
 ; ----------------------------------------------------------------------
 ; DATA erase_drawing: The same drawing but with zeros, that is, the erasing.
-;   Requested by 0x4BC1.
+;   Requested by L_4BC1.
 erase_drawing:
 	defb 0AEh,38h,00h,00h,00h,00h,0FEh
 	defb 0CEh,38h,00h,00h,00h,00h,0FEh
@@ -337,7 +337,7 @@ erase_drawing:
 	defb 0Eh,39h,00h,00h,00h,00h,0FFh
 
 ; ----------------------------------------------------------------------
-; DATA tables_of_4C4B: What 0x4C50 (0x4FEA), 0x4C4B (0x502E), 0x4C70 (0x5040)
+; DATA tables_of_4C4B: What L_4C50 (0x4FEA), 0x4C4B (0x502E), 0x4C70 (0x5040)
 ;   and 0x4C93 (0x504A) read.
 tables_of_4C4B:
 	defb 0F4h,4Fh,0FBh,4Fh,02h,50h,09h,50h,11h,50h,0Eh,39h,27h,2Fh,2Fh,24h

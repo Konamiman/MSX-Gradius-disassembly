@@ -12,7 +12,7 @@
 	include "variables.inc"
 
 	public run_channel,silence_this_channel,write_volume_and_mix
-	extrn write_period,read_melody_command,repeat_stream,save_pointer,set_mix
+	extrn read_melody_command,repeat_stream,save_pointer,set_mix,write_period
 
 run_channel:		; A channel's interpreter: fetches the next command from the stream it points to (IX+3, IX+4). 0xFE and the codes above it are control commands; those below, note and length.
 	ld a,(ix+CARD_MODE)	; Byte 2: the mode

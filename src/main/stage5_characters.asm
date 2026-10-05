@@ -5,19 +5,20 @@
 	include "variables.inc"
 
 	public advance_background_script,check_falling_pieces_script,erase_stage_5_background,erase_turrets,paint_stage_5_background,paint_turrets
+	extrn add_a_to_de,add_a_to_hl,check_if_sound,clear_rectangle,copy_rectangle,get_word
 
 ; ----------------------------------------------------------------------
 ; IN STAGE 5 THE BACKGROUND IS PAINTED WITH CHARACTERS, NOT SPRITES
 ; The background objects of the fifth stage have no sprite card: they are
 ; rectangles of characters written into the map. That is why there are two
-; twin routines called one frame apart: first they are erased (0xEC00 to
+; twin routines called one frame apart: first they are erased (PAINT_FLAG to
 ; zero, which sends them to clear_rectangle) and then, once moved, they
-; are painted again (0xEC00 to 0xFF, which sends them to
+; are painted again (PAINT_FLAG to 0xFF, which sends them to
 ; copy_rectangle). The turret is also painted half way while it peeks
 ; out: only as many of its rows are drawn as it has out.
 ; ----------------------------------------------------------------------
-paint_stage_5_background:		; The eight cards at 0xE700, painted as rectangles of characters
-	ld a,0ffh		; 0xEC00 to 0xFF: paint
+paint_stage_5_background:		; The eight cards at BG_OBJECTS, painted as rectangles of characters
+	ld a,0ffh		; PAINT_FLAG to 0xFF: paint
 	ld ix,BG_OBJECTS
 	ld b,008h		; Eight cards
 	ld (PAINT_FLAG),a
@@ -35,19 +36,19 @@ paint_background_piece:		; Types 1 to 4, a five by five block; from 5 onwards, w
 	ret z
 	cp 005h			; From type 5 onwards, elsewhere
 	jp nc,paint_big_piece
-	ld a,(ix+006h)		; Byte 6 picks the drawing in the table at 0xB537
-	ld hl,0b537h
-	call 047aeh
+	ld a,(ix+006h)		; Byte 6 picks the drawing in the table at five_by_five_drawings
+	ld hl,five_by_five_drawings
+	call get_word
 five_by_five:		; Types 1 to 4 measure five cells by five
 	ld bc,00505h
-paint_or_erase:		; With 0xEC00 at zero it erases, and otherwise it copies
+paint_or_erase:		; With PAINT_FLAG at zero it erases, and otherwise it copies
 	ld l,(ix+002h)		; Its row and its column
 	ld h,(ix+003h)
 	ld a,(PAINT_FLAG)	; Says whether to paint or to erase
 	and a
-	jp z,048f7h
-	jp 0490ch
-erase_stage_5_background:		; 0xEC00 to zero and walk the same eight cards
+	jp z,clear_rectangle
+	jp copy_rectangle
+erase_stage_5_background:		; PAINT_FLAG to zero and walk the same eight cards
 	xor a
 	ld (PAINT_FLAG),a
 	jr five_by_five
@@ -57,8 +58,8 @@ paint_big_piece:		; Types 5 to 8 carry their size in front of the characters
 	ret z
 	ld a,(ix+000h)
 	sub 005h
-	ld hl,0b749h		; The table at 0xB749: one pointer per type
-	call 047aeh
+	ld hl,big_piece_drawings	; The table at big_piece_drawings: one pointer per type
+	call get_word
 	ex de,hl
 	ld c,(hl)		; The first two bytes are the width and the height
 	inc hl
@@ -66,10 +67,10 @@ paint_big_piece:		; Types 5 to 8 carry their size in front of the characters
 	inc hl
 	ex de,hl
 	jr paint_or_erase
-erase_turrets:		; 0xEC00 to zero
+erase_turrets:		; PAINT_FLAG to zero
 	xor a
 	jr L_B439
-paint_turrets:		; Only in stage 5, and with 0xEC00 at 0xFF
+paint_turrets:		; Only in stage 5, and with PAINT_FLAG at 0xFF
 	ld a,(STAGE)		; Only stage 5 has turrets
 	cp 005h
 	ret nz
@@ -93,37 +94,37 @@ paint_turret:		; Once fully out, four by four; while peeking out, only the rows 
 	and a
 	jr z,turret_peeks_out
 	ld a,(ix+006h)		; Byte 6 picks between the two drawings
-	ld de,0b729h
+	ld de,sliding_turret_drawing_0
 	and a
 	jr z,L_B465
-	ld de,0b739h
+	ld de,sliding_turret_drawing_1
 L_B465:
 	ld bc,00404h		; Four cells by four
-paint_or_erase_turret:		; Same as the background: 0xEC00 decides
+paint_or_erase_turret:		; Same as the background: PAINT_FLAG decides
 	ld l,(ix+002h)		; Its row and its column
 	ld h,(ix+003h)
 	ld a,(PAINT_FLAG)	; Says whether to paint or to erase
 	and a
-	jp z,048f7h
-	jp 0490ch
+	jp z,clear_rectangle
+	jp copy_rectangle
 turret_peeks_out:		; Only what it has out is drawn: byte 5 says how many rows
 	ld a,(ix+000h)
 	dec a
 	jr nz,L_B489
-	ld de,0b729h
+	ld de,sliding_turret_drawing_0
 	ld b,004h
 	ld c,(ix+005h)		; Byte 5: the rows it has out
 	inc c
 	jr paint_or_erase_turret
 L_B489:
-	ld de,0b729h		; The table at 0xB729, read from the end
+	ld de,sliding_turret_drawing_0	; The table at sliding_turret_drawing_0, read from the end
 	ld a,(ix+005h)
 	ld c,a
 	sub 003h		; Three minus the rows it has out, times four
 	neg
 	add a,a
 	add a,a
-	call 04062h
+	call add_a_to_de
 	ld b,004h
 	inc c
 	jr paint_or_erase_turret
@@ -138,18 +139,18 @@ check_falling_pieces_script:		; On every step with a new column, sets up the bac
 	ld a,(NEW_COLUMN)	; Only on steps with a new column
 	and a
 	ret z
-	ld a,0f8h		; 0xEC04 to 0xF8: they come in from the right
+	ld a,0f8h		; ENTRY_X to 0xF8: they come in from the right
 	ld (ENTRY_X),a
 set_up_due_ones:		; One after another as long as they match
 	call set_up_this_background_piece
 	jr z,set_up_due_ones
 	ret
-set_up_this_background_piece:		; Four bytes per line: the distance, the row and the type; on a match, a card at 0xE700 is taken
-	ld a,(BG_SCRIPT_ROW)	; The table at 0xB7BF: four bytes per line
+set_up_this_background_piece:		; Four bytes per line: the distance, the row and the type; on a match, a card at BG_OBJECTS is taken
+	ld a,(BG_SCRIPT_ROW)	; The table at stage_5_background_script: four bytes per line
 	add a,a
 	add a,a
-	ld hl,0b7bfh
-	call 0405dh
+	ld hl,stage_5_background_script
+	call add_a_to_hl
 	ld e,(hl)
 	inc hl
 	ld d,(hl)
@@ -209,10 +210,10 @@ set_up_small_one:		; Row from the table, column 0xC0, and sound 0x0C
 	inc l
 	ld (hl),000h
 	ld a,00ch		; Sound 0x0C
-	call 049deh
+	call check_if_sound
 	xor a
 	ret
-set_up_big_one:		; Row from the table and column 0xEC04, with the type's high nibble in byte 7
+set_up_big_one:		; Row from the table and column ENTRY_X, with the type's high nibble in byte 7
 	inc l			; Byte 1 to zero
 	ld (hl),000h
 	inc l
@@ -238,21 +239,21 @@ set_up_big_one:		; Row from the table and column 0xEC04, with the type's high ni
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_B537: Words read by 0xB3F7 with `ld hl,0xB537` (0xB567, 0xB580,
+; DATA five_by_five_drawings: Words read by 0xB3F7 with `ld hl,0xB537` (0xB567, 0xB580,
 ;   0xB599, ...) and, after them, what they point to.
-table_B537:
-	defw 0B567h,0B580h
-	defw 0B599h,0B5B2h
-	defw 0B5CBh,0B5E4h
-	defw 0B5FDh,0B5FDh
-	defw 0B5FDh,0B5FDh
-	defw 0B5FDh,0B5FDh
-	defw 0B5FDh,0B616h
-	defw 0B62Fh,0B648h
-	defw 0B661h,0B67Ah
-	defw 0B693h,0B6ACh
-	defw 0B6C5h,0B6DEh
-	defw 0B6F7h,0B710h
+five_by_five_drawings:
+	defw five_by_five_drawings+30h,five_by_five_drawings+49h
+	defw five_by_five_drawings+62h,five_by_five_drawings+7Bh
+	defw five_by_five_drawings+94h,five_by_five_drawings+0ADh
+	defw five_by_five_drawings+0C6h,five_by_five_drawings+0C6h
+	defw five_by_five_drawings+0C6h,five_by_five_drawings+0C6h
+	defw five_by_five_drawings+0C6h,five_by_five_drawings+0C6h
+	defw five_by_five_drawings+0C6h,five_by_five_drawings+0DFh
+	defw five_by_five_drawings+0F8h,five_by_five_drawings+111h
+	defw five_by_five_drawings+12Ah,five_by_five_drawings+143h
+	defw five_by_five_drawings+15Ch,five_by_five_drawings+175h
+	defw five_by_five_drawings+18Eh,five_by_five_drawings+1A7h
+	defw five_by_five_drawings+1C0h,five_by_five_drawings+1D9h
 	defw 0000h,0000h
 	defw 0000h,0000h
 	defw 0000h,0000h
@@ -368,18 +369,18 @@ table_B537:
 	defw 0D269h
 
 ; ----------------------------------------------------------------------
-; DATA table_B729: Sixteen bytes read by 0xB45C, 0xB47E and 0xB489.
-table_B729:
+; DATA sliding_turret_drawing_0: Sixteen bytes read by 0xB45C, 0xB47E and L_B489.
+sliding_turret_drawing_0:
 	defb 0B2h,4Eh,52h,0B5h,0B3h,4Fh,53h,0B6h,0B4h,50h,54h,0B7h,00h,51h,55h,00h
 
 ; ----------------------------------------------------------------------
-; DATA table_B739: Sixteen bytes read by 0xB462.
-table_B739:
+; DATA sliding_turret_drawing_1: Sixteen bytes read by 0xB462.
+sliding_turret_drawing_1:
 	defb 0B2h,4Eh,52h,0B5h,0B3h,4Fh,53h,0B6h,0B4h,56h,57h,0B7h,00h,58h,59h,00h
 
 ; ----------------------------------------------------------------------
-; DATA table_B749: One hundred and eighteen bytes read by 0xB420.
-table_B749:
+; DATA big_piece_drawings: One hundred and eighteen bytes read by 0xB420.
+big_piece_drawings:
 	defb 59h,0B7h,73h,0B7h,8Dh,0B7h,93h,0B7h,99h,0B7h,99h,0B7h,0B3h,0B7h,0B9h,0B7h
 	defb 04h,06h,5Ah,00h,00h,00h,00h,5Fh,5Bh,5Ch,5Dh,62h,61h,60h,5Eh,05h
 	defb 02h,07h,0Ah,63h,00h,06h,04h,09h,0Bh,00h,04h,06h,00h,3Ch,3Ah,3Fh
@@ -390,8 +391,8 @@ table_B749:
 	defb 01h,04h,12h,13h,14h,15h
 
 ; ----------------------------------------------------------------------
-; DATA table_B7BF: One hundred and thirty-four bytes read by 0xB4BF.
-table_B7BF:
+; DATA stage_5_background_script: One hundred and thirty-four bytes read by 0xB4BF.
+stage_5_background_script:
 	defb 8Dh,00h,78h,00h,96h,00h,08h,02h,99h,00h,58h,02h,0A2h,00h,78h,00h
 	defb 0A6h,00h,08h,02h,0ACh,00h,58h,02h,0B6h,00h,78h,00h,0BEh,00h,08h,02h
 	defb 0C2h,00h,40h,00h,0C5h,00h,78h,03h,0C9h,00h,08h,03h,0D2h,00h,58h,02h

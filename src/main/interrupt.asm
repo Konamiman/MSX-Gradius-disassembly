@@ -3,20 +3,20 @@
 ; ============================================================================
 
 	include "bios.inc"
-	include "sound_symbols.inc"
 	include "variables.inc"
 
+	include "sound_symbols.inc"
 	public add_a_to_de,add_a_to_hl,interrupt,L_405A
 	extrn read_controller,state_machine
 
 ; ----------------------------------------------------------------------
 ; THE INTERRUPT
 ; ----------------------------------------------------------------------
-interrupt:		; What INIT installs in the H.KEYI hook (0xFD9A). THE WHOLE GAME RUNS HERE.
+interrupt:		; What INIT installs in the H.KEYI hook (H_KEYI). THE WHOLE GAME RUNS HERE.
 	call RDVDP		; Reading the VDP status is what acknowledges the interrupt.
 	di
 	ld a,007h		; Bank 7 at 0x8000 and bank 8 at 0xA000: the sound player and its data.
-	ld (08000h),a		; NOTE: the RAM copy at 0xF0F2 is NOT touched here, and that is why it can be undone afterwards.
+	ld (08000h),a		; NOTE: the RAM copy at BANK_8000 is NOT touched here, and that is why it can be undone afterwards.
 	inc a
 	ld (0a000h),a
 	call play		; The sound runs entirely inside the interrupt.

@@ -5,16 +5,17 @@
 	include "variables.inc"
 
 	public run_stage_5_background
+	extrn add_a_to_de,add_a_to_hl,spawn_object
 
 ; ----------------------------------------------------------------------
 ; STAGE 5 HAS ITS OWN BACKGROUND MOVER
 ; The other eleven stages move the background objects with the mover at
-; p01:0x6008; the fifth does not: p00:0x5FE4 diverts it here. They are the
-; same eight eight-byte cards at 0xE700, but with two rules of their own:
+; p01:run_object; the fifth does not: p00:run_background_objects diverts it here. They are the
+; same eight eight-byte cards at BG_OBJECTS, but with two rules of their own:
 ; types 1 to 4 release type 0x1C objects when the ship comes within range,
-; and types 5 to 8 set up the sliding turrets at 0xE880.
+; and types 5 to 8 set up the sliding turrets at TURRETS.
 ; ----------------------------------------------------------------------
-run_stage_5_background:		; The eight eight-byte cards at 0xE700, one by one
+run_stage_5_background:		; The eight eight-byte cards at BG_OBJECTS, one by one
 	ld ix,BG_OBJECTS
 	ld b,008h		; Eight cards
 L_B2B0:
@@ -108,8 +109,8 @@ L_B346:
 release_type_1C:		; The position comes from its own plus the offset for its type
 	ld a,(ix+000h)
 	add a,a
-	ld hl,0b366h		; The table at 0xB366: two bytes per type
-	call 0405dh
+	ld hl,type_1C_release_offsets-2	; The table at 0xB366: two bytes per type
+	call add_a_to_hl
 	ld a,(ix+002h)		; Its row plus the offset...
 	add a,(hl)
 	ld e,a
@@ -119,16 +120,16 @@ release_type_1C:		; The position comes from its own plus the offset for its type
 	ld d,a
 	ld c,000h
 	ld a,01ch		; Type 0x1C
-	jp 06a72h
+	jp spawn_object
 
 ; ----------------------------------------------------------------------
-; DATA table_B366 (part): Ten bytes read by 0xB350 with base 0xB366.
-table_B366_B368:
+; DATA type_1C_release_offsets (part): Ten bytes read by 0xB350 with base 0xB366.
+type_1C_release_offsets:
 	defb 10h,0F0h
 	defb 10h,28h
 	defb 10h,0F0h
 	defb 10h,28h
-set_up_turret:		; Types 5 to 8 look for a free card at 0xE880 and set up a sliding turret there
+set_up_turret:		; Types 5 to 8 look for a free card at TURRETS and set up a sliding turret there
 	ld a,(ix+000h)
 	cp 009h			; From type 9 onwards, nothing
 	ret nc
@@ -158,11 +159,11 @@ L_B39B:
 	inc l
 	ld (hl),000h
 	inc l
-	ld a,(ix+000h)		; The table at 0xB3C7: two bytes per type
+	ld a,(ix+000h)		; The table at sliding_turret_offsets: two bytes per type
 	sub 005h
-	ld de,0b3c7h
+	ld de,sliding_turret_offsets
 	add a,a
-	call 04062h
+	call add_a_to_de
 	ld a,(de)
 	inc de
 	add a,(ix+002h)		; Its row plus the offset...
@@ -183,8 +184,8 @@ L_B39B:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_B3C7: Eleven bytes read by 0xB3A5 with `ld de,0xB3C7`.
-table_B3C7:
+; DATA sliding_turret_offsets: Eleven bytes read by 0xB3A5 with `ld de,0xB3C7`.
+sliding_turret_offsets:
 	defb 00h,08h,18h,08h,0F8h,00h,08h,00h,0AFh,18h,02h
 
 	end

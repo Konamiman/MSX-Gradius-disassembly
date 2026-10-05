@@ -9,7 +9,7 @@
 	include "bios.inc"
 	include "variables.inc"
 
-	public write_mix,set_mix
+	public set_mix,write_mix
 
 set_mix:		; Builds PSG register 7: for each channel, whether tone sounds, whether noise sounds, or neither
 	ld a,(SND_MIX)		; The current mix

@@ -3,7 +3,7 @@
 ; ============================================================================
 
 	public jump_to_intro
-	extrn intro
+	extrn INIT,intro
 
 ; Bank 0 (runs at 0x4000).
 ;
@@ -21,7 +21,7 @@
 ;   entries (STATEMENT, DEVICE, TEXT) at zero, plus six reserved bytes.
 header:
 	defb 41h,42h
-	defw 4071h		; -> INIT
+	defw INIT
 	defw 0000h
 	defw 0000h
 	defw 0000h
@@ -32,7 +32,7 @@ header:
 ; plugs into the slot next door and needs to know where this one keeps its
 ; things so it can tamper with them. "CD" format: mark, catalogue number, a
 ; flags byte and only the fields that byte announces. The 19 bytes the Game
-; Master copies start at 0x4012, and the count closes exactly at 0x4025.
+; Master copies start at gm_catalogue, and the count closes exactly at 0x4025.
 
 ; ----------------------------------------------------------------------
 ; DATA gm_mark: The format mark: "CD" in ASCII (43 44). It is what the Game
@@ -57,13 +57,13 @@ gm_flags:
 
 ; ----------------------------------------------------------------------
 ; DATA gm_fields: The seven fields the flags byte announces, in bit order:
-;   0xE000 with the 0x04 that says when there is a live game (0x53B1 state_4
-;   is where the stage starts); 0xE061 the stage with its modulo 8 (0x4129);
-;   0xE060 the lives (0x53CC, in BCD); 0xE053 the high score; 0xE05B one
-;   player's score and 0xE057 the other's (0x54AA picks between the two by bit
-;   7 of 0xE002 and clears four bytes); and 0xE002, the game flags. That
-;   0xE053 is the high score is something the cartridge itself tells us:
-;   0x5558 clears from 0xE057 up to 0xEFFF when a game starts and those four
+;   GAME_STATE with the 0x04 that says when there is a live game (state_4
+;   is where the stage starts); STAGE the stage with its modulo 8 (set_up_due_stage);
+;   LIVES the lives (0x53CC, in BCD); HISCORE the high score; SCORE_P1 one
+;   player's score and SCORE_P2 the other's (0x54AA picks between the two by bit
+;   7 of GAME_FLAGS and clears four bytes); and GAME_FLAGS, the game flags. That
+;   HISCORE is the high score is something the cartridge itself tells us:
+;   start_whole_game clears from SCORE_P2 up to 0xEFFF when a game starts and those four
 ;   bytes are exactly the ones it leaves standing.
 gm_fields:
 	defb 00h,0E0h,04h
@@ -73,7 +73,7 @@ gm_fields:
 	defw 0E05Bh
 	defw 0E057h
 	defw 0E002h
-jump_to_intro:		; `jp 0x5A54`. It is the only place that enters the intro.
+jump_to_intro:		; `jp intro`. It is the only place that enters the intro.
 	jp intro
 
 	end

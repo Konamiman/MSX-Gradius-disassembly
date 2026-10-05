@@ -5,23 +5,28 @@
 	include "bios.inc"
 	include "variables.inc"
 
+	include "map_symbols.inc"
+	include "scenery_symbols.inc"
+	include "screens_symbols.inc"
+	include "sound_symbols.inc"
 	public blink_two_characters,check_if_sound,clear_rectangle,clear_screen,copy_rectangle,decompress
 	public decompress_three_thirds,decompress_with_destination,dispatch_ship_end,dump_three_thirds,dump_to_vram,erase_characters
 	public fill_three_thirds,get_word,L_49A0,load_explosion_graphics,next_submode,request_sound
 	public run_sprites,scroll_map_one_column,set_vram_write,upload_screen,upload_sprites_rotating,write_characters
 	extrn add_a_to_de,add_a_to_hl,advance_1B_script,advance_script,animate_shrapnel,build_mirror
-	extrn cell_to_ram_address,dispatcher,explosion_step_6,explosion_step_7,explosion_step_8,explosion_step_9
-	extrn load_entries,load_scoreboard,move_shrapnel,paint_e800_objects,pick_border_colour,release_background_objects
-	extrn release_enemies,release_shrapnel,remove_sprites_from_screen,set_border_colour,upload_shrapnel_to_buffer,write_laser
+	extrn cell_to_ram_address,dispatcher,erase_drawing,explosion_step_6,explosion_step_7,explosion_step_8
+	extrn explosion_step_9,formations,four_by_four_drawing,load_entries,load_scoreboard,meter_table
+	extrn move_shrapnel,paint_e800_objects,pick_border_colour,release_background_objects,release_enemies,release_shrapnel
+	extrn remove_sprites_from_screen,set_border_colour,upload_shrapnel_to_buffer,write_laser
 
 ; (The last instruction of pause_and_frame.asm falls through into here.)
 
 ; ----------------------------------------------------------------------
 ; THE SCROLL
-; The stage map is not read from VRAM: it lives in RAM, at 0xED00, and it
-; is twenty-two rows of thirty-two cells. On each scroll step, 0x469D
+; The stage map is not read from VRAM: it lives in RAM, at MAP, and it
+; is twenty-two rows of thirty-two cells. On each scroll step, L_469D
 ; SHIFTS IT ONE COLUMN TO THE LEFT with twenty-two `ldir`s of 0x1F bytes,
-; and 0x46AE puts the new column in on the right, which comes from the
+; and read_new_column puts the new column in on the right, which comes from the
 ; stage script and from the 4x4-character pieces of bank 11.
 ; ----------------------------------------------------------------------
 take_scroll_steps:		; B scroll steps; on each one it maps banks 11 and 12 to read the script, and then four more routines
@@ -67,11 +72,11 @@ take_scroll_steps:		; B scroll steps; on each one it maps banks 11 and 12 to rea
 	dec hl
 	ld (DISTANCE),hl
 	ret
-flag_not_due:		; 0xE107 to one: no new column comes in on this step
+flag_not_due:		; SCROLL_AT_LIMIT to one: no new column comes in on this step
 	ld a,001h
 	ld (SCROLL_AT_LIMIT),a
 	ret
-scroll_map_one_column:		; If it is time to scroll, raises the distance and shifts the twenty-two rows at 0xED00 one cell to the left
+scroll_map_one_column:		; If it is time to scroll, raises the distance and shifts the twenty-two rows at MAP one cell to the left
 	xor a
 	ld (NEW_COLUMN),a
 	ld (SCROLL_AT_LIMIT),a
@@ -93,9 +98,9 @@ scroll_map_one_column:		; If it is time to scroll, raises the distance and shift
 L_468C:
 	inc hl			; The distance goes up
 	ld (DISTANCE),hl
-	ld a,001h		; 0xE100 to one: there is a new column on this step
+	ld a,001h		; NEW_COLUMN to one: there is a new column on this step
 	ld (NEW_COLUMN),a
-	ld hl,MAP+1		; To 0xED00: the whole map, one cell to the left
+	ld hl,MAP+1		; To MAP: the whole map, one cell to the left
 	ld de,MAP
 	ld b,016h		; Twenty-two rows
 L_469D:
@@ -106,9 +111,9 @@ L_469D:
 	inc hl			; And the leftover cell when jumping to the next row
 	inc de
 	djnz L_469D
-	ld hl,MAP+MAP_WIDTH-1	; 0xEC00 points to the right-hand column, the one to be filled
+	ld hl,MAP+MAP_WIDTH-1	; MAP_COLUMN_PTR points to the right-hand column, the one to be filled
 	ld (MAP_COLUMN_PTR),hl
-read_new_column:		; With the distance inside the range, takes from the stage script the piece that is due and leaves its address in 0xEC02
+read_new_column:		; With the distance inside the range, takes from the stage script the piece that is due and leaves its address in PIECE_PTR
 	ld hl,(DISTANCE)	; The distance covered...
 	ld de,(MAP_RANGE_END)	; ...against the end of the range
 	rst 20h
@@ -119,7 +124,7 @@ read_new_column:		; With the distance inside the range, takes from the stage scr
 	sbc hl,de
 	jr c,draw_star_column
 	push hl
-	ld hl,097deh		; The script table at 0x97DE, indexed by the stage
+	ld hl,script_table	; The script table at script_table, indexed by the stage
 	ld a,(STAGE)
 	call get_word
 	pop hl
@@ -149,7 +154,7 @@ insert_new_column:		; Copies into the right-hand column of the map the four cell
 	add hl,hl
 	add hl,hl
 	add hl,hl
-	ld de,08ff0h		; Stages 5, 9, 10 and 12 use the other set of pieces, the one at 0x8FF0
+	ld de,pieces_B		; Stages 5, 9, 10 and 12 use the other set of pieces, the one at pieces_B
 	ld a,(STAGE)
 	cp 005h
 	jr z,L_470B
@@ -159,7 +164,7 @@ insert_new_column:		; Copies into the right-hand column of the map the four cell
 	jr z,L_470B
 	cp 00ch
 	jr z,L_470B
-	ld de,08000h
+	ld de,pieces_A
 L_470B:
 	add hl,de
 	ex de,hl
@@ -202,16 +207,16 @@ half_piece:		; The other two cells of the piece, when the column coming in is th
 ; ----------------------------------------------------------------------
 ; THE STARS COME FROM THE R REGISTER
 ; When the stage has no script to read, the column coming in is sky: a
-; single character lit on the row the table at 0x478E says, and the rest
+; single character lit on the row the table at star_row says, and the rest
 ; at zero. Which of the two star drawings goes in is decided by `ld a,r`,
 ; the Z80's refresh register, which counts on its own with every
 ; instruction. It is the closest thing to chance in the cartridge, and it
 ; is only used so that the stars do not all twinkle the same.
 ; ----------------------------------------------------------------------
-draw_star_column:		; Fills the incoming column with zeros, except for one cell: the star, on the row the table at 0x478E says
+draw_star_column:		; Fills the incoming column with zeros, except for one cell: the star, on the row the table at star_row says
 	ld a,(DISTANCE)		; The five low bits of the distance index the table
 	and 01fh
-	ld hl,0478eh
+	ld hl,star_row
 	call add_a_to_hl
 	ld c,(hl)		; C says which row the star falls on
 	ld b,016h		; Twenty-two rows
@@ -232,7 +237,7 @@ L_4756:
 blink_two_characters:		; Every two frames turns the patterns at 0x27B0 and 0x27B8 off or on, in the three thirds
 	ld a,(FRAME_COUNT)	; Two bits of the frame counter: four steps
 	and 006h
-	ld hl,04786h		; The mask table at 0x4786
+	ld hl,blink		; The mask table at blink
 	ld e,a
 	ld d,000h
 	add hl,de
@@ -254,13 +259,13 @@ L_4774:
 	jp WRTVRM
 
 ; ----------------------------------------------------------------------
-; DATA blink: Four words that 0x4760 indexes with (0xE003 AND 6).
+; DATA blink: Four words that 0x4760 indexes with (FRAME_COUNT AND 6).
 blink:
 	defw 00FFh,0FFFFh
 	defw 0FF00h,0FFFFh
 
 ; ----------------------------------------------------------------------
-; DATA star_row: Thirty-two bytes that 0x473D indexes with (0xE063 AND 0x1F):
+; DATA star_row: Thirty-two bytes that 0x473D indexes with (DISTANCE AND 0x1F):
 ;   which of the twenty-two rows the star of the incoming column falls on. The
 ;   values go from 1 to 0x14, so it always falls inside.
 star_row:
@@ -279,7 +284,7 @@ run_sprites:		; Four passes: two routines from banks 1 and 3, the second group o
 	call write_laser
 	call build_second_group
 	jp build_sprites
-upload_sprites:		; Sends the 128 bytes at 0xEC80 out of the VDP data port with `outi`: 32 sprites of four bytes, in one go.
+upload_sprites:		; Sends the 128 bytes at SPRITE_BUFFER out of the VDP data port with `outi`: 32 sprites of four bytes, in one go.
 	ld hl,SPRITE_BUFFER
 	ld b,080h
 L_47C8:
@@ -293,7 +298,7 @@ L_47C8:
 ; are always the last ones in the table. So that the one that disappears
 ; is not always the same, this routine does not upload the buffer in one
 ; go: it uploads it in THIRTY-TWO pieces of four bytes, starting each
-; frame at a different place (0xE17F goes up by 0x1C and wraps at 0x7C)
+; frame at a different place (SPRITE_ROTATION goes up by 0x1C and wraps at 0x7C)
 ; and stepping 0x0C at a time. That way each object lands in a different
 ; slot of the attribute table every frame, and the flicker is shared out
 ; among all of them.
@@ -328,7 +333,7 @@ L_47EF:
 	dec d
 	jr nz,L_47E7
 	ret
-upload_screen:		; The 704 bytes of the map at 0xED00 to the name table, with `outi` and without going through the BIOS
+upload_screen:		; The 704 bytes of the map at MAP to the name table, with `outi` and without going through the BIOS
 	ld hl,03800h		; The name table, at VRAM 0x3800
 	call set_vram_write
 	exx
@@ -345,7 +350,7 @@ L_4816:
 	outi
 	jp nz,L_4816
 	ret
-build_second_group:		; The other ten objects, the ones at 0xE500, to the buffer at 0xECD8
+build_second_group:		; The other ten objects, the ones at ENEMY_SHOTS, to the buffer at 0xECD8
 	ld ix,ENEMY_SHOTS	; The second group of objects
 	ld de,SPRITE_BUFFER+22*4
 	ld b,00ah		; Ten objects
@@ -354,7 +359,7 @@ build_second_group:		; The other ten objects, the ones at 0xE500, to the buffer 
 ; ----------------------------------------------------------------------
 ; THE SPRITE ENGINE: FROM THE OBJECTS AT 0xE300 TO THE ATTRIBUTE TABLE
 ; ----------------------------------------------------------------------
-build_sprites:		; With banks 4/5/6 in place, walks twelve objects at 0xE300 (32 bytes each) and builds their sprite attribute in 0xECA8.
+build_sprites:		; With banks 4/5/6 in place, walks twelve objects at OBJECTS (32 bytes each) and builds their sprite attribute in 0xECA8.
 	di
 	push hl
 	ld hl,BANK_6000
@@ -547,7 +552,7 @@ clip_right:		; If the rectangle goes off the row, takes the leftover cells off B
 	add a,b
 	ld b,a
 	ret
-clear_screen:		; Calls 0x55AA and fills the 768 bytes of the name table (VRAM 0x3800) with zeros using FILVRM.
+clear_screen:		; Calls remove_sprites_from_screen and fills the 768 bytes of the name table (VRAM 0x3800) with zeros using FILVRM.
 	call remove_sprites_from_screen
 	ld hl,03800h		; The 768 cells of the name table
 	ld bc,00300h
@@ -565,9 +570,9 @@ set_vram_write:		; SETWRT, and the VDP data port is saved in C'.
 
 ; ----------------------------------------------------------------------
 ; DATA dead_vram_read: Ten bytes that are `call SETRD / exx / ld a,(0x0006) /
-;   ld c,a / exx / ret`: the twin of 0x494A for READING from VRAM. Nobody
+;   ld c,a / exx / ret`: the twin of set_vram_write for READING from VRAM. Nobody
 ;   calls it.
-set_vram_read:		; SETRD, and the read port is saved in C'. Nobody calls it: it is the dead twin of 0x494A.
+set_vram_read:		; SETRD, and the read port is saved in C'. Nobody calls it: it is the dead twin of set_vram_write.
 	defb 0CDh,50h,00h,0D9h,3Ah,06h,00h,4Fh,0D9h,0C9h
 dump_to_vram:		; LDIRVM with DE and HL swapped.
 	ex de,hl
@@ -600,7 +605,7 @@ L_4979:
 	dec d
 	jr nz,L_4979
 	ret
-decompress_three_thirds:		; 0x49B9 three times, once per third.
+decompress_three_thirds:		; decompress three times, once per third.
 	ld b,003h		; Three thirds
 next_third:		; 0x800 more: the third below
 	push bc			; One third at a time
@@ -612,7 +617,7 @@ next_third:		; 0x800 more: the third below
 	pop bc
 	djnz next_third
 	ret
-write_characters:		; Reads the VRAM address from the stream and writes characters with WRTVRM: 0xFE = another address follows, 0xFF = end. It is the simple, uncompressed sibling of 0x49B9.
+write_characters:		; Reads the VRAM address from the stream and writes characters with WRTVRM: 0xFE = another address follows, 0xFF = end. It is the simple, uncompressed sibling of decompress.
 	ld c,0ffh		; C to 0xFF: the `and c` below leaves the character as it is
 L_499A:
 	ex de,hl
@@ -633,7 +638,7 @@ L_49A0:
 	call WRTVRM
 	inc hl
 	jr L_49A0
-erase_characters:		; The same as 0x4998 but with C=0, so the `and c` leaves every character at zero: it is used to erase the text 0x4998 wrote.
+erase_characters:		; The same as write_characters but with C=0, so the `and c` leaves every character at zero: it is used to erase the text write_characters wrote.
 	ld c,000h
 	jr L_499A
 decompress_with_destination:		; Enters the decompressor after first reading the VRAM address from the stream itself.
@@ -674,8 +679,8 @@ L_49D6:
 	exx
 	djnz L_49D6
 	jr L_49BC
-check_if_sound:		; Checks bit 6 of 0xE002 before falling into the sound trigger.
-	di			; Bit 6 of 0xE002: with no game, nothing sounds
+check_if_sound:		; Checks bit 6 of GAME_FLAGS before falling into the sound trigger.
+	di			; Bit 6 of GAME_FLAGS: with no game, nothing sounds
 	push hl
 	ld hl,GAME_FLAGS
 	bit 6,(hl)
@@ -719,7 +724,7 @@ L_4A1F:
 	pop hl
 	ei
 	ret
-queue_sound:		; Writes the request into the queue at 0xE012/0xE034 using the table at 0x8328 in bank 7.
+queue_sound:		; Writes the request into the queue at 0xE012/0xE034 using the table at sound_table in bank 7.
 	ld c,a
 	and 07fh		; The seven low bits are the sound number; bit 7 is separate
 	ld b,002h		; Two queue channels
@@ -746,7 +751,7 @@ L_4A3F:
 	cp e			; If what is already playing weighs more, the request is thrown away
 	ret c
 	add a,a
-	ld de,08328h		; The table at 0x8328 in bank 7, indexed by two
+	ld de,sound_table	; The table at sound_table in bank 7, indexed by two
 	call add_a_to_de
 	dec hl
 	dec hl
@@ -771,7 +776,7 @@ write_request:		; Leaves in the channel's card the marker, the sound number and 
 	inc de
 	djnz write_request
 	ret
-load_explosion_graphics:		; With banks 4/5/6 in place, the entries at 0x98A3 and the mirror at 0x98B0; then clears the 0x800 bytes of objects
+load_explosion_graphics:		; With banks 4/5/6 in place, the entries at trigger_records and the mirror at list_for_0x4348; then clears the 0x800 bytes of objects
 	di			; Banks 4, 5 and 6, which are the graphics ones
 	push hl			; The three graphics banks
 	ld hl,BANK_6000
@@ -788,11 +793,11 @@ load_explosion_graphics:		; With banks 4/5/6 in place, the entries at 0x98A3 and
 	ld (hl),a
 	pop hl
 	ei
-	ld ix,098a3h		; The entries at 0x98A3
+	ld ix,trigger_records	; The entries at trigger_records
 	call load_entries
 	ld a,001h
 	ld (MIRROR_KIND),a	; To one: the byte mirror
-	ld ix,098b0h		; And the mirror at 0x98B0
+	ld ix,list_for_0x4348	; And the mirror at list_for_0x4348
 	call build_mirror
 	di			; 1, 2 and 3 restored
 	push hl			; And 1, 2 and 3 restored
@@ -816,8 +821,8 @@ load_explosion_graphics:		; With banks 4/5/6 in place, the entries at 0x98A3 and
 	ld (hl),000h
 	ldir
 	ret
-dispatch_ship_end:		; 0xE1D0 holds the explosion step and 0xE1D1 the submode: ten destinations in the table at 0x4ACA
-	ld hl,(ENDING)		; The step, and 0xE1D1 the submode
+dispatch_ship_end:		; ENDING holds the explosion step and ENDING_STEP the submode: ten destinations in the table at ending_steps
+	ld hl,(ENDING)		; The step, and ENDING_STEP the submode
 	ld a,l
 	and a
 	ret z			; With the step at zero there is no explosion
@@ -825,9 +830,9 @@ dispatch_ship_end:		; 0xE1D0 holds the explosion step and 0xE1D1 the submode: te
 	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_4AC7: Ten words right behind the `call 0x4067` at
+; DATA ending_steps: Ten words right behind the `call dispatcher` at
 ;   0x4AC7.
-dispatcher_table_4AC7:
+ending_steps:
 	defw explosion_step_0	; 0
 	defw explosion_step_1	; 1
 	defw explosion_step_2	; 2
@@ -838,19 +843,19 @@ dispatcher_table_4AC7:
 	defw explosion_step_7	; 7
 	defw explosion_step_8	; 8
 	defw explosion_step_9	; 9
-explosion_step_0:		; Raises the counter at 0xE1D3 by 0x40 and, past Y 0xF0, clears the screen and turns the sprites off
+explosion_step_0:		; Raises the counter at ENDING_SHIP_Y by 0x40 and, past Y 0xF0, clears the screen and turns the sprites off
 	ld hl,(ENDING_SHIP_Y)
 	ld de,00040h		; 0x40 more each frame
 	add hl,de
 	ld (ENDING_SHIP_Y),hl
-	ld hl,00800h		; 0x0800 in 0xE008
+	ld hl,00800h		; 0x0800 in CONTROLLER_NEW
 	ld (CONTROLLER_NEW),hl
 	ld a,(SHIP_COLUMN)	; And until it goes past 0xF0, nothing is cleared
 	cp 0f0h
 	ret c
 	call clear_screen
 	call turn_off_sprites
-next_submode:		; 0xE1D1 + 1: the next step of the explosion
+next_submode:		; ENDING_STEP + 1: the next step of the explosion
 	ld hl,ENDING_STEP
 	inc (hl)
 	ret
@@ -865,13 +870,13 @@ explosion_step_1:		; Waits for the channel to go quiet, loads the ending graphic
 	ld (BANK_A000),a
 	ei
 	ld hl,02418h		; Three thirds of patterns at VRAM 0x2418...
-	ld de,0a0dbh
+	ld de,graphics_patterns_2418
 	call decompress_three_thirds
 	ld hl,00418h		; ...and three of colours at 0x0418
-	ld de,0a3f4h
+	ld de,graphics_colours_0418
 	call decompress_three_thirds
 	ld hl,01800h		; And the sprite patterns, at 0x1800
-	ld de,0a683h
+	ld de,graphics_sprites_1800
 	call decompress
 	di			; Bank 3 restored
 	ld a,003h
@@ -879,18 +884,18 @@ explosion_step_1:		; Waits for the channel to go quiet, loads the ending graphic
 	ld (BANK_A000),a
 	ei
 	call turn_off_sprites
-	ld de,04fb2h		; The four-by-four drawing at 0x4FB2
+	ld de,four_by_four_drawing	; The four-by-four drawing at four_by_four_drawing
 	call write_characters
 	xor a
 	ld (ENDING_TIMER),a
-	ld hl,000c0h		; 0x00C0 in 0xE1D5: the long count
+	ld hl,000c0h		; 0x00C0 in SHRAPNEL_LEFT: the long count
 	ld (SHRAPNEL_LEFT),hl
 	ld a,003h
 	ld (SHRAPNEL_DELAY),a
 	ld a,038h		; Sound 0x38
 	call check_if_sound
 	jr next_submode
-turn_off_sprites:		; Sets the 128 bytes at 0xEC80 to 0xE0, which is the Y at which a sprite cannot be seen.
+turn_off_sprites:		; Sets the 128 bytes at SPRITE_BUFFER to 0xE0, which is the Y at which a sprite cannot be seen.
 	ld hl,SPRITE_BUFFER
 	ld b,080h		; The 128 bytes of the attribute table
 L_4B5A:
@@ -913,7 +918,7 @@ explosion_step_2:		; Moves the objects until 0xE1D5 reaches zero, and then start
 	ld a,03bh		; Sound 0x3B
 	call check_if_sound
 	jp next_submode
-explosion_step_3:		; Every 0x10 frames swaps the 4x4 drawing for the next one at 0x6340; at the third, erases it and waits 0x40 frames
+explosion_step_3:		; Every 0x10 frames swaps the 4x4 drawing for the next one at formations; at the third, erases it and waits 0x40 frames
 	call move_shrapnel
 	call animate_shrapnel
 	call upload_shrapnel_to_buffer
@@ -928,7 +933,7 @@ explosion_step_3:		; Every 0x10 frames swaps the 4x4 drawing for the next one at
 	jr z,L_4BC1
 L_4B9C:
 	ld a,(ENDING_DRAWING)
-	ld de,06340h		; The strip at 0x6340, in bank 1
+	ld de,formations	; The strip at formations, in bank 1
 	add a,a			; Times sixteen: four by four characters
 	add a,a
 	add a,a
@@ -950,7 +955,7 @@ L_4BB0:
 	jr nz,L_4BAE
 	ret
 L_4BC1:
-	ld de,04fceh		; And the erasing
+	ld de,erase_drawing	; And the erasing
 	call write_characters
 	xor a
 	ld (ENDING_DRAWING),a
@@ -971,16 +976,16 @@ explosion_step_4:		; Lights up the six cells of the power-up meter one by one, e
 	ld a,(hl)
 	cp 006h			; Six cells and it is over
 	jr z,finish_meter
-	ld de,04c10h		; 0x4C10 is the speed table, and its first byte falls on top of the code.
+	ld de,speeds_4C11-1	; 0x4C10 is the speed table, and its first byte falls on top of the code.
 	call add_a_to_de
 	ld a,(de)		; Each cell lasts less: 0x28, 0x28, 0x10, 0x0C, 0x08 and 0x04 frames
 	ld (ENDING_TIMER),a
 L_4BFA:
 	ld a,(ENDING_DRAWING)
-draw_meter:		; Takes from 0xE1D9 the lit cell of the power-up meter and writes its drawing with 0x4998.
-	ld hl,04edah		; 0xE1D9 says which cell of the meter is lit.
+draw_meter:		; Takes from ENDING_DRAWING the lit cell of the power-up meter and writes its drawing with write_characters.
+	ld hl,meter_table	; ENDING_DRAWING says which cell of the meter is lit.
 	call get_word
-	jp write_characters	; And it is drawn: 0x4998 writes characters, it does not execute anything.
+	jp write_characters	; And it is drawn: write_characters writes characters, it does not execute anything.
 finish_meter:		; Turns the sprites off and leaves 0x20 frames for the next step
 	call turn_off_sprites
 	ld a,020h
@@ -988,11 +993,11 @@ finish_meter:		; Turns the sprites off and leaves 0x20 frames for the next step
 	jp next_submode
 
 ; ----------------------------------------------------------------------
-; DATA speeds (part): Six bytes that 0x4BF0 indexes with 0x4062 and stores in
-;   0xE1D2: 0x28, 0x28, 0x10, 0x0C, 0x08, 0x04.
+; DATA speeds (part): Six bytes that 0x4BF0 indexes with add_a_to_de and stores in
+;   ENDING_TIMER: 0x28, 0x28, 0x10, 0x0C, 0x08, 0x04.
 speeds_4C11:
 	defb 28h,10h,0Ch,08h,04h
-explosion_step_5:		; Waits the frames in 0xE1D2 and then requests screen piece 0
+explosion_step_5:		; Waits the frames in ENDING_TIMER and then requests screen piece 0
 	call pick_border_colour
 	ld hl,ENDING_TIMER
 	dec (hl)

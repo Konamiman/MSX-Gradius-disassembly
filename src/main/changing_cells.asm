@@ -6,16 +6,17 @@
 	include "variables.inc"
 
 	public animate_seven_cells
+	extrn add_a_to_de
 
 ; ----------------------------------------------------------------------
 ; AND SEVEN CELLS THAT CHANGE CHARACTER
-; The other background trick: seven eight-byte cards at 0xE710, each one
+; The other background trick: seven eight-byte cards at CHANGING_CELLS, each one
 ; with the VRAM address of a map cell. Every so many frames another
 ; character from the list 0xF0, 0xF2, 0xF4, 0xF2 is written over it, and
 ; the next one over the cell below (0x20 bytes further on). Two cells per
 ; card, and not a single object involved.
 ; ----------------------------------------------------------------------
-animate_seven_cells:		; Seven eight-byte cards at 0xE710, each one with its map cell
+animate_seven_cells:		; Seven eight-byte cards at CHANGING_CELLS, each one with its map cell
 	ld b,007h		; Seven cards
 	ld hl,CHANGING_CELLS
 L_BE30:
@@ -41,8 +42,8 @@ animate_cell:		; Writes into its cell the character that is due, and the next on
 	inc a
 	and 003h
 	ld (hl),a
-	ld de,0be62h		; The list at 0xBE62
-	call 04062h
+	ld de,changing_cell_characters	; The list at changing_cell_characters
+	call add_a_to_de
 	ld a,(de)
 	inc hl
 	ld e,(hl)		; The VRAM address of its cell
@@ -56,9 +57,9 @@ animate_cell:		; Writes into its cell the character that is due, and the next on
 	jp WRTVRM
 
 ; ----------------------------------------------------------------------
-; DATA table_BE62: Four bytes (0xF0, 0xF2, 0xF4, 0xF2) read by 0xBE4B with `ld
+; DATA changing_cell_characters: Four bytes (0xF0, 0xF2, 0xF4, 0xF2) read by 0xBE4B with `ld
 ;   de,0xBE62`.
-table_BE62:
+changing_cell_characters:
 	defb 0F0h,0F2h,0F4h,0F2h
 
 	end

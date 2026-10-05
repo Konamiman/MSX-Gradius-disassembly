@@ -5,18 +5,18 @@
 	include "variables.inc"
 
 	public note_upgrades_held,take_upgrade
-	extrn raise_difficulty
+	extrn check_if_sound,dispatcher,raise_difficulty,refresh_meter,set_up_one_option
 
 ; ----------------------------------------------------------------------
 ; THE POWER-UP METER
 ; The six slots of the meter (SPEED UP, MISSILE, DOUBLE, LASER, OPTION and
 ; the shield) are painted lit or unlit according to what the ship already
-; carries. 0xA022 walks the ship's card and leaves in 0xE131..0xE136 a one
-; for each upgrade already taken; 0xA068 looks at 0xE130 (the selected
+; carries. note_upgrades_held walks the ship's card and leaves in METER_HELD..0xE136 a one
+; for each upgrade already taken; take_upgrade looks at METER_SLOT (the selected
 ; slot) and, when the button is pressed, gives that upgrade if it is not
 ; there yet.
 ; ----------------------------------------------------------------------
-note_upgrades_held:		; Leaves in 0xE131 to 0xE136 which upgrades the ship already has, to paint the meter
+note_upgrades_held:		; Leaves in METER_HELD to 0xE136 which upgrades the ship already has, to paint the meter
 	ld hl,SHIP
 	xor a
 	ld b,a
@@ -86,18 +86,18 @@ take_upgrade:		; With the button, if the selected slot of the meter is not alrea
 	ret nz
 	xor a
 	ld (METER_SLOT),a	; The meter goes back to zero
-	ld hl,0a153h
+	ld hl,refresh_meter
 	push hl
 	ld a,014h		; Sound 0x14
-	call 049deh
+	call check_if_sound
 	ld a,c
 	dec a
-	call 04067h
+	call dispatcher
 
 ; ----------------------------------------------------------------------
-; DATA dispatcher_table_A091: Six words stuck right after the `call 0x4067` at
-;   0xA091 (0xA0A0, 0xA0A5, 0xA0AC, 0xA0B7, 0xA0C1, 0xA0CB).
-dispatcher_table_A091:
+; DATA power_up_upgrades: Six words stuck right after the `call dispatcher` at
+;   0xA091 (upgrade_speed, upgrade_missile, upgrade_double, upgrade_laser, upgrade_option, upgrade_shield).
+power_up_upgrades:
 	defw upgrade_speed	; 0
 	defw upgrade_missile	; 1
 	defw upgrade_double	; 2
@@ -111,37 +111,37 @@ upgrade_speed:		; One more notch of speed
 upgrade_missile:		; Raises the missile and raises the difficulty
 	ld hl,SHIP_MISSILE
 	inc (hl)
-	jp 070cah
+	jp raise_difficulty
 upgrade_double:		; Sets the double shot and removes the laser
-	xor a			; 0xE20E to zero: no more laser
+	xor a			; SHIP_LASER to zero: no more laser
 	ld hl,SHIP_LASER
 	ld (hl),a
 	inc a
 	dec l
-	ld (hl),a		; And 0xE20C and 0xE20D to one: the double is on
+	ld (hl),a		; And SHIP_SHOT and 0xE20D to one: the double is on
 	dec l
 	ld (hl),a
 	ret
 upgrade_laser:		; Sets the laser and removes the double
-	xor a			; 0xE20C and 0xE20D to zero: no more double
+	xor a			; SHIP_SHOT and 0xE20D to zero: no more double
 	ld hl,SHIP_SHOT
 	ld (hl),a
 	inc l
 	ld (hl),a
 	inc l
-	inc (hl)		; And 0xE20E up: the laser is on
+	inc (hl)		; And SHIP_LASER up: the laser is on
 	ret
 upgrade_option:		; One more option and the difficulty goes up
 	ld hl,OPTION_COUNT
 	inc (hl)
-	call 09bfbh
-	jp 070cah
-upgrade_shield:		; 0xE200 to 3 and 0xE201 to 0x0A: the shield is on
-	ld hl,SHIP		; To three and 0xE201 to 0x0A
+	call set_up_one_option
+	jp raise_difficulty
+upgrade_shield:		; SHIP to 3 and SHIP_TIMER to 0x0A: the shield is on
+	ld hl,SHIP		; To three and SHIP_TIMER to 0x0A
 	ld (hl),003h
 	inc l
 	ld (hl),00ah
-	ld c,002h		; And 0x70CA raises the difficulty
+	ld c,002h		; And raise_difficulty raises the difficulty
 	jp raise_difficulty
 
 	end

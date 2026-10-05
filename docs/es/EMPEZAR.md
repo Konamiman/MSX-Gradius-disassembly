@@ -51,7 +51,7 @@ dato, el nombre de la rutina o de la tabla, y el comentario. Una cabecera
 código trazado** y **105.598 bytes de datos**, 0 sin explicar, 131.072 en
 total. `make density` imprime la densidad de comentario por imagen: 12.959
 instrucciones, 2.980 comentarios de línea, **23,0 %**, y 5 rutinas por debajo
-del 10 % de 1.535.
+del 10 % de 1.539.
 
 Todas las cifras de esta web salen de esas dos órdenes, no de una estimación.
 

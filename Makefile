@@ -73,8 +73,10 @@ ORG_screens = 8000h
 ORG_map     = 8000h
 
 # What each image exports to the main image.
-EXPORTS_sound   = ^(play|sound_table)$$
-EXPORTS_screens = ^(set_up_screen|run_screen)$$
+EXPORTS_map = ^(endings_table|pieces_A|pieces_B|script_table)$$
+EXPORTS_scenery = ^(common_records|extra_records_1|extra_records_2|graphics_1D00|graphics_chain_6000|graphics_chain_6379|graphics_chain_7793|graphics_colours_30A8|graphics_names_1800|graphics_patterns_10A8|graphics_patterns_1160|list_for_0x4348|record_lists_A|record_lists_B|record_lists_C|stage_graphics_blocks|trigger_records)$$
+EXPORTS_screens = ^(data_AAB0|graphics_0468|graphics_2468|graphics_9B3F|graphics_9BCB|graphics_colours_0418|graphics_colours_0780|graphics_colours_2008|graphics_colours_2808|graphics_colours_3008|graphics_patterns_0008|graphics_patterns_0808|graphics_patterns_1008|graphics_patterns_2418|graphics_patterns_2780|graphics_sprites_1800|graphics_sprites_1800_b|name_table_screen|run_screen|set_up_screen|type_3_piece_drawings)$$
+EXPORTS_sound = ^(play|sound_table)$$
 
 IMAGES = main scenery sound screens map
 
@@ -106,7 +108,7 @@ $(eval $(call IMAGE_RULES,scenery,$(SCENERY),))
 $(eval $(call IMAGE_RULES,sound,$(SOUND),))
 $(eval $(call IMAGE_RULES,screens,$(SCREENS),))
 $(eval $(call IMAGE_RULES,map,$(MAP),))
-$(eval $(call IMAGE_RULES,main,$(MAIN),$(BUILD)/sound.bin $(BUILD)/screens.bin))
+$(eval $(call IMAGE_RULES,main,$(MAIN),$(BUILD)/map.bin $(BUILD)/scenery.bin $(BUILD)/screens.bin $(BUILD)/sound.bin))
 
 $(BUILD)/inc:
 	mkdir -p $@
@@ -158,6 +160,11 @@ figures: $(ROM)
 density:
 	@python3 tools/density.py $(SRC)
 
+# The sources carry no addresses. This writes build/listing/<image>.lst: every
+# module of each image in link order, every line with its bank and address.
+listing: $(ROM)
+	@python3 tools/listing.py $(BUILD) $(SRC)
+
 test: $(ROM)
 	@echo "=================================================================="
 	@echo " Tests"
@@ -180,4 +187,4 @@ web: images
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all rom verify sanity mark recon figures density test images web clean
+.PHONY: all rom verify sanity mark recon figures density listing test images web clean

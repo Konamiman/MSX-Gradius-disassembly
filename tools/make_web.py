@@ -24,7 +24,7 @@ from web_style import STYLE                                   # noqa: E402
 # instructions that carry a line comment.
 CODE_BYTES = 25474
 DATA_BYTES = 105598
-ROUTINES = 910
+ROUTINES = 914
 STAGES = 12
 DENSITY = "23,0"
 

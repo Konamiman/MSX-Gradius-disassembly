@@ -5,8 +5,11 @@
 	include "bios.inc"
 	include "variables.inc"
 
-	public intro,just_pressed,load_scoreboard,load_scoreboard_two_thirds,load_stage_font,program_vdp
-	public raise_logo,read_controller,read_controller_no_save,set_border_colour,start_logo_curtain,write_title_panel
+	include "scenery_symbols.inc"
+	include "screens_symbols.inc"
+	public intro,just_pressed,load_scoreboard,load_scoreboard_two_thirds,load_stage_font,messages
+	public program_vdp,raise_logo,read_controller,read_controller_no_save,set_border_colour,start_logo_curtain
+	public write_title_panel
 	extrn add_a_to_de,clear_screen,decompress_three_thirds,dump_three_thirds,dump_to_vram,fill_three_thirds
 	extrn jump_to_intro,L_405A,set_vram_write
 
@@ -14,7 +17,7 @@
 
 ; ----------------------------------------------------------------------
 ; THE CARTRIDGE TURNS THE VRAM MAP UPSIDE DOWN
-; The eight bytes at 0x575A are 0x02, 0xE2, 0x0E, 0x7F, 0x07, 0x76, 0x03
+; The eight bytes at vdp_registers are 0x02, 0xE2, 0x0E, 0x7F, 0x07, 0x76, 0x03
 ; and 0xE4, and they do not leave VRAM where the BIOS leaves it. Register 4
 ; is 0x07, so the PATTERNS live at 0x2000; register 3 is 0x7F, so the
 ; COLOURS live at 0x0000 (exactly the reverse of normal); register 2 is
@@ -24,8 +27,8 @@
 ; who reads the addresses in this source expecting the BIOS layout will
 ; get every one of them wrong.
 ; ----------------------------------------------------------------------
-program_vdp:		; The eight values at 0x575A to registers 0 to 7, with WRTVDP
-	ld hl,0575ah
+program_vdp:		; The eight values at vdp_registers to registers 0 to 7, with WRTVDP
+	ld hl,vdp_registers
 	ld d,008h		; Eight registers
 	ld c,000h
 L_5750:
@@ -38,7 +41,7 @@ L_5750:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA vdp_registers: The eight values with which 0x5749 programs VDP
+; DATA vdp_registers: The eight values with which program_vdp programs VDP
 ;   registers 0 to 7, one after the other, calling WRTVDP (0x0047) with B =
 ;   the value and C = the register number. From them follow: patterns at
 ;   0x2000, colours at 0x0000, names at 0x3800, sprite attributes at 0x3B00
@@ -48,7 +51,7 @@ vdp_registers:
 set_border_colour:		; Writes B to VDP register 7: the border and background colour
 	ld c,007h
 	jp L_405A
-read_controller:		; Combines joystick and keyboard into 0xE009 and leaves in 0xE008 what has just been pressed
+read_controller:		; Combines joystick and keyboard into CONTROLLER and leaves in CONTROLLER_NEW what has just been pressed
 	call merge_joystick_and_keyboard
 	ld hl,CONTROLLER
 just_pressed:		; Saves the current state and, with an xor and an and, leaves in the next byte only what has just gone down
@@ -115,14 +118,14 @@ read_joystick:		; PSG register 15 selects the port and 14 reads it; it arrives i
 ; DATA messages: The screen texts, with THEIR OWN CHARACTER CODES: 0x00 is the
 ;   space, 0x10 to 0x19 are the digits 0 to 9 and 0x21 to 0x3A the letters
 ;   (that is, ASCII minus 0x20). They are read with two different routines,
-;   and both start by taking the VRAM address from the stream itself: 0x4998
+;   and both start by taking the VRAM address from the stream itself: write_characters
 ;   writes character by character (0xFE = another address follows, 0xFF = end)
-;   and 0x49B3 decompresses them with the 0x49B9 format. That is where
+;   and decompress_with_destination decompresses them with the decompress format. That is where
 ;   "software", "konami", "1986", "play select", "1 player", "2 players",
 ;   "player 1", "player 2", "game over" and "continue" come from. Each message
 ;   starts where its caller asks for it: 0x57BD (0x52E2, compressed), 0x57CE
-;   (0x5632), 0x57E1 (0x563B), 0x57E6 (0x5641), 0x57EB (0x5BCA), 0x5808
-;   (0x538A), 0x5812 (0x538F), 0x581D (0x5BF1), 0x5820 (0x53B8 and 0x554B),
+;   (write_captions), 0x57E1 (0x563B), 0x57E6 (0x5641), 0x57EB (0x5BCA), 0x5808
+;   (0x538A), 0x5812 (0x538F), 0x581D (L_5BF1), 0x5820 (0x53B8 and 0x554B),
 ;   0x582B (0x5552) and 0x5836 (0x54E0).
 messages:
 	defb 4Ah,39h,0Ch,5Ah,80h,6Ch,39h,88h,33h,2Fh,26h,34h,37h,21h,32h,25h
@@ -135,12 +138,12 @@ messages:
 	defb 30h,2Ch,21h,39h,25h,32h,00h,12h,0FFh,4Bh,39h,27h,21h,2Dh,25h,00h
 	defb 00h,2Fh,36h,25h,32h,0FEh,8Bh,39h,23h,2Fh,2Eh,34h,29h,2Eh,35h,25h
 	defb 00h,26h,15h,0FFh
-load_scoreboard:		; Dumps into VRAM 0x2080 and 0x2100 the patterns at 0x5906 and 0x596E, across the three thirds.
-	ld de,05906h		; The 104 bytes at 0x5906: the digits and letters of the score
+load_scoreboard:		; Dumps into VRAM 0x2080 and 0x2100 the patterns at patterns_2080 and patterns_2100, across the three thirds.
+	ld de,patterns_2080	; The 104 bytes at patterns_2080: the digits and letters of the score
 	ld hl,02080h
 	ld bc,00068h
 	call dump_three_thirds
-	ld de,0596eh		; And the 216 at 0x596E, which are the rest of the font
+	ld de,patterns_2100	; And the 216 at patterns_2100, which are the rest of the font
 	ld hl,02100h
 	ld bc,000d8h
 	call dump_three_thirds
@@ -148,12 +151,12 @@ load_scoreboard:		; Dumps into VRAM 0x2080 and 0x2100 the patterns at 0x5906 and
 	ld hl,00080h
 	ld bc,00158h
 	jp fill_three_thirds
-load_scoreboard_two_thirds:		; The same as 0x5851 but only in the first and second thirds, and this time one at a time
-	ld de,05906h
+load_scoreboard_two_thirds:		; The same as load_scoreboard but only in the first and second thirds, and this time one at a time
+	ld de,patterns_2080
 	ld hl,02080h
 	ld bc,00068h
 	call dump_to_vram
-	ld de,0596eh
+	ld de,patterns_2100
 	ld hl,02100h
 	ld bc,000d8h
 	call dump_to_vram
@@ -161,11 +164,11 @@ load_scoreboard_two_thirds:		; The same as 0x5851 but only in the first and seco
 	ld hl,00080h
 	ld bc,00158h
 	call FILVRM
-	ld de,05906h		; And again in the second third, at 0x2880
+	ld de,patterns_2080	; And again in the second third, at 0x2880
 	ld hl,02880h
 	ld bc,00068h
 	call dump_to_vram
-	ld de,0596eh
+	ld de,patterns_2100
 	ld hl,02900h
 	ld bc,000d8h
 	call dump_to_vram
@@ -173,7 +176,7 @@ load_scoreboard_two_thirds:		; The same as 0x5851 but only in the first and seco
 	ld hl,00880h
 	ld bc,00158h
 	jp FILVRM
-load_stage_font:		; Sets 0x90 colour cells of the third third to white and uploads there the digits and the nine characters at 0x58FD
+load_stage_font:		; Sets 0x90 colour cells of the third third to white and uploads there the digits and the nine characters at drawing_order
 	ld hl,01008h		; 0x50 colour cells to white...
 	ld bc,00050h
 	ld a,0f0h
@@ -182,15 +185,15 @@ load_stage_font:		; Sets 0x90 colour cells of the third third to white and uploa
 	ld bc,00040h
 	ld a,0f0h
 	call FILVRM
-	ld de,05906h		; The digits, at VRAM 0x3008
+	ld de,patterns_2080	; The digits, at VRAM 0x3008
 	ld hl,03008h
 	ld bc,00050h
 	call dump_to_vram
-	ld hl,03068h		; And from here down, the loose characters in the list at 0x58FD
+	ld hl,03068h		; And from here down, the loose characters in the list at drawing_order
 	call set_vram_write
 	exx
-	ld hl,058fdh
-upload_loose_characters:		; For each number in the list, its eight bytes from 0x596E; 0x00 ends it
+	ld hl,drawing_order
+upload_loose_characters:		; For each number in the list, its eight bytes from patterns_2100; 0x00 ends it
 	ld a,(hl)
 	inc hl
 	and a			; The 0x00 ends the list
@@ -198,7 +201,7 @@ upload_loose_characters:		; For each number in the list, its eight bytes from 0x
 	add a,a			; Times eight: eight bytes per character
 	add a,a
 	add a,a
-	ld de,0596eh
+	ld de,patterns_2100
 	call add_a_to_de
 	ld b,008h		; Eight bytes through the data port
 L_58F5:
@@ -216,7 +219,7 @@ drawing_order:
 
 ; ----------------------------------------------------------------------
 ; DATA patterns_2080: One hundred and four raw bytes that 0x585A passes to
-;   0x4964 with HL=0x2080: they are copied to the three thirds.
+;   dump_three_thirds with HL=0x2080: they are copied to the three thirds.
 patterns_2080:
 	defb 00h,1Ch,22h,63h,63h,63h,22h,1Ch
 	defb 00h,18h,38h,18h,18h,18h,18h,7Eh
@@ -234,7 +237,7 @@ patterns_2080:
 
 ; ----------------------------------------------------------------------
 ; DATA patterns_2100: Two hundred and seventeen raw bytes that 0x5866 passes
-;   to 0x4964 with HL=0x2100.
+;   to dump_three_thirds with HL=0x2100.
 patterns_2100:
 	defb 00h,00h,00h,00h,7Eh,00h,00h,00h
 	defb 00h,1Ch,36h,63h,63h,7Fh,63h,63h
@@ -263,15 +266,15 @@ patterns_2100:
 	defb 00h,63h,76h,3Ch,1Ch,1Eh,37h,63h
 	defb 00h,66h,66h,7Eh,3Ch,18h,18h,18h
 	defb 00h,7Fh,07h,0Eh,1Ch,38h,70h,7Fh
-start_logo_curtain:		; 0x0E steps in 0xE00A and the cursor at row 21, column 10: that is where the logo starts rising from
+start_logo_curtain:		; 0x0E steps in LOGO_ROWS and the cursor at row 21, column 10: that is where the logo starts rising from
 	ld a,00eh
 	ld (LOGO_ROWS),a	; Fourteen rows
 	ld hl,03aaah		; Row 21, column 10
 	ld (LOGO_CURSOR),hl
 	jp jump_to_intro
-intro:		; Decompresses the logo at 0x5A9A into the three thirds of VRAM 0x6200 and sets its 0xD8 colours to white
-	ld de,05a9ah
-	ld hl,06200h
+intro:		; Decompresses the logo at stream_6200 into the three thirds of VRAM 0x6200 and sets its 0xD8 colours to white
+	ld de,stream_6200
+	ld hl,graphics_chain_6000+200h
 	call decompress_three_thirds
 	ld hl,00200h
 	ld bc,000d8h
@@ -307,7 +310,7 @@ L_5A8D:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA stream_6200: Compressed stream that 0x5A54 (the intro) passes to 0x4988
+; DATA stream_6200: Compressed stream that intro (the intro) passes to decompress_three_thirds
 ;   with HL=0x6200.
 stream_6200:
 	defb 0Fh,00h,01h,01h,06h,00h,82h,0FFh,0FEh,08h,0Fh,84h,0C3h,0C7h,0CFh,0DFh
@@ -335,10 +338,10 @@ build_title_screen:		; With banks 9 and 10 in place, black border, clean screen,
 	call set_border_colour
 	call clear_screen
 	call load_scoreboard
-	ld de,09c57h		; The title patterns, at VRAM 0x2468...
+	ld de,graphics_2468	; The title patterns, at VRAM 0x2468...
 	ld hl,02468h
 	call decompress_three_thirds
-	ld de,09eabh		; ...and its colours, at 0x0468
+	ld de,graphics_0468	; ...and its colours, at 0x0468
 	ld hl,00468h
 	call decompress_three_thirds
 	di			; 2 and 3 restored

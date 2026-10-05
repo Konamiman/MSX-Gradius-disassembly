@@ -386,8 +386,12 @@ class TestTheCartridge(unittest.TestCase):
         text = image_text("main")
         for stage in ("005h", "009h", "00ah", "00ch"):
             self.assertIn("cp %s" % stage, text)
-        self.assertIn("ld de,08ff0h", text)
-        self.assertIn("ld de,08000h", text)
+        self.assertIn("ld de,pieces_B", text)
+        self.assertIn("ld de,pieces_A", text)
+        # and those two are where the comment says, in the map image
+        symbols = read(os.path.join(BUILD, "inc", "map_symbols.inc"))
+        self.assertRegex(symbols, r"(?mi)^pieces_A EQU 8000h")
+        self.assertRegex(symbols, r"(?mi)^pieces_B EQU 8FF0h")
 
 
 if __name__ == "__main__":

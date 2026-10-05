@@ -5,12 +5,13 @@
 	include "variables.inc"
 
 	public run_wave
+	extrn find_group,spawn_object
 
 ; ----------------------------------------------------------------------
 ; THE WAVE THAT COMES IN SINGLE FILE
 ; Six enemies of the same type coming in single file from the right. The
-; wave is noted in one of the four group cards at 0xE900 with its count,
-; and p00:0x5E65 brings it down as they fall; when the last one falls, the
+; wave is noted in one of the four group cards at GROUPS with its count,
+; and p00:object_to_explosion brings it down as they fall; when the last one falls, the
 ; group closes and that last one blows up with a different drawing. The
 ; stage decides which type comes out: the byte at 0xA5AF carries TWO
 ; types, one in each half, and they alternate from wave to wave.
@@ -51,7 +52,7 @@ L_A4EA:
 	ld d,0f0h		; X 0xF0: through the right edge
 	ld a,(FILE_WAVE_TYPE)
 	ld c,000h
-	call 06a72h
+	call spawn_object
 	ld a,(SPAWNED_TYPE)	; Stays at zero if there was no free slot
 	and a
 	ret nz
@@ -83,10 +84,10 @@ L_A522:
 	ld a,l			; One wave every eight steps
 	and 007h
 	ret nz
-	ld hl,00101h		; 0xE160 to one and 0xE161 to one: the wave starts
+	ld hl,00101h		; FILE_WAVE_STEP to one and 0xE161 to one: the wave starts
 	ld (FILE_WAVE_STEP),hl
 	ld a,(STAGE)		; The stage indexes the list at 0xA5AF
-	ld hl,0A5AFh
+	ld hl,file_wave_types_per_stage-1
 	add a,l
 	ld l,a
 	jr nc,L_A539
@@ -109,10 +110,10 @@ L_A542:
 	rrca
 	rrca
 L_A54C:
-	and 00fh		; The type of this wave, to 0xE163
+	and 00fh		; The type of this wave, to FILE_WAVE_TYPE
 	ld (FILE_WAVE_TYPE),a
 	ld c,a
-	ld a,(hl)		; The two low bits: 0xE164 to zero or to one
+	ld a,(hl)		; The two low bits: FILE_WAVE_ALT to zero or to one
 	and 003h
 	jr z,L_A559
 	ld a,001h
@@ -122,13 +123,13 @@ L_A559:
 	ld (FILE_WAVE_HEIGHT),a
 	ld a,006h		; Six enemies per wave
 	ld (FILE_WAVE_LEFT),a
-	xor a			; A free group card is looked for at 0xE900
-	call 05ebah
+	xor a			; A free group card is looked for at GROUPS
+	call find_group
 	jr nc,note_group
 	xor a			; No free card, no wave
 	ld (FILE_WAVE_STEP),a
 	ret
-note_group:		; The card at 0xE900 keeps the wave number and, twice, the six it brings
+note_group:		; The card at GROUPS keeps the wave number and, twice, the six it brings
 	ld a,(FILE_WAVE_NUMBER)	; The wave number, in the group card
 	ld (hl),a
 	inc l
@@ -177,8 +178,8 @@ L_A5AF:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_A5AF (part): Nine bytes read by 0xA531 with base 0xA5AF.
-table_A5AF_A5B0:
+; DATA file_wave_types_per_stage (part): Nine bytes read by 0xA531 with base 0xA5AF.
+file_wave_types_per_stage:
 	defb 22h,22h,2Ah,2Ah,2Ah,0CAh,22h,22h
 
 	end

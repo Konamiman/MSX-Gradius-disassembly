@@ -4,24 +4,24 @@
 
 	include "variables.inc"
 
-	public run_screen,set_up_screen
+	public data_AAB0,run_screen,set_up_screen,type_3_piece_drawings
 
 ; ----------------------------------------------------------------------
 ; A FOUR-SPRITES-PER-CRITTER ENGINE, ONLY FOR THE FIXED SCREEN
 ; This bank carries its own little engine, separate from the game's:
-; eight slots of eight bytes at 0xE300, three spawners at 0xE500 and,
+; eight slots of eight bytes at SCREEN_CRITTERS, three spawners at SCREEN_SPAWNERS and,
 ; for each slot, up to FOUR consecutive sprite entries in the buffer at
-; 0xEC80. Each critter comes into view one sprite at a time (byte 5
+; SPRITE_BUFFER. Each critter comes into view one sprite at a time (byte 5
 ; counts how many it has) and moves with a pair of fixed displacements
 ; that its type gives it.
 ; ----------------------------------------------------------------------
-set_up_screen:		; Clears the work RAM, sets up the three spawners and copies a routine for itself to 0xE710
+set_up_screen:		; Clears the work RAM, sets up the three spawners and copies a routine for itself to CHANGING_CELLS
 	ld hl,SCREEN_CRITTERS	; 0x800 bytes, to zero
 	ld de,SCREEN_CRITTERS+1
 	ld bc,00800h
 	ld (hl),000h
 	ldir
-	ld hl,0a881h		; The three spawners, from 0xA881 to 0xE500
+	ld hl,initial_values	; The three spawners, from initial_values to 0xE500
 	ld de,SCREEN_SPAWNERS
 	ld b,003h		; Three slots
 L_A81E:
@@ -36,20 +36,20 @@ L_A81E:
 	inc de
 	pop bc
 	djnz L_A81E
-	ld a,010h		; 0xE700, 0xE702 and 0xE704: where each one starts
+	ld a,010h		; BG_OBJECTS, 0xE702 and 0xE704: where each one starts
 	ld (CHAR_ANIM+1),a
 	ld a,018h
 	ld (CHAR_ANIM+3),a
 	ld a,020h
 	ld (CHAR_ANIM+5),a
-	ld bc,00038h		; And 0x38 bytes of routine, copied to 0xE710 to run them from RAM
-	ld hl,0a849h
+	ld bc,00038h		; And 0x38 bytes of routine, copied to CHANGING_CELLS to run them from RAM
+	ld hl,routine_for_RAM
 	ld de,CHANGING_CELLS
 	ldir
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA routine_for_RAM: 56 bytes that 0xA840 copies with LDIR to 0xE710. They
+; DATA routine_for_RAM: 56 bytes that 0xA840 copies with LDIR to CHANGING_CELLS. They
 ;   run from RAM, not from here.
 routine_for_RAM:
 	defb 01h,20h,00h,0C1h,38h,00h,00h,00h,01h,28h,01h,63h,39h,00h,00h,00h
@@ -59,7 +59,7 @@ routine_for_RAM:
 
 ; ----------------------------------------------------------------------
 ; DATA initial_values: Three groups of four bytes that 0xA816 spreads over
-;   0xE500, leaving four empty bytes between one group and the next.
+;   SCREEN_SPAWNERS, leaving four empty bytes between one group and the next.
 initial_values:
 	defb 00h,40h,45h,16h
 	defb 01h,10h,38h,80h
@@ -69,7 +69,7 @@ run_screen:		; A whole frame: moves the critters, lets the spawners release more
 	call run_spawners
 	call build_sprite_entries
 	ret
-move_the_eight:		; The eight eight-byte slots at 0xE300, one by one
+move_the_eight:		; The eight eight-byte slots at SCREEN_CRITTERS, one by one
 	ld ix,SCREEN_CRITTERS
 	ld b,008h		; Eight slots
 L_A89D:
@@ -100,7 +100,7 @@ critter_moves:		; The two displacements its type gives it; when it leaves throug
 	add a,a
 	ld e,a
 	ld d,000h
-	ld hl,0a8f3h		; The table at 0xA8F3: two bytes per type
+	ld hl,displacements	; The table at displacements: two bytes per type
 	add hl,de
 	ld a,(ix+003h)		; Byte 3, the row, plus its own
 	add a,(hl)
@@ -122,7 +122,7 @@ L_A8E4:
 ; DATA displacements: Twenty-four bytes read by 0xA8D0.
 displacements:
 	defb 0F8h,0FCh,0F8h,0F8h,0FCh,0F8h,04h,0F8h,08h,0F8h,08h,0FCh,08h,04h,08h,08h,04h,08h,0FCh,08h,0F8h,08h,0F8h,04h
-run_spawners:		; The three spawners at 0xE500 release a critter every eight frames
+run_spawners:		; The three spawners at SCREEN_SPAWNERS release a critter every eight frames
 	ld ix,SCREEN_SPAWNERS
 	ld b,003h		; Three spawners
 L_A911:
@@ -137,7 +137,7 @@ L_A91E:
 	add ix,de
 	djnz L_A911
 	ret
-release_critter:		; Picks the type from the table at 0xA989, looks for a free slot among the eight and fills it with its position, its drawing and its colour
+release_critter:		; Picks the type from the table at spawner_critter_types, looks for a free slot among the eight and fills it with its position, its drawing and its colour
 	ld a,(ix+000h)		; The spawner's type, times four
 	add a,a
 	add a,a
@@ -150,7 +150,7 @@ release_critter:		; Picks the type from the table at 0xA989, looks for a free sl
 L_A93A:
 	inc (ix+005h)		; One more for next time
 	add a,c
-	ld hl,0a989h		; The table at 0xA989: four types per spawner
+	ld hl,spawner_critter_types	; The table at spawner_critter_types: four types per spawner
 	ld e,a
 	ld d,000h
 	add hl,de
@@ -172,10 +172,10 @@ L_A956:
 	inc hl
 	ld (hl),002h
 	inc hl
-	ld a,c			; The type times three: the table at 0xA995
+	ld a,c			; The type times three: the table at critter_offsets_and_drawings
 	add a,a
 	add a,c
-	ld de,0a995h
+	ld de,critter_offsets_and_drawings
 	add a,e
 	ld e,a
 	jr nc,L_A969
@@ -195,7 +195,7 @@ L_A969:
 	inc hl
 	ex de,hl
 	ldi
-	ld hl,0a9b9h		; And its colour comes from 0xA9B9
+	ld hl,critter_colours	; And its colour comes from critter_colours
 	ld c,(ix+000h)
 	ld b,000h
 	add hl,bc
@@ -204,22 +204,22 @@ L_A969:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_A989: Twelve bytes read by 0xA93E.
-table_A989:
+; DATA spawner_critter_types: Twelve bytes read by 0xA93E.
+spawner_critter_types:
 	defb 06h,07h,08h,07h,04h,05h,06h,07h,03h,04h,05h,04h
 
 ; ----------------------------------------------------------------------
-; DATA table_A995: Thirty-six bytes read by 0xA961.
-table_A995:
+; DATA critter_offsets_and_drawings: Thirty-six bytes read by 0xA961.
+critter_offsets_and_drawings:
 	defb 10h,0F8h,00h,10h,0F0h,04h,08h,0F0h,08h,00h,0F0h,0Ch
 	defb 00h,0F0h,10h,00h,0F0h,14h,00h,00h,00h,00h,00h,04h
 	defb 00h,00h,08h,08h,00h,0Ch,10h,00h,10h,10h,0F8h,14h
 
 ; ----------------------------------------------------------------------
-; DATA table_A9B9: Nine bytes read by 0xA97D.
-table_A9B9:
+; DATA critter_colours: Nine bytes read by 0xA97D.
+critter_colours:
 	defb 07h,0Bh,07h,07h,07h,0Fh,0Bh,0Fh,0Fh
-build_sprite_entries:		; For each of the eight critters, four sprite entries in the buffer at 0xEC80
+build_sprite_entries:		; For each of the eight critters, four sprite entries in the buffer at SPRITE_BUFFER
 	ld b,008h		; Eight critters
 	ld ix,SCREEN_CRITTERS
 	ld hl,SPRITE_BUFFER	; The sprite attribute buffer
@@ -243,12 +243,12 @@ L_A9E3:
 	inc hl
 	djnz L_A9E3
 	ret
-this_critter_entries:		; One entry per sprite in view, with the offset its type gets from the table at 0xAA46
-	ld a,(ix+000h)		; The type times eight: the table at 0xAA46
+this_critter_entries:		; One entry per sprite in view, with the offset its type gets from the table at critter_sprite_offsets
+	ld a,(ix+000h)		; The type times eight: the table at critter_sprite_offsets
 	add a,a
 	add a,a
 	add a,a
-	ld de,0aa46h
+	ld de,critter_sprite_offsets
 	add a,e
 	ld e,a
 	jr nc,L_A9F7
@@ -310,8 +310,8 @@ L_AA3B:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_AA46: Ninety-six bytes read by 0xA9EF.
-table_AA46:
+; DATA critter_sprite_offsets: Ninety-six bytes read by 0xA9EF.
+critter_sprite_offsets:
 	defb 00h,00h,0F0h,0F8h,0E0h,0F0h,0D0h,0E8h,00h,00h,0F0h,0F0h,0E0h,0E0h,0D0h,0D0h
 	defb 00h,00h,0F8h,0F0h,0F0h,0E0h,0E8h,0D0h,00h,00h,08h,0F0h,10h,0E0h,18h,0D0h
 	defb 00h,00h,10h,0F0h,20h,0E0h,30h,0D0h,00h,00h,10h,0F8h,20h,0F0h,30h,0E8h
@@ -320,15 +320,15 @@ table_AA46:
 	defb 00h,00h,0F0h,10h,0E0h,20h,0D0h,30h,00h,00h,0F0h,08h,0E0h,10h,0D0h,18h
 
 ; ----------------------------------------------------------------------
-; DATA table_AAA6: Five words read by 0x831B in bank 2 with 0x47AE, indexing
+; DATA type_3_piece_drawings: Five words read by 0x831B in bank 2 with get_word, indexing
 ;   with (IX+6).
-table_AAA6:
-	defw 0AB00h,0AB13h
-	defw 0AB26h,0AB2Dh
-	defw 0AB34h
+type_3_piece_drawings:
+	defw data_AAB0+50h,data_AAB0+63h
+	defw data_AAB0+76h,data_AAB0+7Dh
+	defw data_AAB0+84h
 
 ; ----------------------------------------------------------------------
-; DATA data_AAB0: What the table above points to, and what 0x834F in bank 2
+; DATA data_AAB0: What the table above points to, and what place_first_turret in bank 2
 ;   reads. 1145 bytes up to where the filler starts.
 data_AAB0:
 	defb 39h,0ABh,51h,0ABh,69h,0ABh,81h,0ABh,99h,0ABh,0B4h,0ABh,0D5h,0ABh,0F0h,0ABh

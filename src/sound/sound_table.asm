@@ -1,29 +1,33 @@
 ; ============================================================================
 ; Sound player - The table of sounds
 ; ============================================================================
-;
-; Eighty words: the address of each sound. Read by bank 0 at 0x4A49 with
-; `ld de,0x8328` and `call 0x4062` (DE += A), with A = sound number times two.
-; It is public: the main image would get its address from the symbols file
-; instead of writing 0x8328.
 
 	public sound_table
-	extrn empty_sound,sound_01,sound_02,sound_03,sound_04,sound_05,sound_06,sound_07
-	extrn sound_08,sound_09,sound_10,sound_11,sound_12,sound_13,sound_14,sound_15
-	extrn sound_16,sound_17,sound_18,sound_19,sound_20,sound_21,sound_22,sound_23
-	extrn sound_24,sound_25,sound_26,sound_27,sound_28,sound_29,sound_30,sound_31
-	extrn sound_32,sound_33,sound_34,sound_35,sound_36,sound_37,sound_38,sound_39
-	extrn sound_40,sound_41,sound_42,sound_43,sound_44,sound_45,sound_46,sound_47
-	extrn sound_48,sound_49,sound_50,sound_51,sound_52,sound_53,sound_54,sound_55
-	extrn sound_56,sound_57,sound_58,sound_59,sound_60,sound_61,sound_62,sound_63
-	extrn sound_64,sound_65,sound_66,sound_67,sound_68,sound_69,sound_70,sound_71
+	extrn empty_sound,sound_01,sound_02,sound_03,sound_04,sound_05
+	extrn sound_06,sound_07,sound_08,sound_09,sound_10,sound_11
+	extrn sound_12,sound_13,sound_14,sound_15,sound_16,sound_17
+	extrn sound_18,sound_19,sound_20,sound_21,sound_22,sound_23
+	extrn sound_24,sound_25,sound_26,sound_27,sound_28,sound_29
+	extrn sound_30,sound_31,sound_32,sound_33,sound_34,sound_35
+	extrn sound_36,sound_37,sound_38,sound_39,sound_40,sound_41
+	extrn sound_42,sound_43,sound_44,sound_45,sound_46,sound_47
+	extrn sound_48,sound_49,sound_50,sound_51,sound_52,sound_53
+	extrn sound_54,sound_55,sound_56,sound_57,sound_58,sound_59
+	extrn sound_60,sound_61,sound_62,sound_63,sound_64,sound_65
+	extrn sound_66,sound_67,sound_68,sound_69,sound_70,sound_71
 	extrn sound_72,sound_73,sound_74,sound_75,sound_76
+
+;
+; Eighty words: the address of each sound. Read by bank 0 at 0x4A49 with
+; `ld de,sound_table` and `call add_a_to_de` (DE += A), with A = sound number times two.
+; It is public: the main image would get its address from the symbols file
+; instead of writing sound_table.
 
 ; ----------------------------------------------------------------------
 ; DATA sound_table: Eighty words: the address of each sound. Read by 0x4A49 in
-;   bank 0 with `ld de,0x8328` and `call 0x4062` (DE += A), with A = sound
+;   bank 0 with `ld de,0x8328` and `call add_a_to_de` (DE += A), with A = sound
 ;   number times two. Entry 0 (0x393C) is not a cartridge address: sound 0
-;   does not exist. The last three point to 0xA3DE, the first filler byte of
+;   does not exist. The last three point to empty_sound, the first filler byte of
 ;   bank 8, that is, to an empty sound.
 sound_table:
 	defw 0393Ch		; 0: not an address, sound 0 does not exist

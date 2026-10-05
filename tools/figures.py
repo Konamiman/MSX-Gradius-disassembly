@@ -81,7 +81,7 @@ def count():
                 c["ranges"] += 1
                 continue
             m = re.match(r"^([A-Za-z_]\w*):", ln)
-            if m and "equ" not in ln.split(";", 1)[0].lower():
+            if m and not re.search(r"\bequ\b", ln.split(";", 1)[0].lower()):
                 pending.append(m.group(1))
                 continue
             if not ln.startswith("\t"):

@@ -6,13 +6,15 @@
 
 	public check_for_wall,finish_type_0A,finish_type_0B,finish_type_8,finish_type_9,move_type_0A
 	public move_type_0B,move_type_8,move_type_9
-	extrn compare_speed_and_acceleration,L_ABCC,set_horizontal_acceleration,set_negated_acceleration,set_vertical_acceleration
+	extrn add_vertical_acceleration,aim_from_where_it_is,animate_round_and_round,compare_speed_and_acceleration,fire_without_aiming,get_word
+	extrn L_9239,L_ABCC,move_with_scroll_eight,negate_horizontal_speed,set_horizontal_acceleration,set_horizontal_speed
+	extrn set_negated_acceleration,set_vertical_acceleration,set_vertical_speed,zero_speed
 
 ; ----------------------------------------------------------------------
 ; THE ROCK WALLS OF STAGES 2 AND 8
 ; There is no time script here: there is a list of DISTANCES. On every step
-; with a new column the stage's list is walked (0xAC81 for the second and
-; 0xAC8D for the eighth) and each distance is compared with the one
+; with a new column the stage's list is walked (stage_2_wall_distances for the second and
+; stage_8_wall_distances for the eighth) and each distance is compared with the one
 ; travelled; on an exact match, a wall of five rocks (three in the eighth)
 ; is released through one column or the other, one per frame. Bit 7 of the
 ; distance, which is set aside before comparing, is what says which side
@@ -30,11 +32,11 @@ check_for_wall:		; Compares the distance travelled with the stage's list and, on
 	jp z,L_AC13
 	cp 008h			; ...and the eighth its own; the others have none
 	ret nz
-	ld hl,0ac8dh		; Seventeen distances, and walls of three
+	ld hl,stage_8_wall_distances	; Seventeen distances, and walls of three
 	ld bc,01101h
 	jp L_AC19
 L_AC13:
-	ld hl,0ac81h		; Six distances, and walls of five
+	ld hl,stage_2_wall_distances	; Six distances, and walls of five
 	ld bc,00600h
 L_AC19:
 	ld (WALL_LIST),hl	; The list and the count are parked
@@ -44,7 +46,7 @@ walk_distances:		; One by one, against the distance travelled
 	ld a,(WALL_LIST_LEN)	; From the count comes the index
 	sub b
 	ld hl,(WALL_LIST)
-	call 047aeh		; The word that is due from the list
+	call get_word		; The word that is due from the list
 	ld a,d
 	exx			; The high byte is saved whole...
 	ld d,a
@@ -74,7 +76,7 @@ L_AC57:
 	ld (WALL_ON),hl
 	ret
 release_wall:		; One rock per frame, each one on its row, until the count runs out
-	ld hl,0AC7Bh		; The table base lands on the `ret` right next to it: it is never read, because the index is never zero
+	ld hl,wall_rock_rows-1	; The table base lands on the `ret` right next to it: it is never read, because the index is never zero
 	dec a
 	jp z,L_AC63
 	inc hl
@@ -98,13 +100,13 @@ L_AC7B:
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_AC7B (part): Six bytes read by 0xAC5B with base 0xAC7B.
-table_AC7B_AC7C:
+; DATA wall_rock_rows (part): Six bytes read by release_wall with base 0xAC7B.
+wall_rock_rows:
 	defb 8Ch,6Ch,4Ch,2Ch,0Ch
 
 ; ----------------------------------------------------------------------
-; DATA table_AC81: Twelve bytes read by 0xAC13.
-table_AC81:
+; DATA stage_2_wall_distances: Twelve bytes read by L_AC13.
+stage_2_wall_distances:
 	defb 44h,01h
 	defb 4Ch,01h
 	defb 70h,01h
@@ -113,8 +115,8 @@ table_AC81:
 	defb 88h,01h
 
 ; ----------------------------------------------------------------------
-; DATA table_AC8D: Thirty-four bytes read by 0xAC0A, in pairs.
-table_AC8D:
+; DATA stage_8_wall_distances: Thirty-four bytes read by 0xAC0A, in pairs.
+stage_8_wall_distances:
 	defb 88h,00h
 	defb 90h,00h
 	defb 0C8h,00h
@@ -137,12 +139,12 @@ finish_type_8:		; Counters to zero, ten frames in byte 2, and still
 	ld (ix+01bh),a
 	ld (ix+01dh),a
 	ld (ix+002h),00ah	; Ten frames
-	jp 09510h
+	jp zero_speed
 move_type_8:		; The rock grows in three steps of ten frames and, once grown, stays still and fires
 	ld a,(ix+001h)		; Byte 1: whether it has already grown
 	or a
 	jr nz,rock_fires
-	call 09251h		; While it grows it moves with the scroll
+	call move_with_scroll_eight	; While it grows it moves with the scroll
 	dec (ix+002h)		; Ten frames per step
 	ret nz
 	inc (ix+01dh)		; One more step of the three
@@ -156,7 +158,7 @@ L_ACDA:
 	inc (ix+001h)
 	call rock_drawing	; The big drawing
 	call its_shot_speed	; And the speed of its shots
-	jp 06c61h
+	jp aim_from_where_it_is
 rock_fires:		; Once grown, it releases a shot every eight frames
 	ld a,(LOOP_NUMBER)	; On the first loop it does not fire
 	dec a
@@ -175,18 +177,18 @@ L_ACFC:
 	ld a,(FRAME_COUNT)	; One frame in every eight
 	and 007h
 	ret nz
-	jp 09239h
+	jp L_9239
 rock_drawing:		; From the pair at 0xAD16 come the character and the colour: 0xC0 in 5, 0xC4 in 7 and 0xC8 in 0x0F
-	ld hl,0ad16h		; The table at 0xAD16, in pairs
-	call 047aeh
+	ld hl,rock_growth_drawings-2	; The table at 0xAD16, in pairs
+	call get_word
 	ld (ix+00ch),d		; The character to byte 12 and the colour to 13
 	ld (ix+00dh),e
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA table_AD16 (part): Eight bytes read by 0xAD0B with base 0xAD16, in
+; DATA rock_growth_drawings (part): Eight bytes read by rock_drawing with base 0xAD16, in
 ;   pairs.
-table_AD16_AD18:
+rock_growth_drawings:
 	defb 05h,0C0h
 	defb 07h,0C4h
 	defb 0Fh,0C8h
@@ -197,14 +199,14 @@ its_shot_speed:		; 0x40 plus the difficulty
 	ret
 finish_type_9:		; No vertical speed and three points to the left
 	ld de,00000h
-	call 06cbfh
+	call set_vertical_speed
 	ld de,0fd00h
-	jp 06cc6h
+	jp set_horizontal_speed
 move_type_9:		; Crosses in a straight line and, past the middle of the screen, gets level with the ship
-	call 09235h		; Fires without aiming
+	call fire_without_aiming	; Fires without aiming
 	ld bc,00306h		; Six drawings, one every four frames
-	ld hl,0ad68h
-	call 095d1h
+	ld hl,type_9_drawings
+	call animate_round_and_round
 	ld a,(ix+006h)		; Up to column 0x80 it goes straight
 	cp 080h
 	ret nc
@@ -217,19 +219,19 @@ move_type_9:		; Crosses in a straight line and, past the middle of the screen, g
 	pop af
 	jr c,climb_towards_ship
 	ld de,00100h		; Ship below: one point per frame downwards
-	jp 06cbfh
+	jp set_vertical_speed
 climb_towards_ship:		; One point per frame upwards
 	ld de,0ff00h		; Above: one upwards
-	jp 06cbfh
+	jp set_vertical_speed
 on_ship_row:		; Stays at that height
 	pop af
 	ld de,00000h		; And on its row, neither up nor down
-	jp 06cbfh
+	jp set_vertical_speed
 
 ; ----------------------------------------------------------------------
-; DATA table_AD68: Six bytes read by 0xAD39: there and back (0xEC, 0xF0, 0xF4,
+; DATA type_9_drawings: Six bytes read by 0xAD39: there and back (0xEC, 0xF0, 0xF4,
 ;   0xF8, 0xF4, 0xF0).
-table_AD68:
+type_9_drawings:
 	defb 0ECh,0F0h,0F4h,0F8h,0F4h,0F0h
 finish_type_0A:		; The ones in the wave curve alternately: one upwards and the next one downwards
 	ld de,00080h
@@ -243,62 +245,62 @@ L_AD81:
 	call set_vertical_acceleration
 	ld d,b
 	ld e,c
-	call 06cbfh
+	call set_vertical_speed
 	call set_horizontal_acceleration
 	ld de,0fd00h		; Three points to the left
-	jp 06cc6h
+	jp set_horizontal_speed
 move_type_0A:		; Keeps curving and, on reaching column 0x30, turns round and goes back the way it came
-	call 09235h		; Fires without aiming
+	call fire_without_aiming	; Fires without aiming
 	call animate_type_0A	; Six drawings, one every four frames
-	call 0953ch		; The curve: the acceleration is added to the speed
+	call add_vertical_acceleration	; The curve: the acceleration is added to the speed
 	call compare_speed_and_acceleration
 	call z,set_negated_acceleration
 	ld a,(ix+006h)		; Past column 0x30...
 	cp 030h
-	call c,09580h		; ...it is turned round and goes back
+	call c,negate_horizontal_speed	; ...it is turned round and goes back
 	ret
 animate_type_0A:		; Six drawings there and back, one every four frames
 	ld bc,00306h
-	ld hl,0adb3h
-	jp 095d1h
+	ld hl,type_0A_drawings
+	jp animate_round_and_round
 
 ; ----------------------------------------------------------------------
-; DATA table_ADB3: Six bytes read by 0xADAD: another there and back (0xBC,
+; DATA type_0A_drawings: Six bytes read by 0xADAD: another there and back (0xBC,
 ;   0xC0, 0xC4, 0xC8, 0xC4, 0xC0).
-table_ADB3:
+type_0A_drawings:
 	defb 0BCh,0C0h,0C4h,0C8h,0C4h,0C0h
-finish_type_0B:		; The speeds come from a table indexed by 0xE15A, and on the second loop they are faster
+finish_type_0B:		; The speeds come from a table indexed by SHOT_BURST, and on the second loop they are faster
 	ld a,(LOOP_NUMBER)	; From the second loop onwards, another table
 	or a
 	ld bc,0fe00h		; Two points to the left...
-	ld hl,0add7h
+	ld hl,type_0B_vertical_speeds-2
 	jr z,L_ADCB
 	ld bc,0fd00h		; ...or three on the second loop
-	ld hl,0adddh
+	ld hl,type_0B_vertical_speeds_loop2
 L_ADCB:
 	ld a,(SHOT_BURST)	; Says which of the pairs it gets
-	call 047aeh
-	call 06cbfh
+	call get_word
+	call set_vertical_speed
 	ld d,b
 	ld e,c
-	jp 06cc6h
+	jp set_horizontal_speed
 
 ; ----------------------------------------------------------------------
-; DATA table_ADD7 (part): Six bytes read by 0xADC0.
-table_ADD7_ADD9:
+; DATA type_0B_vertical_speeds (part): Six bytes read by 0xADC0.
+type_0B_vertical_speeds:
 	defb 00h,0FFh,00h,00h
 
 ; ----------------------------------------------------------------------
-; DATA table_ADDD: Eight bytes read by 0xADC8.
-table_ADDD:
+; DATA type_0B_vertical_speeds_loop2: Eight bytes read by 0xADC8.
+type_0B_vertical_speeds_loop2:
 	defb 00h,01h
 	defb 80h,0FEh
 	defb 00h,00h
 	defb 80h,01h
 move_type_0B:		; Four drawings, and from the third loop onwards it fires every 0x20 frames
 	ld bc,00304h		; Four drawings, one every four frames
-	ld hl,0ae03h
-	call 095d1h
+	ld hl,type_0B_drawings
+	call animate_round_and_round
 	ld a,(LOOP_NUMBER)	; It does not fire until the third loop
 	cp 002h
 	ret c
@@ -308,11 +310,11 @@ move_type_0B:		; Four drawings, and from the third loop onwards it fires every 0
 	ld a,(CONTROLLER_NEW)	; Bit 4
 	and 010h
 	ret z
-	jp 09239h
+	jp L_9239
 
 ; ----------------------------------------------------------------------
-; DATA table_AE03: Four bytes (0xDC, 0xE0, 0xE4, 0xE8) read by 0xADE8.
-table_AE03:
+; DATA type_0B_drawings: Four bytes (0xDC, 0xE0, 0xE4, 0xE8) read by 0xADE8.
+type_0B_drawings:
 	defb 0DCh,0E0h,0E4h,0E8h
 
 	end

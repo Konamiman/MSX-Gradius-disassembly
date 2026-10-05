@@ -21,7 +21,7 @@ play:		; What the interrupt calls every frame (p00:4035), with banks 7 and 8 in 
 	ld a,(NOISE_FX_ON)	; While the noise effect is running, it is in charge
 	or a
 	jp z,restore_registers
-	ld a,001h		; 0xE04C to one: when it ends the registers must be restored
+	ld a,001h		; NOISE_FX_DIRTY to one: when it ends the registers must be restored
 	ld (NOISE_FX_DIRTY),a
 	ld e,0b8h		; Mix 0xB8: the three tones silenced and noise on C
 	ld a,007h
@@ -65,7 +65,7 @@ run_noise_effect:		; Counts down the effect's two counters: the inner one keeps 
 	ld (NOISE_FX_VOLUME),a
 	ld e,a
 	jp set_volume
-next_noise_step:		; Once the outer counter runs out, the effect moves on to the next register value from 0x80D9; when they run out, the channels go silent
+next_noise_step:		; Once the outer counter runs out, the effect moves on to the next register value from noise_registers; when they run out, the channels go silent
 	inc hl
 	dec (hl)		; The outer counter
 	jp z,silence_channels	; And when it runs out, the effect is over
@@ -75,7 +75,7 @@ next_noise_step:		; Once the outer counter runs out, the effect moves on to the 
 	dec a
 	ld e,a
 	ld d,000h
-	ld hl,noise_registers	; The table at 0x80D9: the period for each step
+	ld hl,noise_registers	; The table at noise_registers: the period for each step
 	add hl,de
 	ld e,(hl)
 	call set_tone_a_and_b

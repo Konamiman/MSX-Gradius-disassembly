@@ -6,17 +6,18 @@
 
 	public collides_at_this_cell,collides_with_map,collides_with_map_2,collides_with_map_3,is_special_cell,object_collides_with_map
 	public ship_collides
+	extrn cell_to_ram_address
 
 ; ----------------------------------------------------------------------
 ; COLLIDING WITH THE MAP MEANS LOOKING AT WHICH CHARACTER IS UNDERNEATH
 ; There is no list of walls: to know whether something collides with the
 ; terrain, the code looks at the CHARACTER the map has in that cell. Below
 ; 0x77 it is background and does not collide; from there up, each stage
-; decides which range of characters it collides with (0x9912, 0x991D,
-; 0x9923 and 0x9929).
+; decides which range of characters it collides with (stage_1_wall, stage_4_wall,
+; stage_3_wall and stage_5_wall).
 ; ----------------------------------------------------------------------
 collides_with_map:		; Looks at the character in the cell and the one next to it; returns carry if either of them is wall
-	call 0571bh		; The map cell comes from the position
+	call cell_to_ram_address	; The map cell comes from the position
 	ex de,hl
 	call L_9864
 	ret c
@@ -39,7 +40,7 @@ L_9864:
 	xor a
 	ret
 collides_with_map_2:		; The same, but only stage 4 has walls
-	call 0571bh		; The cell comes from the position
+	call cell_to_ram_address	; The cell comes from the position
 	ex de,hl
 	call L_9886
 	ret c
@@ -60,7 +61,7 @@ L_9886:
 	xor a
 	ret
 collides_with_map_3:		; The same, but no stage has walls: it only checks that it is not background
-	call 0571bh		; The cell comes from the position
+	call cell_to_ram_address	; The cell comes from the position
 	ex de,hl
 	call L_98A4
 	ret c
@@ -79,7 +80,7 @@ L_98A4:
 object_collides_with_map:		; The same, taking the position of the object IX points to
 	ld l,(ix+004h)		; The object's position
 	ld h,(ix+006h)
-	call 0571bh		; The map cell comes from there
+	call cell_to_ram_address	; The map cell comes from there
 	ex de,hl		; The character in the cell
 	ld a,(de)		; The character in the cell
 	and a
@@ -116,7 +117,7 @@ ship_collides:		; Looks at the two cells the ship passes through: the one of its
 	and 007h		; The low three bits of Y: whether it straddles two rows
 	cp 004h			; The low three bits of Y
 	push af			; Straddling two rows
-	call 0571bh
+	call cell_to_ram_address
 	ex de,hl
 	pop af
 	jr nc,L_98F8

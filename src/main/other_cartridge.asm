@@ -11,7 +11,7 @@
 ; NEMESIS LOOKS FOR ANOTHER KONAMI CARTRIDGE IN THE OTHER SLOTS
 ; At boot, INIT calls here and the cartridge starts looking at the
 ; machine's other slots and subslots with RDSLT, reading SIX bytes
-; backwards from 0xBFFF and comparing them with the ones at 0x50AE.
+; backwards from 0xBFFF and comparing them with the ones at rc740_mark.
 ; Those six bytes (AC 81 91 06 40 AA read in memory order) are not just
 ; any number: they are the END OF THE HIDDEN KONAMI MARK of another
 ; cartridge, the same one Nemesis carries at the end of its bank 3.
@@ -20,8 +20,8 @@
 ; being compared are, read the right way round, TU I N: ツイン, the
 ; start of ツインビー. In other words, Nemesis is looking for TwinBee
 ; (Konami, RC-740).
-; If it finds it, 0xF0F4 stays at one, and with that the game loads extra
-; graphics: the block at 0x9963 in 0x428A and the entries at 0x938E and
+; If it finds it, TWINBEE_FOUND stays at one, and with that the game loads extra
+; graphics: the block at 0x9963 in L_428A and the entries at 0x938E and
 ; 0x939B in 0x4326.
 ; ----------------------------------------------------------------------
 find_other_cartridge:		; Walks slots 0, 0x80, 0x84, 0x88 and 0x8C looking for Konami's RC-740 mark
@@ -53,9 +53,9 @@ try_one_subslot:		; Tries that subslot and moves on to the next one
 	xor a
 	ld (TWINBEE_FOUND),a
 	ret
-compare_mark:		; Reads six bytes backwards from 0xBFFF in that slot and compares them with the ones at 0x50AE
+compare_mark:		; Reads six bytes backwards from 0xBFFF in that slot and compares them with the ones at rc740_mark
 	ld hl,0bfffh		; Six bytes are read from the end of page 2 of ANOTHER slot, backwards.
-	ld de,050aeh		; And they are compared with the six at 0x50AE, which are the hidden Konami mark of another cartridge.
+	ld de,rc740_mark	; And they are compared with the six at rc740_mark, which are the hidden Konami mark of another cartridge.
 	ld b,006h		; Six bytes
 L_5095:
 	push bc
@@ -73,19 +73,19 @@ L_5095:
 	inc de			; One goes up and the other goes down: the mark is written backwards
 	dec hl
 	djnz L_5095
-	ld a,001h		; If all six match, 0xF0F4 = 1, and that switches on extra graphics.
+	ld a,001h		; If all six match, TWINBEE_FOUND = 1, and that switches on extra graphics.
 	ld (TWINBEE_FOUND),a
 	xor a
 	ret
 
 ; ----------------------------------------------------------------------
-; DATA rc740_mark: The six bytes 0x508D looks for in the other slots: AC 81 91
+; DATA rc740_mark: The six bytes compare_mark looks for in the other slots: AC 81 91
 ;   06 40 AA. They are the end of a hidden Konami mark: 0xAA closes it, 0x40
 ;   is the RC-740, 0x06 the length of the title, and AC 81 91 are, read the
 ;   right way round, TU I N (ツイン), that is, TwinBee.
 rc740_mark:
 	defb 0AAh,40h,06h,91h,81h,0ACh
-clear_typing_state:		; 0xE1E0 to zero and the eight bytes at 0xE1E8 behind it
+clear_typing_state:		; TYPED_COUNT to zero and the eight bytes at TYPED_KEYS behind it
 	push hl
 	push bc
 	ld hl,00000h

@@ -2,13 +2,15 @@
 ; Nemesis / Gradius - scenery image (banks 4-6) - graphics.asm
 ; ============================================================================
 
+	public graphics_chain_6000,graphics_chain_6379,graphics_chain_7793,graphics_colours_30A8,graphics_patterns_10A8,graphics_patterns_1160
+
 ; Bank 4 (runs at 0x6000).
 ;
 ; THIS BANK HOLDS NO CODE. Its 8192 bytes are graphics compressed in the
-; 0x49B9 format (see tools/rle.py): patterns and colours of each stage's
-; scenery. The one that asks for them is routine 0x4371 in bank 0, which walks
+; decompress format (see tools/rle.py): patterns and colours of each stage's
+; scenery. The one that asks for them is routine load_entries in bank 0, which walks
 ; some six-byte records (flag, colour source, character index, pattern
-; source) kept in bank 5, and hands each source to 0x49B9. That is why almost
+; source) kept in bank 5, and hands each source to decompress. That is why almost
 ; no block is pointed at by an `ld de,nnnn`: the address comes from the
 ; record, not from an instruction.
 ;
@@ -19,7 +21,7 @@
 
 ; ----------------------------------------------------------------------
 ; SCENERY GRAPHICS (bank 4, 8192 bytes)
-; The whole bank is a compressed stream for 0x49B9. The splits below are
+; The whole bank is a compressed stream for decompress. The splits below are
 ; the exact places that bank 0 code asks for with an `ld de,nnnn`;
 ; between one split and the next there are chains of blocks that are
 ; requested from the six-byte records of bank 5.
@@ -28,7 +30,7 @@
 ; ----------------------------------------------------------------------
 ; DATA graphics_chain_6000: Chain of 19 compressed blocks, from 0x6000 to
 ;   0x62C6, that fit with no slack. They are requested by the records of bank
-;   5 (0x4371), not by an instruction with the address written in it.
+;   5 (load_entries), not by an instruction with the address written in it.
 graphics_chain_6000:
 	defb 0A0h,3Dh,0C6h,0BBh,7Dh,7Eh,9Eh,6Fh,0D7h,61h,73h,3Fh,1Eh,00h,00h,00h
 	defb 00h,0A7h,0C7h,87h,0Eh,0Ch,18h,30h,40h,0F0h,70h,39h,0Dh,05h,82h,0E1h
